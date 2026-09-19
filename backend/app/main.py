@@ -1,0 +1,50 @@
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.core.config import settings
+from app.routers import api_router
+from app.routers.health import router as health_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    print(f"Starting {settings.PROJECT_NAME} v{settings.VERSION} [{settings.ENVIRONMENT}]")
+    yield
+    print("Shutting down...")
+
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    version=settings.VERSION,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    lifespan=lifespan,
+)
+
+# CORS
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(o) for o in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+# Root-level /health (no prefix)
+app.include_router(health_router, prefix="")
+
+# All versioned routes under /api/v1
+app.include_router(api_router, prefix=settings.API_V1_STR)
+
+
+@app.get("/", tags=["Root"])
+async def root():
+    return {
+        "message": f"Welcome to {settings.PROJECT_NAME} API",
+        "version": settings.VERSION,
+        "docs_url": "/docs",
+        "health_check": "/health",
+    }

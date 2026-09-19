@@ -1,0 +1,47 @@
+from app.schemas.health import HealthCheckResponse
+from app.schemas.auth import (
+    UserRegister,
+    UserLogin,
+    TokenResponse,
+    TokenPayload,
+    UserRead,
+    UserUpdate,
+    AdminUserCreate,
+)
+from app.schemas.athletes import (
+    AthleteCreate,
+    AthleteUpdate,
+    AthleteRead,
+    PaginatedAthletes,
+    InjuryCreate,
+    InjuryRead,
+    TrainingProfileCreate,
+    TrainingProfileRead,
+    AssessmentCreate,
+    AssessmentRead,
+    AssignmentCreate,
+    AssignmentRead,
+)
+
+__all__ = [
+    "HealthCheckResponse",
+    "UserRegister",
+    "UserLogin",
+    "TokenResponse",
+    "TokenPayload",
+    "UserRead",
+    "UserUpdate",
+    "AdminUserCreate",
+    "AthleteCreate",
+    "AthleteUpdate",
+    "AthleteRead",
+    "PaginatedAthletes",
+    "InjuryCreate",
+    "InjuryRead",
+    "TrainingProfileCreate",
+    "TrainingProfileRead",
+    "AssessmentCreate",
+    "AssessmentRead",
+    "AssignmentCreate",
+    "AssignmentRead",
+]

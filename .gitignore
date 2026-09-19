@@ -1,0 +1,59 @@
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Database & Local Storage
+*.sqlite
+*.sqlite3
+*.db
+postgres_data/
+
+# Datasets & Large Media Files
+ml/datasets/*
+!ml/datasets/README.md
+!ml/datasets/.gitkeep
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+
+# Jupyter Notebooks Checkpoints
+.ipynb_checkpoints/
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+.npm
+.eslintcache
+
+# IDEs & System
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
