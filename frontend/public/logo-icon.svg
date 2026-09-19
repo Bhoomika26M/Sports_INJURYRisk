@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
+  <defs>
+    <linearGradient id="logoBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="logoGleam" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="boltGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#34d399"/>
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#1e3a8a" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#cardShadow)">
+    <rect x="2" y="2" width="44" height="44" rx="12" fill="url(#logoBg)"/>
+    <rect x="2" y="2" width="44" height="22" rx="12" fill="url(#logoGleam)"/>
+    <rect x="2.5" y="2.5" width="43" height="43" rx="11.5" fill="none" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1"/>
+  </g>
+
+  <!-- Kinematic Motion Path / Lightning -->
+  <path d="M26 8 L12 24 L22 24 L19 40 L35 22 L25 22 Z" 
+        fill="url(#boltGrad)" 
+        stroke="#ffffff"
+        stroke-width="1.2"
+        stroke-linejoin="round"/>
+
+  <!-- Kinematic Joint Nodes -->
+  <circle cx="31" cy="14" r="2.5" fill="#34d399" stroke="#ffffff" stroke-width="1"/>
+  <circle cx="15" cy="32" r="2" fill="#38bdf8" stroke="#ffffff" stroke-width="0.75"/>
+</svg>
