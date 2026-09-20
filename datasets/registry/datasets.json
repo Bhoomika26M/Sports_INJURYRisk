@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Human3.6M",
+    "source": "http://vision.imar.ro/human3.6m/",
+    "purpose": "Human pose estimation, joint tracking, movement analysis",
+    "modality": "Video + Motion Capture",
+    "annotation_format": "3D joint coordinates",
+    "expected_keypoints": "17 joints (head, neck, shoulders, elbows, wrists, hips, knees, ankles)",
+    "status": "not_downloaded",
+    "local_path": null,
+    "license_notes": "Research use only, requires license agreement",
+    "preprocessing_status": "pending"
+  },
+  {
+    "name": "MPII Human Pose",
+    "source": "http://human-pose.mpi-inf.mpg.de/",
+    "purpose": "Body keypoint detection, activity recognition",
+    "modality": "Images",
+    "annotation_format": "2D joint coordinates",
+    "expected_keypoints": "16 joints (head, neck, shoulders, elbows, wrists, hips, knees, ankles)",
+    "status": "not_downloaded",
+    "local_path": null,
+    "license_notes": "Research use only",
+    "preprocessing_status": "pending"
+  },
+  {
+    "name": "COCO Keypoints",
+    "source": "https://cocodataset.org/",
+    "purpose": "Pose estimation training, human motion analysis",
+    "modality": "Images",
+    "annotation_format": "2D joint coordinates with visibility",
+    "expected_keypoints": "17 keypoints (nose, eyes, ears, shoulders, elbows, wrists, hips, knees, ankles)",
+    "status": "not_downloaded",
+    "local_path": null,
+    "license_notes": "Creative Commons, research and commercial use allowed",
+    "preprocessing_status": "pending"
+  },
+  {
+    "name": "SportsPose",
+    "source": "https://github.com/opencv/cvat",
+    "purpose": "Sports-specific movement analysis, athlete posture assessment",
+    "modality": "Video",
+    "annotation_format": "2D/3D joint coordinates",
+    "expected_keypoints": "Variable, sport-specific",
+    "status": "not_downloaded",
+    "local_path": null,
+    "license_notes": "Requires manual collection or annotation",
+    "preprocessing_status": "pending"
+  },
+  {
+    "name": "FIFA Injury Dataset",
+    "source": "https://www.fifainjury.com/",
+    "purpose": "Injury trend analysis, risk factor modeling",
+    "modality": "Tabular data",
+    "annotation_format": "Injury records, player statistics",
+    "expected_keypoints": "N/A (tabular data)",
+    "status": "not_downloaded",
+    "local_path": null,
+    "license_notes": "Research use only, may require access request",
+    "preprocessing_status": "pending"
+  },
+  {
+    "name": "Sample Pose Dataset",
+    "source": "Internal sample",
+    "purpose": "Dataset integration testing, pose data structure validation",
+    "modality": "JSON annotations",
+    "annotation_format": "2D joint coordinates",
+    "expected_keypoints": "17 keypoints (nose, eyes, ears, shoulders, elbows, wrists, hips, knees, ankles)",
+    "status": "sample_integrated",
+    "local_path": "datasets/sample/sample_pose.json",
+    "license_notes": "Sample data for testing purposes",
+    "preprocessing_status": "completed"
+  }
+]

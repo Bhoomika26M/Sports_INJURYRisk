@@ -1,0 +1,226 @@
+{
+  "dataset_info": {
+    "name": "Sample Pose Dataset",
+    "version": "1.0",
+    "description": "Sample pose annotations for testing dataset integration",
+    "created_at": "2026-09-20"
+  },
+  "annotations": [
+    {
+      "person_id": 1,
+      "image_id": "sample_001.jpg",
+      "keypoints": [
+        {
+          "name": "nose",
+          "x": 256.0,
+          "y": 150.0,
+          "confidence": 0.95
+        },
+        {
+          "name": "left_eye",
+          "x": 248.0,
+          "y": 145.0,
+          "confidence": 0.92
+        },
+        {
+          "name": "right_eye",
+          "x": 264.0,
+          "y": 145.0,
+          "confidence": 0.91
+        },
+        {
+          "name": "left_ear",
+          "x": 240.0,
+          "y": 150.0,
+          "confidence": 0.88
+        },
+        {
+          "name": "right_ear",
+          "x": 272.0,
+          "y": 150.0,
+          "confidence": 0.87
+        },
+        {
+          "name": "left_shoulder",
+          "x": 220.0,
+          "y": 200.0,
+          "confidence": 0.94
+        },
+        {
+          "name": "right_shoulder",
+          "x": 292.0,
+          "y": 200.0,
+          "confidence": 0.93
+        },
+        {
+          "name": "left_elbow",
+          "x": 200.0,
+          "y": 260.0,
+          "confidence": 0.91
+        },
+        {
+          "name": "right_elbow",
+          "x": 312.0,
+          "y": 260.0,
+          "confidence": 0.90
+        },
+        {
+          "name": "left_wrist",
+          "x": 180.0,
+          "y": 320.0,
+          "confidence": 0.89
+        },
+        {
+          "name": "right_wrist",
+          "x": 332.0,
+          "y": 320.0,
+          "confidence": 0.88
+        },
+        {
+          "name": "left_hip",
+          "x": 230.0,
+          "y": 350.0,
+          "confidence": 0.95
+        },
+        {
+          "name": "right_hip",
+          "x": 282.0,
+          "y": 350.0,
+          "confidence": 0.94
+        },
+        {
+          "name": "left_knee",
+          "x": 220.0,
+          "y": 450.0,
+          "confidence": 0.92
+        },
+        {
+          "name": "right_knee",
+          "x": 292.0,
+          "y": 450.0,
+          "confidence": 0.91
+        },
+        {
+          "name": "left_ankle",
+          "x": 210.0,
+          "y": 550.0,
+          "confidence": 0.90
+        },
+        {
+          "name": "right_ankle",
+          "x": 302.0,
+          "y": 550.0,
+          "confidence": 0.89
+        }
+      ]
+    },
+    {
+      "person_id": 2,
+      "image_id": "sample_002.jpg",
+      "keypoints": [
+        {
+          "name": "nose",
+          "x": 300.0,
+          "y": 140.0,
+          "confidence": 0.96
+        },
+        {
+          "name": "left_eye",
+          "x": 292.0,
+          "y": 135.0,
+          "confidence": 0.93
+        },
+        {
+          "name": "right_eye",
+          "x": 308.0,
+          "y": 135.0,
+          "confidence": 0.92
+        },
+        {
+          "name": "left_ear",
+          "x": 284.0,
+          "y": 140.0,
+          "confidence": 0.89
+        },
+        {
+          "name": "right_ear",
+          "x": 316.0,
+          "y": 140.0,
+          "confidence": 0.88
+        },
+        {
+          "name": "left_shoulder",
+          "x": 260.0,
+          "y": 190.0,
+          "confidence": 0.95
+        },
+        {
+          "name": "right_shoulder",
+          "x": 340.0,
+          "y": 190.0,
+          "confidence": 0.94
+        },
+        {
+          "name": "left_elbow",
+          "x": 240.0,
+          "y": 250.0,
+          "confidence": 0.92
+        },
+        {
+          "name": "right_elbow",
+          "x": 360.0,
+          "y": 250.0,
+          "confidence": 0.91
+        },
+        {
+          "name": "left_wrist",
+          "x": 220.0,
+          "y": 310.0,
+          "confidence": 0.90
+        },
+        {
+          "name": "right_wrist",
+          "x": 380.0,
+          "y": 310.0,
+          "confidence": 0.89
+        },
+        {
+          "name": "left_hip",
+          "x": 270.0,
+          "y": 340.0,
+          "confidence": 0.96
+        },
+        {
+          "name": "right_hip",
+          "x": 330.0,
+          "y": 340.0,
+          "confidence": 0.95
+        },
+        {
+          "name": "left_knee",
+          "x": 260.0,
+          "y": 440.0,
+          "confidence": 0.93
+        },
+        {
+          "name": "right_knee",
+          "x": 340.0,
+          "y": 440.0,
+          "confidence": 0.92
+        },
+        {
+          "name": "left_ankle",
+          "x": 250.0,
+          "y": 540.0,
+          "confidence": 0.91
+        },
+        {
+          "name": "right_ankle",
+          "x": 350.0,
+          "y": 540.0,
+          "confidence": 0.90
+        }
+      ]
+    }
+  ]
+}
