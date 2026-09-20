@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.env
+
+# Database
+*.db
+
+# Uploaded videos
+videos/*
+uploads/*
+
+# ML models
+models/*.pkl
+models/*.joblib
+
+# Reports
+reports/*
+
+# Node
+node_modules/
+dist/
+
+# VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db

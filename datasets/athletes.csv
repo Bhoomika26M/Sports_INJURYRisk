@@ -1,0 +1,11 @@
+athlete_id,sport_type,position,age,height,weight,injury_history,training_load
+ATH001,Football,Forward,21,175,68,Previous ankle injury,75
+ATH002,Football,Midfielder,22,178,70,No previous injuries,65
+ATH003,Cricket,Batsman,24,180,76,Previous shoulder injury,80
+ATH004,Basketball,Guard,20,185,78,No previous injuries,72
+ATH005,Athletics,Sprinter,23,172,65,Previous hamstring injury,85
+ATH006,Football,Defender,25,182,82,Previous knee injury,78
+ATH007,Volleyball,Setter,21,176,68,No previous injuries,60
+ATH008,Cricket,Bowler,26,183,79,Previous back injury,70
+ATH009,Basketball,Forward,22,190,88,No previous injuries,74
+ATH010,Athletics,Runner,20,168,60,Previous ankle injury,68
