@@ -1,0 +1,17 @@
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# Frontend (if not already handled by Next.js inner gitignore)
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/.env.development.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
