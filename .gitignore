@@ -15,3 +15,8 @@ frontend/.env.development.local
 .idea/
 *.swp
 *.swo
+
+# Data & Uploads
+backend/*.db
+backend/uploads/
+backend/processed/

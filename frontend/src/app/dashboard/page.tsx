@@ -1,7 +1,137 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { getUserFromToken } from "@/lib/auth";
+
 export default function DashboardHome() {
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
+
+  useEffect(() => {
+    setUser(getUserFromToken());
+  }, []);
+
+  if (!user) return null;
+
+  switch (user.role) {
+    case "Athlete":
+      return <AthleteDashboard />;
+    case "Physiotherapist":
+      return <PhysioDashboard />;
+    case "Sports Scientist":
+      return <ScientistDashboard />;
+    case "Administrator":
+      return <AdminDashboard />;
+    case "Coach":
+    default:
+      return <CoachDashboard />;
+  }
+}
+
+function AthleteDashboard() {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">My Fitness Score</div>
+          <div className="text-3xl font-bold text-white">88/100</div>
+          <div className="text-xs text-green-400 mt-2">+2 from last week</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Injury Risk Level</div>
+          <div className="text-3xl font-bold text-emerald-400">Low</div>
+          <div className="text-xs text-slate-400 mt-2">Optimal form detected</div>
+        </div>
+        <Link href="/dashboard/upload" className="glass-panel p-6 rounded-2xl border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors cursor-pointer flex flex-col items-center justify-center text-indigo-400 hover:text-indigo-300">
+          <span className="font-medium">Upload Training Video</span>
+        </Link>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        Workout plans and progress charts go here
+      </div>
+    </div>
+  );
+}
+
+function PhysioDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Active Injuries</div>
+          <div className="text-3xl font-bold text-white">4</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Rehab Plans Active</div>
+          <div className="text-3xl font-bold text-white">12</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Cleared to Play</div>
+          <div className="text-3xl font-bold text-emerald-400">2 This Week</div>
+        </div>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        Injury-risk reports and recovery status tracking go here
+      </div>
+    </div>
+  );
+}
+
+function ScientistDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Team Fatigue Index</div>
+          <div className="text-3xl font-bold text-amber-400">Elevated</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Workload Spikes</div>
+          <div className="text-3xl font-bold text-rose-400">3 Players</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Reports Generated</div>
+          <div className="text-3xl font-bold text-white">14</div>
+        </div>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        Complex performance data and workload/fatigue trend graphs go here
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Total Users</div>
+          <div className="text-3xl font-bold text-white">245</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Active Teams</div>
+          <div className="text-3xl font-bold text-white">8</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">System Health</div>
+          <div className="text-3xl font-bold text-emerald-400">99.9%</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Storage Used</div>
+          <div className="text-3xl font-bold text-white">1.2 TB</div>
+        </div>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        User management, system settings, and platform activity logs go here
+      </div>
+    </div>
+  );
+}
+
+function CoachDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Stats Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="glass-panel p-6 rounded-2xl">
@@ -36,14 +166,14 @@ export default function DashboardHome() {
           </div>
         </div>
 
-        <div className="glass-panel p-6 rounded-2xl border-indigo-500/30 bg-indigo-500/5 cursor-pointer hover:bg-indigo-500/10 transition-colors group">
+        <Link href="/dashboard/upload" className="glass-panel p-6 rounded-2xl border-indigo-500/30 bg-indigo-500/5 cursor-pointer hover:bg-indigo-500/10 transition-colors group">
           <div className="h-full flex flex-col items-center justify-center text-indigo-400 group-hover:text-indigo-300">
             <svg className="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
             <span className="font-medium">Upload New Video</span>
           </div>
-        </div>
+        </Link>
       </div>
 
       {/* Main Content Area */}
