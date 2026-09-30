@@ -2,27 +2,25 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-07-11
-**Verified by:** full docker compose up --build, alembic upgrade, pytest run, and manual UI build verification.
+**Last verified:** 2026-09-30
+**Verified by:** postgres+redis via Docker, `alembic upgrade head` clean, seed idempotent, `pytest` 46/46 green, `npm run build` clean (16 routes), `/health` 200 against live server.
 
 ---
 
 ## Current status
 
-**Milestone 1 — Fully Complete.** Scaffolding, infrastructure, PostgreSQL/Redis setup, complete Auth module, and complete Athlete module are live. The frontend is fully scaffolded and built, successfully handling JWT rotation and RBAC routing.
+**Rebuild (all 4 milestones) — Backend + API complete and verified.** Fresh schema (`0001_init` + `0002_widen_confidence`), 7-movement registry seeded, JWT + Google OAuth2 scaffold, YOLO tracking with main-subject selection, 7 movement-specific biomechanics calculators, Isolation Forest anomaly + transparent composite scoring (anomaly/asymmetry/prior-injury/ACWR/fatigue), rule-based recommendations, team/coach/movement analytics, notifications, PDF/Excel/CSV exports with methodology_note.
 
-**Milestone 2 — Fully Complete (Post-Audit).** Video upload flow (mock S3), YOLOv8 person-count, MediaPipe Pose extraction, and Biomechanics math engines are fully implemented and passing security/robustness audits.
+**Frontend — all pages built, `npm run build` clean.** Design-system shell (sidebar/topbar/canvas), login/register (+Google button), landing, 5 role dashboards (athlete/coach/physio/scientist/admin with role router), athletes CRUD + ACWR view, video upload/detail/results (recharts + exports), notifications, reports.
 
-**Milestone 3 — Fully Complete.** Risk scoring baseline generation, anomaly detection using Isolation Forest, and rule-based recommendation engine implemented and verified via automated tests. Frontend Results view integrated.
-
-**Next step:** execute Milestone 4 — dashboards, notifications, reports, deploy.
+**Not yet verified:** end-to-end video processing on a real clip (needs YOLO/MediaPipe model downloads + arq worker running); Google OAuth2 needs real client credentials; S3/R2 swap still mocked to local disk; no browser-based manual UI pass yet.
 
 | Milestone | Modules | Status |
 |---|---|---|
-| M1 — auth, athletes, env setup | 1, 2 | complete |
-| M2 — video, pose, biomechanics | 3, 4, 5 | complete |
-| M3 — risk scoring, recommendations | 6, 7, 8, 9 | complete |
-| M4 — dashboards, notifications, reports, deploy | 10, 11, 12, 13 | not started |
+| M1 — auth, athletes, env setup | 1, 2 | complete (verified) |
+| M2 — video, pose, biomechanics | 3, 4, 5 | complete (verified, unit + API level) |
+| M3 — risk scoring, recommendations | 6, 7, 8, 9 | complete (verified) |
+| M4 — dashboards, notifications, reports, deploy | 10, 11, 12, 13 | complete except deploy (verified: build + API level, no live deploy) |
 
 ---
 
