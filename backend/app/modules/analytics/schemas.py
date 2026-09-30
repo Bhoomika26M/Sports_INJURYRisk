@@ -1,3 +1,5 @@
+"""Analytics Pydantic schemas."""
+
 from pydantic import BaseModel
 
 
@@ -31,3 +33,10 @@ class AthleteTrendResponse(BaseModel):
         "a bounded symmetry flag, and a bounded prior-injury flag. "
         "Not a trained injury-prediction model. See docs/SCIENCE_CONSTRAINTS.md."
     )
+
+
+class MovementAnalyticsResponse(BaseModel):
+    movement_type: str | None
+    videos_analyzed: int
+    baselines: dict
+    anomaly_distribution: dict

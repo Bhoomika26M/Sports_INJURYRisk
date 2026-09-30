@@ -1,12 +1,14 @@
 """Analytics service — dashboard backing queries. Routers stay thin."""
 
+from datetime import date, timedelta
+import numpy as np
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete
 from app.modules.risk_scoring.models import RiskScore
 from app.modules.users.models import User, UserRole
-from app.modules.videos.models import Video, VideoProcessingStatus
+from app.modules.video.models import Video, VideoProcessingStatus
 
 
 async def scoped_athlete_ids(db: AsyncSession, user: User) -> list[str] | None:
@@ -27,9 +29,8 @@ async def team_overview(db: AsyncSession, user: User) -> dict:
     video_q = select(func.count()).select_from(Video)
     completed_q = select(func.count()).select_from(Video).where(Video.processing_status == VideoProcessingStatus.completed)
     failed_q = select(func.count()).select_from(Video).where(Video.processing_status == VideoProcessingStatus.failed)
-    processing_q = select(func.count()).select_from(Video).where(
-        Video.processing_status == VideoProcessingStatus.processing
-    )
+    processing_q = select(func.count()).select_from(Video).where(Video.processing_status == VideoProcessingStatus.processing)
+
     if athlete_ids is not None:
         athlete_q = athlete_q.where(Athlete.id.in_(athlete_ids)) if athlete_ids else athlete_q.where(False)
         video_q = video_q.where(Video.athlete_id.in_(athlete_ids)) if athlete_ids else video_q.where(False)
@@ -65,3 +66,87 @@ async def team_overview(db: AsyncSession, user: User) -> dict:
         "low_risk_count": counts["low"],
         "moderate_risk_count": counts["moderate"],
     }
+
+
+async def athlete_trends(db: AsyncSession, athlete_id: str, user: User, limit: int = 50) -> dict:
+    """Get risk score trend for a specific athlete."""
+    rows = list(
+        (await db.scalars(select(RiskScore).where(RiskScore.athlete_id == athlete_id).order_by(RiskScore.created_at.desc()).limit(limit))).all()
+    )
+    videos = {v.id: v for v in (await db.scalars(select(Video).where(Video.athlete_id == athlete_id))).all()}
+    points = [
+        {
+            "video_id": r.video_id,
+            "movement_type": videos.get(r.video_id).movement_type if videos.get(r.video_id) else "unknown",
+            "overall_score": float(r.overall_score),
+            "risk_category": r.risk_category,
+            "created_at": r.created_at.isoformat() if r.created_at else "",
+        }
+        for r in rows
+    ]
+    return {"athlete_id": athlete_id, "points": points, "total": len(points)}
+
+
+async def movement_type_analytics(db: AsyncSession, user: User, movement_type: str | None = None) -> dict:
+    """Baseline stats and anomaly distributions per movement type."""
+    athlete_ids = await scoped_athlete_ids(db, user)
+
+    base_q = select(Video).where(Video.processing_status == VideoProcessingStatus.completed)
+    if athlete_ids is not None:
+        base_q = base_q.where(Video.athlete_id.in_(athlete_ids)) if athlete_ids else base_q.where(False)
+    if movement_type:
+        base_q = base_q.where(Video.movement_type == movement_type)
+
+    videos = list((await db.scalars(base_q)).all())
+    video_ids = [v.id for v in videos]
+
+    if not video_ids:
+        return {"movement_type": movement_type, "videos_analyzed": 0, "baselines": {}, "anomaly_distribution": {}}
+
+    from app.modules.risk_scoring.models import MovementBaseline, AnomalyScore
+
+    baselines = list((await db.scalars(select(MovementBaseline).where(MovementBaseline.movement_type == movement_type))).all()) if movement_type else []
+    anomalies = list((await db.scalars(select(AnomalyScore).join(Video, Video.id == AnomalyScore.video_id).where(Video.id.in_(video_ids)))).all())
+
+    baseline_data = {}
+    for b in baselines:
+        baseline_data[b.metric_name] = {"mean": b.mean_value, "std": b.std_dev, "sample_size": b.sample_size}
+
+    anomaly_scores = [float(a.anomaly_score) for a in anomalies]
+    anomaly_dist = {
+        "count": len(anomaly_scores),
+        "mean": round(np.mean(anomaly_scores), 1) if anomaly_scores else None,
+        "p50": round(np.percentile(anomaly_scores, 50), 1) if anomaly_scores else None,
+        "p90": round(np.percentile(anomaly_scores, 90), 1) if anomaly_scores else None,
+        "p99": round(np.percentile(anomaly_scores, 99), 1) if anomaly_scores else None,
+    }
+
+    return {"movement_type": movement_type, "videos_analyzed": len(videos), "baselines": baseline_data, "anomaly_distribution": anomaly_dist}
+
+
+async def coach_dashboard_data(db: AsyncSession, user) -> dict:
+    """Coach-specific dashboard: team risk overview, athlete table, trends."""
+    from app.modules.users.models import UserRole
+
+    overview = await team_overview(db, user)
+
+    if user.role == UserRole.coach:
+        athletes = list((await db.scalars(select(Athlete).where(Athlete.coach_id == user.id))).all())
+    else:
+        # physio / scientist / admin see all athletes
+        athletes = list((await db.scalars(select(Athlete).order_by(Athlete.created_at.desc()).limit(100))).all())
+    athlete_cards = []
+    for a in athletes:
+        latest_risk = await db.scalar(
+            select(RiskScore).where(RiskScore.athlete_id == a.id).order_by(RiskScore.created_at.desc()).limit(1)
+        )
+        athlete_cards.append({
+            "athlete_id": a.id,
+            "name": a.full_name,
+            "sport": a.sport_type,
+            "latest_risk_score": float(latest_risk.overall_score) if latest_risk else None,
+            "latest_risk_category": latest_risk.risk_category if latest_risk else None,
+            "last_assessed": latest_risk.created_at.isoformat() if latest_risk else None,
+        })
+
+    return {"overview": overview, "athletes": athlete_cards}

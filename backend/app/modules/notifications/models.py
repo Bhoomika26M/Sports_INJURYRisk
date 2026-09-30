@@ -1,7 +1,6 @@
-"""SQLAlchemy models for notifications table. Matches /docs/SCHEMA.md."""
+"""Notifications SQLAlchemy models."""
 
 from datetime import datetime
-
 from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column

@@ -58,3 +58,20 @@ async def mark_read(
     await db.commit()
     await db.refresh(note)
     return note
+
+
+@router.post("/read-all", response_model=dict)
+async def mark_all_read(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from datetime import datetime, timezone
+    from sqlalchemy import update
+
+    await db.execute(
+        update(Notification)
+        .where(Notification.user_id == current_user.id, Notification.read_at.is_(None))
+        .values(read_at=datetime.now(tz=timezone.utc))
+    )
+    await db.commit()
+    return {"message": "All notifications marked as read"}

@@ -8,16 +8,16 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_role
 from app.core.errors import api_error
 from app.database import get_db
-from app.modules.analytics.schemas import AthleteTrendResponse, RiskTrendPoint, TeamOverviewResponse
-from app.modules.analytics.service import team_overview
+from app.modules.analytics.schemas import AthleteTrendResponse, MovementAnalyticsResponse, RiskTrendPoint, TeamOverviewResponse
+from app.modules.analytics.service import athlete_trends, coach_dashboard_data, movement_type_analytics, team_overview
 from app.modules.athletes.models import Athlete
 from app.modules.risk_scoring.models import RiskScore
 from app.modules.recommendations.models import Recommendation
 from app.modules.users.models import User, UserRole
-from app.modules.videos.models import BiomechanicalMetric, Video
+from app.modules.video.models import BiomechanicalMetric, Video
 
 router = APIRouter(prefix="/api/v1", tags=["analytics"])
 
@@ -51,21 +51,25 @@ async def get_athlete_trends(
         raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-    rows = list(
-        (await db.scalars(select(RiskScore).where(RiskScore.athlete_id == athlete_id).order_by(desc(RiskScore.created_at)).limit(50))).all()
-    )
-    videos = {v.id: v for v in (await db.scalars(select(Video).where(Video.athlete_id == athlete_id))).all()}
-    points = [
-        RiskTrendPoint(
-            video_id=r.video_id,
-            movement_type=videos.get(r.video_id).movement_type if videos.get(r.video_id) else "unknown",
-            overall_score=float(r.overall_score),
-            risk_category=r.risk_category,
-            created_at=r.created_at.isoformat() if r.created_at else "",
-        )
-        for r in rows
-    ]
-    return AthleteTrendResponse(athlete_id=athlete_id, points=points, total=len(points))
+    return await athlete_trends(db, athlete_id, current_user)
+
+
+@router.get("/analytics/movement-types/{movement_type}", response_model=MovementAnalyticsResponse)
+async def get_movement_analytics(
+    movement_type: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    return await movement_type_analytics(db, current_user, movement_type)
+
+
+@router.get("/analytics/coach")
+async def get_coach_dashboard(
+    current_user: Annotated[User, Depends(require_role(UserRole.coach, UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist))],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    from app.modules.analytics.service import coach_dashboard_data
+    return await coach_dashboard_data(db, current_user)
 
 
 METHODOLOGY_NOTE = (
@@ -116,7 +120,7 @@ async def export_risk_pdf(
     ]
     breakdown = ctx["risk"].score_breakdown or {}
     rows = [["Component", "Points"]]
-    for key in ("movement_anomaly", "asymmetry_flag", "prior_injury_flag"):
+    for key in ("movement_anomaly", "asymmetry_flag", "prior_injury_flag", "acwr_flag", "fatigue_flag"):
         comp = breakdown.get(key, {}) if isinstance(breakdown, dict) else {}
         rows.append([key, str(comp.get("points", "-"))])
     table = Table(rows, colWidths=[300, 150])
@@ -153,7 +157,12 @@ async def export_risk_excel(
     ws.append(["risk_category", ctx["risk"].risk_category])
     ws.append(["methodology_note", METHODOLOGY_NOTE])
     ws.append([])
-    ws.append(["metric recommendations"])
+    ws.append(["metric", "points", "max"])
+    for key in ("movement_anomaly", "asymmetry_flag", "prior_injury_flag", "acwr_flag", "fatigue_flag"):
+        comp = ctx["risk"].score_breakdown.get(key, {}) if isinstance(ctx["risk"].score_breakdown, dict) else {}
+        ws.append([key, comp.get("points", "-"), comp.get("max", "-")])
+    ws.append([])
+    ws.append(["recommendations"])
     ws.append(["category", "title", "priority", "description"])
     for r in ctx["recs"]:
         ws.append([r.category, r.title, r.priority, r.description])

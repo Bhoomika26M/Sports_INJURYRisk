@@ -1,5 +1,6 @@
-from datetime import datetime
+"""Notifications Pydantic schemas."""
 
+from datetime import datetime
 from pydantic import BaseModel
 
 
