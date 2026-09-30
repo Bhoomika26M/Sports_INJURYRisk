@@ -1,3 +1,5 @@
+"""Video processing worker task — YOLO tracking + MediaPipe pose + biomechanics."""
+
 import logging
 import os
 from datetime import datetime
@@ -7,13 +9,14 @@ from sqlalchemy import select, update
 from app.database import async_session_factory
 from app.modules.users.models import User
 from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntry
-from app.modules.videos.models import Video, VideoProcessingStatus, PoseFrame, BiomechanicalMetric
+from app.modules.video.models import Video, VideoProcessingStatus, PoseFrame, BiomechanicalMetric
 from app.modules.risk_scoring.models import MovementBaseline, RiskScore
 from app.modules.recommendations.models import Recommendation
 from app.modules.pose.pipeline import track_persons, run_mediapipe_full_pass, extract_thumbnail
 from app.modules.biomechanics.calculations import (
     knee_flexion_angle, trunk_lean_angle, knee_valgus_flag, limb_symmetry_index, METRIC_CONFIDENCE
 )
+from app.modules.biomechanics.registry import get_calculator
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +54,6 @@ async def download_from_storage(storage_key: str) -> str:
 
 def cleanup_local_file(local_path: str):
     """Clean up local temp file. For local dev with /uploads, we leave it since it's the only copy."""
-    # In a real S3 scenario, we'd delete the downloaded local temp file here.
     pass
 
 
@@ -75,48 +77,30 @@ async def store_pose_frames(db, video_id: str, frame_results: list[dict]):
     await db.commit()
 
 
-def compute_biomechanics(frame_results: list[dict], camera_view: str) -> list[dict]:
+def compute_biomechanics(frame_results: list[dict], calculator, camera_view: str) -> list[dict]:
+    """Compute biomechanics using the movement-type-specific calculator."""
     metrics = []
     failed_frames = 0
-    
-    # We always compute sagittal metrics if they want them, or maybe compute all and just tag them?
-    # Actually, we can compute them unconditionally, but validity may depend on view. 
-    # But per spec, confidence is static per metric_name.
+
     for fr in frame_results:
         landmarks = fr["world_landmarks"]
         f_num = fr["frame_number"]
-        
+
         try:
-            # Knee flexion
-            kf_l = knee_flexion_angle(landmarks, "left")
-            metrics.append({"frame_number": f_num, "name": "knee_flexion_angle_left", "value": kf_l, "plane": "sagittal"})
-            
-            kf_r = knee_flexion_angle(landmarks, "right")
-            metrics.append({"frame_number": f_num, "name": "knee_flexion_angle_right", "value": kf_r, "plane": "sagittal"})
-            
-            # Trunk lean
-            tl = trunk_lean_angle(landmarks)
-            metrics.append({"frame_number": f_num, "name": "trunk_lean_angle", "value": tl, "plane": "sagittal"})
-            
-            # Knee valgus
-            kv_l = knee_valgus_flag(landmarks, "left")
-            if kv_l["deviation_pct"] is not None:
-                metrics.append({"frame_number": f_num, "name": "knee_valgus_deviation_left", "value": kv_l["deviation_pct"], "plane": "frontal"})
-                
-            kv_r = knee_valgus_flag(landmarks, "right")
-            if kv_r["deviation_pct"] is not None:
-                metrics.append({"frame_number": f_num, "name": "knee_valgus_deviation_right", "value": kv_r["deviation_pct"], "plane": "frontal"})
-                
+            frame_metrics = calculator.compute_all(landmarks, camera_view)
+            for m in frame_metrics:
+                m["frame_number"] = f_num
+                metrics.append(m)
         except KeyError as e:
             failed_frames += 1
             logger.warning(f"Frame {f_num}: missing landmark {e}, skipping this frame's biomechanics")
             continue
-            
+
     if failed_frames:
         logger.info(f"compute_biomechanics: {failed_frames}/{len(frame_results)} frames had missing landmarks")
     if not metrics and frame_results:
         logger.error(f"compute_biomechanics produced ZERO metrics from {len(frame_results)} frames — investigate immediately")
-            
+
     return metrics
 
 
@@ -128,7 +112,8 @@ async def store_biomechanical_metrics(db, video_id: str, metrics: list[dict]):
             metric_name=m["name"],
             metric_value=m["value"],
             plane=m["plane"],
-            confidence=METRIC_CONFIDENCE.get(m["name"], "qualitative")
+            confidence=m["confidence"],
+            movement_phase=m.get("phase"),
         )
         for m in metrics
     ]
@@ -151,7 +136,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             local_path = await download_from_storage(video.storage_key)
 
             # Step 1 — YOLO tracking across every frame: count people AND lock
-            # onto the main athlete (most frames present, largest on ties) so
+            # onto the main athlete (most frames present, largest box on ties) so
             # multi-person videos analyze one consistent person instead of
             # failing. See docs/DECISIONS.md (multi-person tracking).
             tracking = track_persons(local_path, ctx.get("yolo_model"), stride=1)
@@ -170,7 +155,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 )
             else:
                 logger.warning("No track IDs available — running untracked full-frame pose")
-                
+
             # Generate thumbnail before long processing starts
             thumbnail_filename = f"thumb_{video_id}.jpg"
             thumbnail_path = os.path.join("/uploads", thumbnail_filename)
@@ -203,24 +188,25 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                     subject_boxes=subject_boxes,
                 )
             )
-            
+
             if detection_rate < 0.70:
                 raise VideoProcessingError(
                     "low_detection_quality",
                     f"Pose detected in only {detection_rate:.0%} of frames — below the 70% floor. "
                     f"Check lighting, framing, and that the full body is in view."
                 )
-            
+
             await store_pose_frames(db, video_id, frame_results)
 
-            # Step 3 — biomechanics from world landmarks
-            metrics = compute_biomechanics(frame_results, camera_view=video.camera_view)
+            # Step 3 — biomechanics from world landmarks using movement-type calculator
+            calculator = get_calculator(video.movement_type)
+            metrics = compute_biomechanics(frame_results, calculator, camera_view=video.camera_view)
             await store_biomechanical_metrics(db, video_id, metrics)
 
             await update_video_status(
                 db, video_id, VideoProcessingStatus.completed,
                 processing_completed_at=now(),
-                person_count_detected=max(person_counts, default=0),
+                person_count_detected=max(person_counts),
                 detection_rate=detection_rate,
                 annotated_video_key=annotated_path,
                 progress_pct=100
@@ -237,13 +223,8 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             return {"status": "failed", "reason": e.code}
         except Exception as e:
             logger.exception(f"Unexpected error processing video {video_id}")
-            # Ensure it fails in DB if we run out of retries, but wait, arq handles retry natively.
-            # However, if it's the last retry, arq doesn't easily let us catch and mark as failed in DB.
-            # We'll just mark it failed directly if it crashes, but maybe we shouldn't unless it's fatal?
-            # Let's let arq retry, and maybe a background monitor can catch orphaned processing jobs.
-            # Actually, let's catch it, update db, and raise.
             await update_video_status(db, video_id, VideoProcessingStatus.failed, error_code="internal_error", error_message=str(e))
-            raise  # let arq's retry policy handle genuinely unexpected failures
+            raise
         finally:
             if local_path:
                 cleanup_local_file(local_path)

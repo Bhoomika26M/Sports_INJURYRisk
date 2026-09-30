@@ -187,7 +187,7 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
     main_track_id = select_main_track(tracks) if saw_ids else None
     if not saw_ids:
         tracks = {}
-        logger.warning("YOLO returned no track IDs — falling back to untracked (full-frame) pose")
+        logger.warning("YOLO returned no track IDs — running untracked full-frame pose")
     return {
         "person_counts": person_counts,
         "tracks": tracks,
@@ -196,21 +196,6 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
         "frames_processed": frame_idx,
         "tracked": saw_ids,
     }
-
-
-def run_yolo_person_check(video_path: str, model, sample_frames: int = 10) -> list[int]:
-    """
-    Run YOLOv8-pose on sampled frames to check person count.
-    Returns a list of person counts for each sampled frame.
-    Kept as a cheap pre-check wrapper around track_persons.
-    """
-    cap = cv2.VideoCapture(video_path)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.release()
-    if total_frames == 0:
-        return []
-    stride = max(1, total_frames // sample_frames)
-    return track_persons(video_path, model, stride=stride)["person_counts"]
 
 
 def crop_to_box(frame, box: tuple[float, float, float, float], pad_ratio: float = 0.15,
@@ -242,17 +227,6 @@ def map_crop_norm_to_full(nx: float, ny: float, origin_x: int, origin_y: int,
     if crop_w <= 0 or crop_h <= 0 or full_w <= 0 or full_h <= 0:
         return (nx, ny)
     return ((origin_x + nx * crop_w) / full_w, (origin_y + ny * crop_h) / full_h)
-
-
-def extract_thumbnail(video_path: str, output_path: str) -> None:
-    """Extract a frame from the middle of the video to use as a thumbnail."""
-    cap = cv2.VideoCapture(video_path)
-    midpoint = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) // 2
-    cap.set(cv2.CAP_PROP_POS_FRAMES, midpoint)
-    ok, frame = cap.read()
-    if ok:
-        cv2.imwrite(output_path, frame)
-    cap.release()
 
 
 def _draw_mapped_landmarks(frame, norm_landmarks, origin_x, origin_y, crop_w, crop_h):
@@ -399,3 +373,14 @@ def run_mediapipe_full_pass(video_path: str, annotate_output_path: str | None = 
         return _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes)
     finally:
         cap.release()
+
+
+def extract_thumbnail(video_path: str, output_path: str) -> None:
+    """Extract a frame from the middle of the video to use as a thumbnail."""
+    cap = cv2.VideoCapture(video_path)
+    midpoint = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) // 2
+    cap.set(cv2.CAP_PROP_POS_FRAMES, midpoint)
+    ok, frame = cap.read()
+    if ok:
+        cv2.imwrite(output_path, frame)
+    cap.release()
