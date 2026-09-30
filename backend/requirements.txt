@@ -10,3 +10,4 @@ mediapipe
 python-jose[cryptography]
 passlib[bcrypt]
 python-multipart
+bcrypt

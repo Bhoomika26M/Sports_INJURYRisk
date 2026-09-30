@@ -37,3 +37,7 @@ class AthleteProfileResponse(AthleteProfileBase):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+class GoogleLogin(BaseModel):
+    email: str
+    role: Optional[str] = "Athlete"

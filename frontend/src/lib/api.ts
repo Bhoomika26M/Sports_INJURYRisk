@@ -37,6 +37,22 @@ export const login = async (email: string, password: string) => {
   return response.json();
 };
 
+export const googleLogin = async (email: string, role: string = "Athlete") => {
+  const response = await fetch(`${API_URL}/auth/google`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, role }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Google login failed");
+  }
+
+  return response.json();
+};
+
 export const getMe = async (token: string) => {
   const response = await fetch(`${API_URL}/users/me`, {
     headers: {

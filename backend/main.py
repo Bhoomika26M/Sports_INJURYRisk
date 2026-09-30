@@ -80,6 +80,21 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
+@app.post("/auth/google", response_model=schemas.Token)
+def login_with_google(google_data: schemas.GoogleLogin, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == google_data.email).first()
+    if not user:
+        hashed_password = auth.get_password_hash("google_mock_password_random_secure")
+        user = models.User(email=google_data.email, hashed_password=hashed_password, role=google_data.role)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me", response_model=schemas.UserResponse)
 def read_users_me(current_user: models.User = Depends(get_current_user)):
