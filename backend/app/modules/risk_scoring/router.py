@@ -203,22 +203,20 @@ async def get_risk_score(
 
     # Create notification for high/critical risk
     if risk_result["risk_category"] in ("high", "critical"):
-        from app.modules.notifications.models import Notification
+        from app.modules.notifications.service import create_notification
         from app.modules.users.models import User as UserModel
         staff = list(
             (await db.scalars(select(UserModel).where(UserModel.role.in_(["coach", "physiotherapist", "sports_scientist", "admin"])))).all()
         )
         for member in staff:
-            db.add(
-                Notification(
-                    user_id=member.id,
-                    type="high_risk",
-                    title=f"{risk_result['risk_category'].title()} injury risk flagged",
-                    body=f"Video {video_id} ({video.movement_type}) scored {risk_result['overall_score']} ({risk_result['risk_category']}). Review recommended.",
-                    related_athlete_id=athlete.id,
-                )
+            await create_notification(
+                db,
+                user_id=member.id,
+                type="high_risk",
+                title=f"{risk_result['risk_category'].title()} injury risk flagged",
+                body=f"Video {video_id} ({video.movement_type}) scored {risk_result['overall_score']} ({risk_result['risk_category']}). Review recommended.",
+                related_athlete_id=athlete.id,
             )
-        await db.commit()
 
     return {
         "overall_score": risk_score.overall_score,

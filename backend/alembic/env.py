@@ -23,6 +23,7 @@ from app.modules.video.models import Video, PoseFrame, BiomechanicalMetric, Move
 from app.modules.risk_scoring.models import MovementBaseline, AnomalyScore, RiskScore # noqa: F401
 from app.modules.recommendations.models import Recommendation # noqa: F401
 from app.modules.notifications.models import Notification # noqa: F401
+from app.modules.analytics.models import ReportExport # noqa: F401
 
 # this is the Alembic Config object
 config = context.config
