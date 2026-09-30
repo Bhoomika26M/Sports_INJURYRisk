@@ -46,9 +46,7 @@ class Athlete(Base):
     date_of_birth: Mapped[date] = mapped_column(Date, nullable=False)
     height_cm: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
     weight_kg: Mapped[float | None] = mapped_column(Numeric(5, 2), nullable=True)
-    dominant_side: Mapped[str | None] = mapped_column(
-        String(10), nullable=True
-    )
+    dominant_side: Mapped[str | None] = mapped_column(String(10), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -59,11 +57,20 @@ class Athlete(Base):
     injury_history = relationship("InjuryHistory", back_populates="athlete", cascade="all, delete-orphan")
     training_load_entries = relationship("TrainingLoadEntry", back_populates="athlete", cascade="all, delete-orphan")
     videos = relationship("Video", back_populates="athlete", cascade="all, delete-orphan")
-    user = relationship("app.modules.users.models.User", foreign_keys=[user_id], lazy="selectin")
+    user = relationship("User", foreign_keys=[user_id], lazy="selectin")
 
     @property
     def full_name(self) -> str | None:
         return self.user.full_name if self.user else None
+
+    @property
+    def age(self) -> int | None:
+        if self.date_of_birth:
+            today = date.today()
+            return today.year - self.date_of_birth.year - (
+                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+            )
+        return None
 
     __table_args__ = (
         CheckConstraint("dominant_side IN ('left', 'right')", name="ck_athletes_dominant_side"),
@@ -115,6 +122,7 @@ class TrainingLoadEntry(Base):
     session_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
     duration_minutes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     rpe: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    session_load: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
