@@ -1,3 +1,5 @@
+"""Recommendation SQLAlchemy models."""
+
 import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -6,8 +8,10 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from app.database import Base
 
+
 def now():
     return datetime.now(tz=ZoneInfo("UTC"))
+
 
 class Recommendation(Base):
     __tablename__ = "recommendations"

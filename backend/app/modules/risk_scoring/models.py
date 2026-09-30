@@ -1,3 +1,5 @@
+"""SQLAlchemy models for risk_scoring tables."""
+
 import uuid
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -8,6 +10,7 @@ from app.database import Base
 
 def now():
     return datetime.now(tz=ZoneInfo("UTC"))
+
 
 class MovementBaseline(Base):
     __tablename__ = "movement_baselines"

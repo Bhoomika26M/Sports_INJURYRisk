@@ -1,16 +1,19 @@
-import numpy as np
+"""Baseline computation — population-level baselines from validated metrics."""
+
 import logging
-from fastapi import HTTPException
+import numpy as np
 from sqlalchemy import select, delete
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.modules.video.models import Video, VideoProcessingStatus, BiomechanicalMetric
+from app.modules.risk_scoring.models import MovementBaseline
 
 logger = logging.getLogger(__name__)
 
-from app.modules.videos.models import Video, VideoProcessingStatus, BiomechanicalMetric
-from app.modules.risk_scoring.models import MovementBaseline
-
 MIN_BASELINE_SAMPLES = 10
 
-async def upsert_baseline(db, movement_type: str, metric_name: str, mean_value: float, std_dev: float, sample_size: int):
+
+async def upsert_baseline(db: AsyncSession, movement_type: str, metric_name: str, mean_value: float, std_dev: float, sample_size: int):
     await db.execute(
         delete(MovementBaseline)
         .where(MovementBaseline.athlete_id.is_(None))
@@ -26,7 +29,8 @@ async def upsert_baseline(db, movement_type: str, metric_name: str, mean_value: 
     ))
     await db.commit()
 
-async def recompute_baseline(db, movement_type: str, metric_name: str) -> dict:
+
+async def recompute_baseline(db: AsyncSession, movement_type: str, metric_name: str) -> dict:
     """Population-level baseline (athlete_id NULL) from all validated-confidence metrics
     for this movement_type across every completed video. Upserts into movement_baselines."""
     stmt = (
@@ -55,12 +59,14 @@ async def recompute_baseline(db, movement_type: str, metric_name: str) -> dict:
     await upsert_baseline(db, movement_type, metric_name, mean_value, std_dev, sample_size)
     return {"movement_type": movement_type, "metric_name": metric_name, "sample_size": sample_size, "sufficient": sample_size >= MIN_BASELINE_SAMPLES, "dropped_non_finite": dropped}
 
+
 RECOMPUTE_COOLDOWN_SECONDS = 60
 
-async def recompute_baseline_debounced(db, redis, movement_type: str, metric_name: str) -> dict:
+async def recompute_baseline_debounced(db: AsyncSession, redis, movement_type: str, metric_name: str) -> dict:
     lock_key = f"baseline_recompute:{movement_type}:{metric_name}"
     acquired = await redis.set(lock_key, "1", nx=True, ex=RECOMPUTE_COOLDOWN_SECONDS)
     if not acquired:
+        from fastapi import HTTPException
         raise HTTPException(
             status_code=429,
             detail={"error": {"code": "RATE_LIMITED", "message": f"Baseline for '{movement_type}' was recomputed recently — try again shortly"}},
