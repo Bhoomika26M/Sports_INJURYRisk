@@ -22,10 +22,13 @@ arq==0.26.0
 aiofiles==23.2.1
 python-multipart==0.0.20
 
-# Pose estimation (dual-API: solutions on py3.12 Docker, tasks on py3.13 host)
-mediapipe>=0.10.21
+# Pose estimation (Tasks PoseLandmarker; legacy solutions path kept for older wheels)
+# NOTE: mediapipe 0.10.30's Windows wheel ships a broken libmediapipe.dll
+# (loader fails with "function 'free' not found") — 1.0.1 verified working.
+mediapipe>=1.0.1
 ultralytics==8.3.145
 opencv-python-headless==4.11.0.86
+lap>=0.5.12
 
 # ML / Analytics
 scikit-learn==1.6.1

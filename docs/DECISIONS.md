@@ -15,6 +15,11 @@ Append-only. New entries go at the top of their section, dated, never edited or 
 
 ## Decisions log
 
+### 2026-09-30 — Pin mediapipe>=1.0.1, add lap, verify real video end-to-end
+**Decision:** require `mediapipe>=1.0.1` (was `>=0.10.21`) and add explicit `lap>=0.5.12` (ByteTrack); verified `squat_sample.mp4` end-to-end: YOLO track → MediaPipe pose (213/213 frames) → 1065 validated metrics → risk 44.7/moderate → prior-injury recommendation.
+**Why:** 0.10.30's Windows wheel ships a broken `libmediapipe.dll` (loader fails with `function 'free' not found`), so the Tasks path could not run on the host; 1.0.1 verified working. `lap` was auto-installed mid-run by ultralytics — pinning makes tracking deterministic.
+**Alternatives considered:** Docker-backend verification — blocked, registry pulls fail with TLS errors; host verification chosen instead.
+
 ### 2026-09-30 — Multi-person videos tracked instead of rejected
 **Decision:** `pose/pipeline.py` gains YOLO tracking (`track_persons`, persistent IDs, main-subject selection by presence then box size) and `run_mediapipe_full_pass` crops each frame to the tracked athlete; `tasks.py::process_video` no longer raises `multiple_people_detected` — it logs the selected track and analyzes that one consistent person. No schema change (`person_count_detected` still records max persons seen).
 **Why:** real-world clips (gyms, fields, physio rooms) routinely have other people in frame; rejecting the whole video made injury screening unusable outside a studio. Cropping before pose also keeps single-person MediaPipe (`num_poses=1`) correct without identity flips.
