@@ -71,7 +71,7 @@ export default function DashboardLayout({
             const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}`));
             return (
               <Link key={item.name} href={item.href} className={`nav-item ${isActive ? "nav-item--active" : ""}`}>
-                <span>{item.name}</span>
+                {item.name}
                 {(item as any).badge > 0 && (
                   <span className="status-pill status-pill--danger" style={{ marginLeft: "auto" }}>
                     {(item as any).badge}

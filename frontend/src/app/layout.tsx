@@ -1,43 +1,20 @@
 import type { Metadata } from "next";
-import "./globals.css";
+import { Inter } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
+import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: {
-    default: "InjuryDetect — Sports Biomechanics & Injury Risk Intelligence",
-    template: "%s | InjuryDetect",
-  },
-  description: "AI-powered monocular video biomechanics screening platform for coaches, physiotherapists, and sports scientists. Joint kinematics, symmetry index, and heuristic injury risk flags.",
-  keywords: ["biomechanics", "sports injury prevention", "movement screening", "pose estimation", "kinematics", "ACWR", "physiotherapy"],
-  authors: [{ name: "InjuryDetect Team" }],
-  icons: {
-    icon: [
-      { url: "/favicon.svg", type: "image/svg+xml" },
-    ],
-    apple: [
-      { url: "/logo-icon.svg", type: "image/svg+xml" },
-    ],
-  },
-  openGraph: {
-    title: "InjuryDetect — Sports Biomechanics & Injury Risk Intelligence",
-    description: "AI-powered monocular video biomechanics screening platform for coaches, physiotherapists, and sports scientists.",
-    type: "website",
-    locale: "en_US",
-    siteName: "InjuryDetect",
-  },
+  title: "InjuryDetect | Sports Biomechanics & Injury Risk Intelligence",
+  description: "Movement screening, joint kinematics, and heuristic risk flags for athletes and coaches.",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-slate-100 text-slate-900 antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+    <html lang="en" className={`${inter.variable} antialiased`}>
+      <body className={`${inter.className} min-h-screen`}>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

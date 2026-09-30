@@ -62,7 +62,6 @@ export const apiClient = {
   },
 
   async fetchWithAuth(endpoint: string, options: RequestInit = {}) {
-    // If no in-memory token yet and not a public auth route, resolve token first
     if (!inMemoryToken && endpoint !== "/auth/refresh" && endpoint !== "/auth/login" && endpoint !== "/auth/register") {
       await refreshTokenSingleFlight();
     }
@@ -77,7 +76,6 @@ export const apiClient = {
       headers.set("Content-Type", "application/json");
     }
 
-    // Include credentials so the backend gets the httpOnly refresh_token cookie
     const config: RequestInit = {
       ...options,
       headers,
@@ -86,7 +84,6 @@ export const apiClient = {
 
     let response = await fetch(`${API_BASE_URL}${endpoint}`, config);
 
-    // If 401, attempt token rotation via single flight
     if (response.status === 401 && endpoint !== "/auth/refresh" && endpoint !== "/auth/login") {
       const newToken = await refreshTokenSingleFlight();
       if (newToken) {

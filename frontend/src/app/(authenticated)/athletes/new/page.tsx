@@ -1,191 +1,118 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { apiClient } from "@/lib/api-client";
+import { useRouter } from "next/navigation";
 
-export default function AddAthletePage() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const [formData, setFormData] = useState({
+export default function NewAthletePage() {
+  const [form, setForm] = useState({
     sport_type: "",
     position: "",
     date_of_birth: "",
     height_cm: "",
     weight_kg: "",
-    dominant_side: "",
+    dominant_side: "right",
   });
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError("");
+    setLoading(true);
 
     try {
-      const payload: any = {
-        sport_type: formData.sport_type,
-        date_of_birth: formData.date_of_birth,
-      };
-
-      if (formData.position) payload.position = formData.position;
-      if (formData.height_cm) payload.height_cm = parseFloat(formData.height_cm);
-      if (formData.weight_kg) payload.weight_kg = parseFloat(formData.weight_kg);
-      if (formData.dominant_side) payload.dominant_side = formData.dominant_side;
-
       await apiClient.fetchWithAuth("/athletes", {
         method: "POST",
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          sport_type: form.sport_type,
+          position: form.position || null,
+          date_of_birth: form.date_of_birth,
+          height_cm: form.height_cm ? parseFloat(form.height_cm) : null,
+          weight_kg: form.weight_kg ? parseFloat(form.weight_kg) : null,
+          dominant_side: form.dominant_side,
+        }),
       });
-
       router.push("/athletes");
-    } catch (err: any) {
-      setError(err.message || "Failed to create athlete");
+    } catch (e: any) {
+      setError(e.message || "Failed to create athlete");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <Link href="/athletes" className="text-xs font-semibold text-blue-600 hover:underline">
-          ← Back to Athletes
-        </Link>
-      </div>
-
+    <div className="space-y-6">
       <div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">
-          Register New Athlete
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-500 mt-1">
-          Add an athlete to your roster to track kinematics baselines and movement risk assessments.
-        </p>
+        <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>New Athlete</h1>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Create a new athlete profile.</p>
       </div>
-      
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm p-4 rounded-xl flex items-center gap-3">
-          <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <span>{error}</span>
-        </div>
-      )}
 
-      <form 
-        onSubmit={handleSubmit} 
-        className="bento-card p-6 sm:p-8 space-y-5"
-       
-      >
-        <div>
-          <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-            Sport Discipline *
-          </label>
-          <input
-            type="text"
-            name="sport_type"
-            required
-            value={formData.sport_type}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
-            placeholder="e.g. Basketball, Soccer, Sprinting"
-          />
-        </div>
+      <form className="bento-card p-6 space-y-5" onSubmit={handleSubmit}>
+        {error && <div className="status-pill status-pill--danger">{error}</div>}
 
         <div>
-          <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-            Position / Role
+          <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+            Sport Type
           </label>
-          <input
-            type="text"
-            name="position"
-            value={formData.position}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
-            placeholder="e.g. Point Guard, Midfielder, Sprinter"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-            Date of Birth *
-          </label>
-          <input
-            type="date"
-            name="date_of_birth"
-            required
-            value={formData.date_of_birth}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-              Height (cm)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              name="height_cm"
-              value={formData.height_cm}
-              onChange={handleChange}
-              placeholder="e.g. 185"
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-              Weight (kg)
-            </label>
-            <input
-              type="number"
-              step="0.1"
-              name="weight_kg"
-              value={formData.weight_kg}
-              onChange={handleChange}
-              placeholder="e.g. 80"
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
-            Dominant Side
-          </label>
-          <select
-            name="dominant_side"
-            value={formData.dominant_side}
-            onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
-          >
-            <option value="">Select Dominant Side...</option>
-            <option value="right">Right</option>
-            <option value="left">Left</option>
-            <option value="bilateral">Bilateral / Both</option>
+          <select className="field-input" value={form.sport_type} onChange={e => setForm({...form, sport_type: e.target.value})} required>
+            <option value="">Select sport</option>
+            <option value="basketball">Basketball</option>
+            <option value="soccer">Soccer</option>
+            <option value="track">Track & Field</option>
+            <option value="volleyball">Volleyball</option>
+            <option value="tennis">Tennis</option>
+            <option value="baseball">Baseball</option>
+            <option value="football">Football</option>
+            <option value="swimming">Swimming</option>
+            <option value="other">Other</option>
           </select>
         </div>
 
-        <div className="pt-4 flex items-center justify-end gap-3">
-          <Link
-            href="/athletes"
-            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all cursor-pointer shadow-xs"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={loading}
-            className="pill-btn--primary"
-          >
-            {loading ? "Registering..." : "Register Athlete"}
+        <div>
+          <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+            Position (optional)
+          </label>
+          <input className="field-input" placeholder="e.g., Point Guard, Striker" value={form.position} onChange={e => setForm({...form, position: e.target.value})} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+              Date of Birth
+            </label>
+            <input type="date" className="field-input" value={form.date_of_birth} onChange={e => setForm({...form, date_of_birth: e.target.value})} required />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+              Dominant Side
+            </label>
+            <select className="field-input" value={form.dominant_side} onChange={e => setForm({...form, dominant_side: e.target.value})} required>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+              Height (cm)
+            </label>
+            <input type="number" step="0.1" min="50" max="300" className="field-input" placeholder="185.5" value={form.height_cm} onChange={e => setForm({...form, height_cm: e.target.value})} />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
+              Weight (kg)
+            </label>
+            <input type="number" step="0.1" min="20" max="200" className="field-input" placeholder="82.0" value={form.weight_kg} onChange={e => setForm({...form, weight_kg: e.target.value})} />
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <button type="submit" disabled={loading} className="pill-btn--primary w-full justify-center">
+            {loading ? "Creating..." : "Create Athlete"}
           </button>
         </div>
       </form>

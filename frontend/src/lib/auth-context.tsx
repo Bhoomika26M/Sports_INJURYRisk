@@ -1,31 +1,29 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { apiClient } from "./api-client";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { apiClient } from "@/lib/api-client";
 
-type User = {
+interface User {
   id: string;
   email: string;
   full_name: string;
   role: string;
-};
+  google_id: string | null;
+  avatar_url: string | null;
+}
 
-type AuthContextType = {
+interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (access_token: string, user_data: User) => void;
-  logout: () => Promise<void>;
-};
+  login: (token: string, user: User) => void;
+  logout: () => void;
+}
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
-  const [accessToken, setAccessToken] = useState<string | null>(null);
 
   useEffect(() => {
     const bootstrap = async () => {
@@ -36,17 +34,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(userData);
         } else {
           setUser(null);
-          apiClient.setToken(null);
-          if (typeof document !== "undefined") {
-            document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
-          }
         }
-      } catch (err) {
+      } catch {
         setUser(null);
-        apiClient.setToken(null);
-        if (typeof document !== "undefined") {
-          document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
-        }
       } finally {
         setLoading(false);
       }
@@ -54,27 +44,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     bootstrap();
   }, []);
 
-  const login = (access_token: string, user_data: User) => {
-    apiClient.setToken(access_token);
-    setUser(user_data);
-    
-    // Cookie approach for middleware sync — just an indicator flag since 
-    // the real refresh token is httpOnly
-    document.cookie = `refresh_token=present; path=/; max-age=604800; SameSite=Lax`; 
-    
-    router.push("/dashboard");
+  const login = (token: string, userData: User) => {
+    apiClient.setToken(token);
+    setUser(userData);
   };
 
-  const logout = async () => {
-    try {
-      await apiClient.fetchWithAuth("/auth/logout", { method: "POST" });
-    } catch (err) {
-      console.error("Logout failed:", err);
-    } finally {
-      apiClient.setToken(null);
-      document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-      setUser(null);
-      router.push("/login");
+  const logout = () => {
+    apiClient.setToken(null);
+    setUser(null);
+    if (typeof window !== "undefined") {
+      document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
+      window.location.href = "/login";
     }
   };
 
@@ -87,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

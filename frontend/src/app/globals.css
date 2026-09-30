@@ -239,11 +239,3 @@ body {
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
 @keyframes scaleInSubtle { from { opacity: 0; transform: scale(0.97) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-
-/* Legacy neumorphic helpers — remapped to design system so old pages keep rendering */
-.neu-card, .neu-flat, .neu-pill { background-color: #FFFFFF; border: 1px solid var(--border-faint); border-radius: var(--radius-card); box-shadow: var(--shadow-diffuse); }
-.neu-inset { background-color: var(--bg-surface); border: 1px solid var(--border-hair); border-radius: var(--radius-inner); box-shadow: none; }
-.neu-button-primary { background-color: var(--brand-primary) !important; color: var(--brand-primary-fg) !important; border-radius: var(--radius-pill) !important; font-weight: 700 !important; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border: none !important; box-shadow: none !important; }
-.neu-button-primary:hover:not(:disabled) { background-color: var(--brand-primary-hover) !important; transform: translateY(-1px); box-shadow: none !important; }
-.neu-button-secondary { background-color: #FFFFFF !important; color: var(--text-primary) !important; border: 1px solid var(--border-hair) !important; border-radius: var(--radius-pill) !important; font-weight: 600 !important; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: none !important; }
-.neu-pill-active { background-color: var(--brand-tint) !important; color: var(--brand-text) !important; border-color: rgba(22,51,0,0.14) !important; box-shadow: none !important; }

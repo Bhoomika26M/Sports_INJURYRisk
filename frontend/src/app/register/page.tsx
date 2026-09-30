@@ -25,7 +25,6 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password, full_name: fullName, role }),
       });
 
-      // Redirect to login after successful registration
       router.push("/login");
     } catch (err) {
       if (err instanceof ApiError) {
@@ -54,7 +53,7 @@ export default function RegisterPage() {
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
             <div className="status-pill status-pill--danger" style={{ padding: "12px 16px", fontSize: 13 }}>
-              <span>{error}</span>
+              {error}
             </div>
           )}
 
@@ -74,9 +73,9 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
-              Password (min 4 characters)
+              Password (min 8 characters)
             </label>
-            <input name="password" type="password" autoComplete="new-password" required minLength={4} className="field-input" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <input name="password" type="password" autoComplete="new-password" required minLength={8} className="field-input" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
 
           <div>
