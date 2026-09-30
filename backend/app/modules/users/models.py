@@ -34,6 +34,8 @@ class User(Base):
         Enum(UserRole, name="user_role", create_constraint=True), nullable=False
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    google_id: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
@@ -42,6 +44,7 @@ class User(Base):
     )
 
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
+    notification_prefs = relationship("NotificationPreference", back_populates="user", cascade="all, delete-orphan")
 
 
 class RefreshToken(Base):
@@ -63,3 +66,16 @@ class RefreshToken(Base):
     )
 
     user = relationship("User", back_populates="refresh_tokens")
+
+
+class NotificationPreference(Base):
+    __tablename__ = "notification_preferences"
+
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    notification_type: Mapped[str] = mapped_column(String(30), primary_key=True)
+    in_app: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="true")
+    email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
+
+    user = relationship("User", back_populates="notification_prefs")

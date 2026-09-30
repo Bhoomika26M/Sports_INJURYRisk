@@ -1,10 +1,10 @@
 """FastAPI dependencies — authentication and role-based access control."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, Optional
 
 import jwt
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +19,7 @@ bearer_scheme = HTTPBearer(auto_error=False)
 
 
 async def get_current_user(
+    request: Request,
     credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
@@ -91,4 +92,3 @@ async def get_redis() -> aioredis.Redis:
     if _redis_pool is None:
         _redis_pool = aioredis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
     return _redis_pool
-

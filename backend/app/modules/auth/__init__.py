@@ -1,1 +1,1 @@
-# auth module
+"""Auth module exports."""

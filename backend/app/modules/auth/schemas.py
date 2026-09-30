@@ -1,15 +1,15 @@
-"""Auth schemas — Pydantic request/response models for auth endpoints."""
+"""Auth Pydantic schemas."""
+
+from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, Field
-
-from app.modules.users.models import UserRole
 
 
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(min_length=4, max_length=128)
+    password: str = Field(min_length=8, max_length=128)
     full_name: str = Field(min_length=1, max_length=255)
-    role: UserRole
+    role: str = Field(pattern="^(athlete|coach|physiotherapist|sports_scientist|admin)$")
 
 
 class LoginRequest(BaseModel):
@@ -26,11 +26,26 @@ class UserResponse(BaseModel):
     id: str
     email: str
     full_name: str
-    role: UserRole
-    is_active: bool
+    role: str
+    google_id: str | None = None
+    avatar_url: str | None = None
+    created_at: datetime
 
     model_config = {"from_attributes": True}
 
 
 class MessageResponse(BaseModel):
     message: str
+
+
+class GoogleUserInfo(BaseModel):
+    sub: str
+    email: str
+    name: str | None = None
+    picture: str | None = None
+    email_verified: bool = False
+
+
+class GoogleLoginRequest(BaseModel):
+    code: str
+    redirect_uri: str

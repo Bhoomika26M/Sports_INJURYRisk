@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.modules.auth.router import router as auth_router
 from app.modules.athletes.router import router as athletes_router
-from app.modules.videos.router import router as videos_router
+from app.modules.video.router import router as videos_router
 from app.modules.risk_scoring.router import router as risk_scoring_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.analytics.router import router as analytics_router
@@ -43,6 +43,7 @@ app.include_router(analytics_router)
 async def health_check():
     return {"status": "healthy"}
 
+
 import aiofiles
 import os
 import re
@@ -54,7 +55,7 @@ from sqlalchemy.future import select
 from app.database import get_db
 from app.core.deps import get_current_user
 from app.modules.users.models import User
-from app.modules.videos.models import Video, VideoProcessingStatus
+from app.modules.video.models import Video, VideoProcessingStatus
 
 os.makedirs("/uploads", exist_ok=True)
 
@@ -70,7 +71,7 @@ async def upload_local_file(
     """Mock local-disk stand-in for a real presigned upload. Dev only — see docs/DECISIONS.md."""
     if not STORAGE_KEY_PATTERN.match(key):
         raise HTTPException(status_code=400, detail={"error": {"code": "invalid_key", "message": "Invalid storage key"}})
-    
+
     video = await db.scalar(
         select(Video).where(Video.storage_key == key, Video.processing_status == VideoProcessingStatus.pending_upload)
     )
@@ -85,4 +86,3 @@ async def upload_local_file(
         async for chunk in request.stream():
             await f.write(chunk)
     return {"status": "ok"}
-
