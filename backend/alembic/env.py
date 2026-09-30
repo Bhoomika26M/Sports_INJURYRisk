@@ -17,11 +17,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.database import Base
 
 # Import all models so they register with Base.metadata
-from app.modules.users.models import User, RefreshToken  # noqa: F401
+from app.modules.users.models import User, RefreshToken, NotificationPreference  # noqa: F401
 from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntry  # noqa: F401
-from app.modules.videos.models import Video, PoseFrame, BiomechanicalMetric  # noqa: F401
+from app.modules.video.models import Video, PoseFrame, BiomechanicalMetric, MovementType, MovementMetric  # noqa: F401
 from app.modules.risk_scoring.models import MovementBaseline, AnomalyScore, RiskScore # noqa: F401
 from app.modules.recommendations.models import Recommendation # noqa: F401
+from app.modules.notifications.models import Notification # noqa: F401
 
 # this is the Alembic Config object
 config = context.config

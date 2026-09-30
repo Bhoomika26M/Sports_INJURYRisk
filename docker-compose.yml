@@ -1,12 +1,13 @@
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-injury_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_in_production}
       POSTGRES_DB: ${POSTGRES_DB:-injury_detection}
     ports:
-      - "5432:5432"
+      # POSTGRES_PORT defaults to 5432; override in .env if the host port is taken
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -48,8 +49,6 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    # To avoid concurrent build pipe error in Docker Desktop, we can just let it build or we can serialize it. 
-    # Let's just leave it but we will build them sequentially instead of together.
     env_file:
       - .env
     depends_on:
@@ -70,7 +69,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "${FRONTEND_PORT:-3001}:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     env_file:
       - .env
     depends_on:

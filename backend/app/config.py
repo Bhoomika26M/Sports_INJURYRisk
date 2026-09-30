@@ -1,6 +1,7 @@
 """Application configuration — reads from environment variables."""
 
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -17,6 +18,11 @@ class Settings(BaseSettings):
     jwt_refresh_token_expire_days: int = 7
     jwt_algorithm: str = "HS256"
 
+    # Google OAuth2
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
+    google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
+
     # Backend
     backend_cors_origins: str = "http://localhost:3000"
     backend_host: str = "0.0.0.0"
@@ -24,6 +30,17 @@ class Settings(BaseSettings):
 
     # Frontend
     next_public_api_url: str = "http://localhost:8000/api/v1"
+
+    # Storage
+    use_s3_storage: bool = False
+    s3_bucket: Optional[str] = None
+    s3_region: Optional[str] = None
+    s3_access_key: Optional[str] = None
+    s3_secret_key: Optional[str] = None
+
+    # Email (SendGrid)
+    sendgrid_api_key: Optional[str] = None
+    sendgrid_from_email: str = "noreply@injury-detection.local"
 
     @property
     def backend_cors_origins_list(self) -> list[str]:

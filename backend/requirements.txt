@@ -13,28 +13,40 @@ alembic==1.16.2
 # Auth
 argon2-cffi==23.1.0
 pyjwt==2.10.1
+authlib==1.3.1
 
 # Async task queue
 arq==0.26.0
 
 # File handling
 aiofiles==23.2.1
+python-multipart==0.0.20
 
 # Pose estimation (dual-API: solutions on py3.12 Docker, tasks on py3.13 host)
 mediapipe>=0.10.21
 ultralytics==8.3.145
 opencv-python-headless==4.11.0.86
 
-# M4 reports (PDF/Excel export, methodology_note preserved on export)
+# ML / Analytics
+scikit-learn==1.6.1
+numpy==1.26.4
+pandas==2.2.1
+
+# Reports (PDF/Excel export, methodology_note preserved on export)
 reportlab==4.2.5
 openpyxl==3.1.5
+
+# Email
+sendgrid==6.11.0
+
+# WebSocket
+websockets==12.0
+
+# Utilities
+structlog==25.4.0
 
 # Testing
 pytest==8.4.1
 pytest-asyncio==1.0.0
 httpx==0.28.1
-
-# Utilities
-python-multipart==0.0.20
-structlog==25.4.0
-scikit-learn==1.6.1
+pytest-mock==3.14.0
