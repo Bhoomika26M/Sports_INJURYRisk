@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+import shutil
 import uuid
 import json
 import subprocess
@@ -167,9 +168,19 @@ async def confirm_upload(
     if not (video.original_filename.lower().endswith(".mp4") or video.original_filename.lower().endswith(".mov")):
         await _reject_upload(db, video, "invalid_format", "Only .mp4 or .mov files are allowed", local_path)
 
-    # Run ffprobe
+    # Run ffprobe (PATH first, static-ffmpeg bundle fallback for hosts
+    # without a system install — Docker images ship ffmpeg already)
+    ffprobe_bin = shutil.which("ffprobe")
+    if ffprobe_bin is None:
+        try:
+            from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+            _, ffprobe_bin = get_or_fetch_platform_executables_else_raise()
+        except Exception as e:
+            logger.error(f"no ffprobe available: {e}")
+    if ffprobe_bin is None:
+        await _reject_upload(db, video, "validator_unavailable", "Video validator (ffprobe) is not installed on this host", local_path)
     cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        ffprobe_bin, "-v", "error", "-select_streams", "v:0",
         "-show_entries", "stream=width,height,r_frame_rate,duration",
         "-of", "json", local_path
     ]

@@ -15,6 +15,11 @@ Append-only. New entries go at the top of their section, dated, never edited or 
 
 ## Decisions log
 
+### 2026-09-30 — Trunk lean measured against MediaPipe's downward +Y axis (real-data bug)
+**Decision:** `biomechanics/calculations.py::trunk_lean_angle` now measures against `[0,-1,0]` instead of `[0,+1,0]`; added 3 regression tests. Also `static-ffmpeg==2.5.1` pinned, with `video/router.py::confirm_upload` resolving `ffprobe` from `PATH` first and falling back to the static-ffmpeg bundle.
+**Why:** the first real-video E2E stored trunk lean of 154–175° on genuine squats. MediaPipe *world* landmarks use Y-down (verified against stored keypoints: head y≈−0.6, hip y≈0.0, ankle y≈+0.75), so the old reference vector inverted every lean measurement. This is exactly the class of bug unit tests with synthetic landmarks cannot catch — it only appears on real landmark data. `static-ffmpeg` is needed because the host has no system ffprobe, so `confirm_upload` could never complete outside Docker.
+**Alternatives considered:** deriving "up" from nose-to-ankle vector per frame — rejected as fragile and it re-introduces the same assumption indirectly; requiring system ffmpeg on every dev host — rejected, pip-installed binaries keep the host path working.
+
 ### 2026-09-30 — Pin mediapipe>=1.0.1, add lap, verify real video end-to-end
 **Decision:** require `mediapipe>=1.0.1` (was `>=0.10.21`) and add explicit `lap>=0.5.12` (ByteTrack); verified `squat_sample.mp4` end-to-end: YOLO track → MediaPipe pose (213/213 frames) → 1065 validated metrics → risk 44.7/moderate → prior-injury recommendation.
 **Why:** 0.10.30's Windows wheel ships a broken `libmediapipe.dll` (loader fails with `function 'free' not found`), so the Tasks path could not run on the host; 1.0.1 verified working. `lap` was auto-installed mid-run by ultralytics — pinning makes tracking deterministic.

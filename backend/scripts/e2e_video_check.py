@@ -25,6 +25,7 @@ CLIP = sys.argv[1] if len(sys.argv) > 1 else os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
     "test-assets", "sample-clips", "squat_sample.mp4",
 )
+MOVEMENT = sys.argv[2] if len(sys.argv) > 2 else "squatting"
 
 
 async def main():
@@ -38,7 +39,8 @@ async def main():
     assert os.path.exists(weights), f"missing weights: {weights}"
     assert os.path.exists(CLIP), f"missing clip: {CLIP}"
 
-    storage_key = f"{uuid.uuid4()}_squat_sample.mp4"
+    clip_name = os.path.basename(CLIP)
+    storage_key = f"{uuid.uuid4()}_{clip_name}"
     shutil.copy(CLIP, os.path.join("/uploads", storage_key))
     print(f"clip copied -> /uploads/{storage_key}", flush=True)
 
@@ -47,8 +49,8 @@ async def main():
         athlete = (await db.scalars(select(Athlete).where(Athlete.coach_id == coach.id))).first()
         assert athlete, "seed athletes missing — run python -m app.seed first"
         video = Video(
-            athlete_id=athlete.id, uploaded_by=coach.id, movement_type="squatting",
-            storage_key=storage_key, original_filename="squat_sample.mp4",
+            athlete_id=athlete.id, uploaded_by=coach.id, movement_type=MOVEMENT,
+            storage_key=storage_key, original_filename=clip_name,
             camera_view="sagittal", processing_status=VideoProcessingStatus.pending_upload,
         )
         db.add(video)

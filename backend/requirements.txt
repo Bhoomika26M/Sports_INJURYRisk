@@ -29,6 +29,7 @@ mediapipe>=1.0.1
 ultralytics==8.3.145
 opencv-python-headless==4.11.0.86
 lap>=0.5.12
+static-ffmpeg==2.5.1
 
 # ML / Analytics
 scikit-learn==1.6.1

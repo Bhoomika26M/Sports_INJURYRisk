@@ -50,7 +50,12 @@ def hip_flexion_angle(world_landmarks: dict, side: str) -> float:
 
 
 def trunk_lean_angle(world_landmarks: dict) -> float | None:
-    """Trunk lean from vertical. 0° = upright, positive = forward lean."""
+    """Trunk lean from upright. 0° = upright, positive = forward lean.
+
+    NOTE: MediaPipe world +Y points DOWN (verified against real data:
+    head y≈-0.6, ankle y≈+0.75), so 'up' is [0,-1,0]. Measuring against
+    +Y would report ~180°-lean (verified bug, 2026-09-30).
+    """
     shoulder_mid = (np.array(world_landmarks[str(LANDMARK["left_shoulder"])]) +
                     np.array(world_landmarks[str(LANDMARK["right_shoulder"])]) ) / 2
     hip_mid = (np.array(world_landmarks[str(LANDMARK["left_hip"])]) +
@@ -59,8 +64,8 @@ def trunk_lean_angle(world_landmarks: dict) -> float | None:
     norm = np.linalg.norm(trunk_vector)
     if norm < 1e-6:
         return None
-    vertical = np.array([0.0, 1.0, 0.0])
-    cos_angle = np.clip(np.dot(trunk_vector, vertical) / norm, -1.0, 1.0)
+    up = np.array([0.0, -1.0, 0.0])
+    cos_angle = np.clip(np.dot(trunk_vector, up) / norm, -1.0, 1.0)
     return round(float(np.degrees(np.arccos(cos_angle))), 1)
 
 
