@@ -120,7 +120,7 @@ async def get_risk_score(
         sample_vectors = np.array(sample_values).reshape(-1, 1)
         
         try:
-            scores = compute_anomaly_scores(sample_vectors, baseline_vectors, MIN_BASELINE_SAMPLES, cache_key=f"{video.movement_type}:{m_name}")
+            scores = compute_anomaly_scores(sample_vectors, baseline_vectors, MIN_BASELINE_SAMPLES, cache_key=f"{video.movement_type}:{m_name}", metric_name=m_name)
             anomaly_percentiles.extend(scores)
         except InsufficientBaselineError as e:
             return JSONResponse(
@@ -177,6 +177,25 @@ async def get_risk_score(
     ]
     db.add_all(db_recs)
     await db.commit()
+
+    if risk_result["risk_category"] in ("high", "critical"):
+        from app.modules.notifications.models import Notification
+        from app.modules.users.models import User as UserModel
+
+        staff = list(
+            (await db.scalars(select(UserModel).where(UserModel.role.in_(["coach", "physiotherapist", "sports_scientist", "admin"])))).all()
+        )
+        for member in staff:
+            db.add(
+                Notification(
+                    user_id=member.id,
+                    type="high_risk",
+                    title=f"{risk_result['risk_category'].title()} injury risk flagged",
+                    body=f"Video {video_id} ({video.movement_type}) scored {risk_result['overall_score']} ({risk_result['risk_category']}). Review recommended.",
+                    related_athlete_id=athlete.id,
+                )
+            )
+        await db.commit()
 
     return {
         "overall_score": risk_score.overall_score,

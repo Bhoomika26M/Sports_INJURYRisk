@@ -15,6 +15,16 @@ Append-only. New entries go at the top of their section, dated, never edited or 
 
 ## Decisions log
 
+### 2026-09-30 — Multi-person videos tracked instead of rejected
+**Decision:** `pose/pipeline.py` gains YOLO tracking (`track_persons`, persistent IDs, main-subject selection by presence then box size) and `run_mediapipe_full_pass` crops each frame to the tracked athlete; `tasks.py::process_video` no longer raises `multiple_people_detected` — it logs the selected track and analyzes that one consistent person. No schema change (`person_count_detected` still records max persons seen).
+**Why:** real-world clips (gyms, fields, physio rooms) routinely have other people in frame; rejecting the whole video made injury screening unusable outside a studio. Cropping before pose also keeps single-person MediaPipe (`num_poses=1`) correct without identity flips.
+**Alternatives considered:** per-frame largest-box without IDs — rejected, identity flips frame-to-frame corrupt per-frame metric series; multi-pose estimation + clustering — rejected, MediaPipe single-pose plus crop is simpler and already in the stack.
+
+### 2026-09-30 — M4 reports deps + mediapipe dual-API support
+**Decision:** add `reportlab==4.2.5` + `openpyxl==3.1.5` for PDF/Excel risk-report export; relax `mediapipe==0.10.21` to `mediapipe>=0.10.21` with dual `solutions`/`tasks` code path in `pose/pipeline.py`.
+**Why:** PDF brief modules 12 requires PDF/Excel export with methodology_note preserved; host Python 3.13 cannot install 0.10.21 and newer mediapipe removed `solutions.pose`, while Docker Python 3.12 still uses it — dual path works in both.
+**Alternatives considered:** pin Python 3.12 locally — rejected, host toolchain stays 3.13.
+
 ### 2026-07-11 — YOLO26-pose confirmed unavailable, yolov8n-pose.pt is the real decision
 **Decision:** use `yolov8n-pose.pt`, not YOLO26-pose as originally logged.
 **Why:** yolo26n-pose.pt is not available as a downloadable checkpoint in the installed

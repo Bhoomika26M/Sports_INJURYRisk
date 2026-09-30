@@ -39,7 +39,10 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      // Immediately fetch /me to get user details for context
+      // Set inMemoryToken so immediate /auth/me fetch succeeds
+      apiClient.setToken(data.access_token);
+
+      // Fetch /me to get user details for context
       const userData = await apiClient.fetchWithAuth("/auth/me");
       
       login(data.access_token, userData);
@@ -56,33 +59,28 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ backgroundColor: "#edf2f7" }}>
-      <div 
-        className="max-w-md w-full bg-white rounded-2xl border-2 border-slate-300 p-8 sm:p-10 space-y-6"
-        style={{ boxShadow: "8px 8px 24px rgba(148, 163, 184, 0.4), -8px -8px 24px rgba(255, 255, 255, 0.95)" }}
-      >
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6" style={{ background: "var(--bg-muted)" }}>
+      <div className="bento-card max-w-md w-full p-8 sm:p-10 space-y-6">
         {/* Brand Header */}
         <div className="text-center">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-500/30 flex items-center justify-center mx-auto mb-3">
+          <div className="circle-action-btn mx-auto mb-3" style={{ width: 56, height: 56 }}>
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Injury<span className="text-blue-600">Detect</span>
+          <h1 className="font-bold tracking-tight" style={{ color: "var(--text-primary)", fontSize: 26, letterSpacing: "-0.02em" }}>
+            InjuryDetect
           </h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">
+          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
             Sports Biomechanics & Injury Risk Intelligence
           </p>
         </div>
 
         {/* Quick Demo Login Chips */}
-        <div className="bg-slate-50 rounded-xl p-4 border-2 border-slate-200">
-          <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 mb-2.5 flex items-center justify-between">
+        <div className="grouped-row p-4">
+          <div className="text-xs font-semibold uppercase mb-2.5 flex items-center justify-between" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
             <span>Quick Demo Login</span>
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-              CLICK TO FILL
-            </span>
+            <span className="status-pill status-pill--info">Click to fill</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {demoAccounts.map((acc) => {
@@ -92,11 +90,8 @@ export default function LoginPage() {
                   key={acc.email}
                   type="button"
                   onClick={() => fillDemo(acc.email)}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    isSelected
-                      ? "bg-blue-600 border-2 border-blue-600 text-white shadow-md shadow-blue-600/30"
-                      : "bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-300 hover:border-slate-400 shadow-xs"
-                  }`}
+                  className={isSelected ? "pill-btn--primary" : "pill-btn--outline"}
+                  style={{ fontSize: 12 }}
                 >
                   {acc.label}
                 </button>
@@ -108,16 +103,13 @@ export default function LoginPage() {
         {/* Login Form */}
         <form className="space-y-4" onSubmit={handleSubmit}>
           {error && (
-            <div className="bg-red-50 border-2 border-red-300 text-red-800 text-sm px-4 py-3 rounded-xl flex items-center gap-2.5 font-semibold">
-              <svg className="w-5 h-5 text-red-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="status-pill status-pill--danger" style={{ padding: "12px 16px", fontSize: 13 }}>
               <span>{error}</span>
             </div>
           )}
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
               Email Address
             </label>
             <input
@@ -125,7 +117,7 @@ export default function LoginPage() {
               type="email"
               autoComplete="email"
               required
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-semibold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
+              className="field-input"
               placeholder="coach@demo.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -133,7 +125,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+            <label className="block text-xs font-semibold uppercase mb-1.5" style={{ color: "var(--text-muted)", letterSpacing: "0.05em" }}>
               Password
             </label>
             <input
@@ -141,7 +133,7 @@ export default function LoginPage() {
               type="password"
               autoComplete="current-password"
               required
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-semibold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
+              className="field-input"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -149,29 +141,15 @@ export default function LoginPage() {
           </div>
 
           <div className="pt-2">
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3.5 px-6 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold text-base rounded-xl shadow-lg shadow-blue-600/30 transition-all focus:outline-none focus:ring-4 focus:ring-blue-500/30 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                "Sign In"
-              )}
+            <button type="submit" disabled={loading} className="pill-btn--primary w-full justify-center" style={{ padding: "14px 22px", fontSize: 15 }}>
+              {loading ? "Signing in..." : "Sign In"}
             </button>
           </div>
         </form>
 
-        <div className="text-center pt-1 border-t border-slate-200">
-          <Link href="/register" className="text-xs font-bold text-blue-600 hover:text-blue-800 hover:underline">
-            Don't have an account? Register here
+        <div className="text-center pt-4" style={{ borderTop: "1px solid var(--border-faint)" }}>
+          <Link href="/register" className="text-xs font-semibold" style={{ color: "var(--brand-dark)" }}>
+            Don&apos;t have an account? Register here
           </Link>
         </div>
       </div>

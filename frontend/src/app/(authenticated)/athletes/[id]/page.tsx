@@ -88,7 +88,7 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="neu-card p-6 rounded-2xl flex items-center gap-3 text-slate-700">
+        <div className="bento-card p-6 rounded-2xl flex items-center gap-3 text-slate-700">
           <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -101,7 +101,7 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
 
   if (error || !athlete) {
     return (
-      <div className="neu-card rounded-2xl p-6 border-red-200 text-red-600 flex items-center gap-3">
+      <div className="bento-card rounded-2xl p-6 border-red-200 text-red-600 flex items-center gap-3">
         <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -114,8 +114,8 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
     <div className="space-y-8">
       {/* Profile Header Card */}
       <div 
-        className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-slate-300 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
-        style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+        className="bento-card p-6 sm:p-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+       
       >
         <div>
           <div className="flex items-center gap-2 mb-1.5">
@@ -138,7 +138,7 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
         <div className="flex items-center gap-3">
           <Link
             href="/videos/upload"
-            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-xs sm:text-sm px-5 py-3 rounded-xl shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2 cursor-pointer shrink-0"
+            className="pill-btn--primary shrink-0"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
@@ -151,29 +151,29 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
       {/* Biometrics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6">
         <div 
-          className="bg-white rounded-2xl p-5 text-center border-2 border-slate-300"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-5 text-center"
+         
         >
           <div className="text-xs font-black uppercase tracking-wider text-slate-600 mb-1">Height</div>
           <div className="text-2xl font-black text-slate-900">{athlete.height_cm ? `${athlete.height_cm} cm` : "N/A"}</div>
         </div>
         <div 
-          className="bg-white rounded-2xl p-5 text-center border-2 border-slate-300"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-5 text-center"
+         
         >
           <div className="text-xs font-black uppercase tracking-wider text-slate-600 mb-1">Weight</div>
           <div className="text-2xl font-black text-slate-900">{athlete.weight_kg ? `${athlete.weight_kg} kg` : "N/A"}</div>
         </div>
         <div 
-          className="bg-white rounded-2xl p-5 text-center border-2 border-slate-300"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-5 text-center"
+         
         >
           <div className="text-xs font-black uppercase tracking-wider text-slate-600 mb-1">Dominant Side</div>
           <div className="text-2xl font-black text-slate-900 capitalize">{athlete.dominant_side || "N/A"}</div>
         </div>
         <div 
-          className="bg-white rounded-2xl p-5 text-center border-2 border-slate-300"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-5 text-center"
+         
         >
           <div className="text-xs font-black uppercase tracking-wider text-slate-600 mb-1">Status</div>
           <div className="text-2xl font-black text-emerald-600">Active</div>
@@ -184,8 +184,8 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Injury History */}
         <div 
-          className="bg-white rounded-2xl p-6 sm:p-7 border-2 border-slate-300 space-y-4 flex flex-col justify-between"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-6 sm:p-7 space-y-4 flex flex-col justify-between"
+         
         >
           <div>
             <div className="flex justify-between items-center mb-4">
@@ -206,13 +206,13 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
             </div>
 
             {showInjuryForm && (
-              <form onSubmit={handleAddInjury} className="mb-4 bg-slate-50 border-2 border-slate-300 p-4 rounded-xl space-y-3">
+              <form onSubmit={handleAddInjury} className="mb-4 bg-slate-50 p-4 rounded-xl space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input 
                     required 
                     type="text" 
                     placeholder="Injury Type (e.g. ACL Sprain)" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={injuryForm.injury_type} 
                     onChange={e => setInjuryForm({...injuryForm, injury_type: e.target.value})} 
                   />
@@ -220,19 +220,19 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
                     required 
                     type="text" 
                     placeholder="Body Part (e.g. Knee)" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={injuryForm.body_part} 
                     onChange={e => setInjuryForm({...injuryForm, body_part: e.target.value})} 
                   />
                   <input 
                     required 
                     type="date" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={injuryForm.injury_date} 
                     onChange={e => setInjuryForm({...injuryForm, injury_date: e.target.value})} 
                   />
                   <select 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={injuryForm.severity} 
                     onChange={e => setInjuryForm({...injuryForm, severity: e.target.value})}
                   >
@@ -242,7 +242,7 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
                     <option value="severe">Severe</option>
                   </select>
                 </div>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-blue-600/30 cursor-pointer">
+                <button type="submit" className="pill-btn--primary">
                   Save Injury Record
                 </button>
               </form>
@@ -278,8 +278,8 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
 
         {/* Training Load */}
         <div 
-          className="bg-white rounded-2xl p-6 sm:p-7 border-2 border-slate-300 space-y-4 flex flex-col justify-between"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-6 sm:p-7 space-y-4 flex flex-col justify-between"
+         
         >
           <div>
             <div className="flex justify-between items-center mb-4">
@@ -300,26 +300,26 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
             </div>
 
             {showLoadForm && (
-              <form onSubmit={handleAddLoad} className="mb-4 bg-slate-50 border-2 border-slate-300 p-4 rounded-xl space-y-3">
+              <form onSubmit={handleAddLoad} className="mb-4 bg-slate-50 p-4 rounded-xl space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <input 
                     required 
                     type="date" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={loadForm.entry_date} 
                     onChange={e => setLoadForm({...loadForm, entry_date: e.target.value})} 
                   />
                   <input 
                     type="text" 
                     placeholder="Session Type (e.g. Practice)" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={loadForm.session_type} 
                     onChange={e => setLoadForm({...loadForm, session_type: e.target.value})} 
                   />
                   <input 
                     type="number" 
                     placeholder="Duration (mins)" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={loadForm.duration_minutes} 
                     onChange={e => setLoadForm({...loadForm, duration_minutes: e.target.value})} 
                   />
@@ -328,12 +328,12 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
                     min="1" 
                     max="10" 
                     placeholder="RPE (1-10)" 
-                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg border-2 border-slate-300 focus:border-blue-600 outline-none" 
+                    className="p-2.5 bg-white text-xs font-semibold text-slate-900 rounded-lg focus:border-blue-600 outline-none" 
                     value={loadForm.rpe} 
                     onChange={e => setLoadForm({...loadForm, rpe: e.target.value})} 
                   />
                 </div>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-black px-4 py-2.5 rounded-xl shadow-md shadow-blue-600/30 cursor-pointer">
+                <button type="submit" className="pill-btn--primary">
                   Save Training Session
                 </button>
               </form>
@@ -365,8 +365,8 @@ export default function AthleteProfilePage({ params }: { params: Promise<{ id: s
 
       {/* Movement Videos Section */}
       <div 
-        className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-slate-300 space-y-4"
-        style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+        className="bento-card p-6 sm:p-8 space-y-4"
+       
       >
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center gap-2">

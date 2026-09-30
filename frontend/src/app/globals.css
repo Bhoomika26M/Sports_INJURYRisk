@@ -1,89 +1,249 @@
 @import "tailwindcss";
 
 :root {
-  --background: #edf2f7;
-  --foreground: #0f172a;
+  /* Canvas & Backgrounds */
+  --bg-app: #FFFFFF;
+  --bg-muted: #F8FAFC;
+  --bg-surface: #F4F5F5;
+  --bg-surface-hover: #ECEEEE;
+  --bg-scrim: rgba(15, 23, 42, 0.40);
+
+  /* Text & Typography */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
+  --text-disabled: #94A3B8;
+
+  /* Hairlines & Dividers */
+  --border-hair: #E2E8F0;
+  --border-faint: #F1F5F9;
+  --border-dashed: #CBD5E1;
+
+  /* Primary Brand / Accent (Wise signature palette) */
+  --brand-primary: #9FE870;
+  --brand-primary-hover: #8EE05B;
+  --brand-primary-fg: #163300;
+  --brand-tint: #E8F8DE;
+  --brand-tint-hover: #DCF4CF;
+  --brand-text: #163300;
+  --brand-dark: #163300;
+
+  /* Pastel Hero Accents */
+  --accent-hero-yellow: #FEF08A;
+  --accent-hero-yellow-fg: #713F12;
+  --accent-hero-blue: #DBEAFE;
+  --accent-hero-blue-fg: #1E3A8A;
+  --accent-hero-purple: #F3E8FF;
+  --accent-hero-purple-fg: #581C87;
+
+  /* Semantic Alerts */
+  --danger-bg: #FEF2F2;
+  --danger-border: #FECACA;
+  --danger-fg: #DC2626;
+  --warning-bg: #FEF3C7;
+  --warning-border: #FDE68A;
+  --warning-fg: #B45309;
+  --info-bg: #EFF6FF;
+  --info-border: #BFDBFE;
+  --info-fg: #1D4ED8;
+
+  --radius-pill: 9999px;
+  --radius-hero: 24px;
+  --radius-card: 16px;
+  --radius-inner: 12px;
+  --radius-control: 10px;
+
+  --shadow-diffuse: 0 4px 20px -2px rgba(15, 23, 42, 0.04);
+  --shadow-floating: 0 16px 36px -8px rgba(15, 23, 42, 0.12);
+  --shadow-drawer: -12px 0 40px rgba(15, 23, 42, 0.14);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: Inter, "Plus Jakarta Sans", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
 }
 
-/* Tactile Evolved Neumorphism Utilities with High Contrast */
-.neu-card {
-  background-color: #ffffff;
-  box-shadow: 6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95);
-  border: 1.5px solid #cbd5e1;
-}
-
-.neu-flat {
-  background-color: #f8fafc;
-  box-shadow: 4px 4px 10px rgba(148, 163, 184, 0.3), -4px -4px 10px rgba(255, 255, 255, 0.95);
-  border: 1.5px solid #cbd5e1;
-}
-
-.neu-inset {
-  background-color: #f1f5f9;
-  box-shadow: inset 3px 3px 6px rgba(148, 163, 184, 0.35), inset -3px -3px 6px rgba(255, 255, 255, 0.95);
-  border: 1.5px solid #cbd5e1;
-}
-
-.neu-button-primary {
-  background-color: #2563eb !important;
-  color: #ffffff !important;
-  font-weight: 800 !important;
-  box-shadow: 4px 4px 12px rgba(37, 99, 235, 0.35), -2px -2px 8px rgba(255, 255, 255, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex;
+/* ---------- Surfaces (§4) ---------- */
+.bento-hero {
+  border-radius: var(--radius-hero);
+  padding: 32px 36px;
+  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
+  gap: 24px;
+  overflow: hidden;
+  position: relative;
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.bento-hero--yellow { background-color: var(--accent-hero-yellow); color: var(--accent-hero-yellow-fg); }
+.bento-hero--blue { background-color: var(--accent-hero-blue); color: var(--accent-hero-blue-fg); }
+.bento-hero--purple { background-color: var(--accent-hero-purple); color: var(--accent-hero-purple-fg); }
+.bento-hero:hover { transform: translateY(-2px); box-shadow: var(--shadow-diffuse); }
+.bento-hero__title { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 8px 0; }
+.bento-hero__subtitle { font-size: 14px; line-height: 1.5; margin: 0; opacity: 0.9; }
 
-.neu-button-primary:hover:not(:disabled) {
-  background-color: #1d4ed8 !important;
-  transform: translateY(-1px);
-  box-shadow: 5px 5px 14px rgba(37, 99, 235, 0.45), -3px -3px 10px rgba(255, 255, 255, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+.bento-account-card {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-hero);
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
+.bento-account-card__label { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.bento-account-card__amount { font-size: 32px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.02em; display: block; margin-top: 4px; }
 
-.neu-button-primary:active:not(:disabled) {
-  background-color: #1e40af !important;
-  transform: translateY(1px);
-  box-shadow: 2px 2px 6px rgba(37, 99, 235, 0.35), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+.bento-surface {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-hero);
+  box-shadow: var(--shadow-diffuse);
 }
+.bento-card {
+  background-color: #FFFFFF;
+  border: 1px solid var(--border-faint);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-diffuse);
+}
+.grouped-row {
+  background-color: var(--bg-surface);
+  border-radius: var(--radius-card);
+  transition: background-color 140ms ease;
+}
+.grouped-row:hover { background-color: var(--bg-surface-hover); }
 
-.neu-button-secondary {
-  background-color: #f8fafc !important;
-  color: #1e293b !important;
-  font-weight: 700 !important;
-  border: 1.5px solid #cbd5e1 !important;
-  box-shadow: 3px 3px 8px rgba(148, 163, 184, 0.3), -3px -3px 8px rgba(255, 255, 255, 0.95);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: inline-flex;
+/* ---------- Dashed action cards (§4.4) ---------- */
+.dashed-action-card {
+  width: 100%;
+  background-color: #FFFFFF;
+  border: 1.5px dashed var(--border-dashed);
+  border-radius: var(--radius-card);
+  padding: 20px 22px;
+  display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 16px;
   cursor: pointer;
+  text-align: left;
+  transition: border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
+  color: inherit;
+  text-decoration: none;
+}
+.dashed-action-card:hover { border-color: var(--brand-primary); background-color: var(--bg-muted); transform: translateY(-1px); }
+.dashed-action-card__icon-wrapper {
+  width: 44px; height: 44px; border-radius: 50%;
+  background-color: var(--bg-muted); color: var(--text-primary);
+  display: flex; align-items: center; justify-content: center;
+  position: relative; flex-shrink: 0;
+}
+.dashed-action-card__content { flex: 1; min-width: 0; }
+.dashed-action-card__title { display: block; font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.dashed-action-card__desc { display: block; font-size: 13px; color: var(--text-secondary); line-height: 1.45; }
+.dashed-action-card .chevron { color: var(--text-muted); font-size: 20px; flex-shrink: 0; transition: transform 140ms ease; }
+.dashed-action-card:hover .chevron { transform: translateX(3px); color: var(--text-primary); }
+
+/* ---------- Pills & buttons (§5) ---------- */
+.pill-btn--primary {
+  background-color: var(--brand-primary); color: var(--brand-primary-fg);
+  border: none; border-radius: var(--radius-pill);
+  padding: 10px 22px; font-size: 14px; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+  text-decoration: none;
+}
+.pill-btn--primary:hover { background-color: var(--brand-primary-hover); transform: translateY(-1px); }
+.pill-btn--primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.pill-btn--soft {
+  background-color: var(--brand-tint); color: var(--brand-text);
+  border: 1px solid rgba(22, 51, 0, 0.14); border-radius: var(--radius-pill);
+  padding: 9px 20px; font-size: 14px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  transition: all 140ms ease; text-decoration: none;
+}
+.pill-btn--soft:hover { background-color: var(--brand-tint-hover); }
+.pill-btn--outline {
+  background-color: #FFFFFF; color: var(--text-primary);
+  border: 1px solid var(--border-hair); border-radius: var(--radius-pill);
+  padding: 8px 18px; font-size: 13px; font-weight: 600;
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  transition: all 140ms ease; text-decoration: none;
+}
+.pill-btn--outline:hover { background-color: var(--bg-muted); border-color: var(--text-muted); }
+.circle-action-btn {
+  width: 52px; height: 52px; border-radius: 50%;
+  background-color: var(--brand-primary); color: var(--brand-primary-fg);
+  border: none; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 26px; font-weight: 700; cursor: pointer;
+  transition: transform 140ms ease, background-color 140ms ease;
+}
+.circle-action-btn:hover { background-color: var(--brand-primary-hover); transform: scale(1.06); }
+
+/* ---------- Sidebar / topbar / canvas (§3) ---------- */
+.app-layout { display: flex; min-height: 100vh; background: var(--bg-app); }
+.app-sidebar {
+  width: 240px; flex-shrink: 0; position: sticky; top: 0; height: 100vh;
+  background: #FFFFFF; border-right: 1px solid var(--border-faint);
+  padding: 28px 16px 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.app-sidebar__brand { padding: 0 8px 20px; display: flex; align-items: center; gap: 10px; }
+.nav-item {
+  height: 44px; padding: 0 18px; display: flex; align-items: center; gap: 12px;
+  border-radius: var(--radius-pill); color: var(--text-secondary);
+  font-size: 14px; font-weight: 500; text-decoration: none;
+  transition: all 140ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.nav-item:hover { background: rgba(0, 0, 0, 0.04); }
+.nav-item--active { background: var(--bg-surface); color: var(--text-primary); font-weight: 600; }
+.app-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.app-header {
+  height: 68px; background: #FFFFFF;
+  border-bottom: 1px solid var(--border-faint);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 40px; position: sticky; top: 0; z-index: 30;
+}
+.content-canvas { max-width: 1240px; margin: 0 auto; width: 100%; padding: 40px 44px 120px; display: flex; flex-direction: column; gap: 40px; }
+@media (max-width: 900px) {
+  .app-sidebar { display: none; }
+  .app-header { padding: 0 20px; }
+  .content-canvas { padding: 32px 20px 100px; }
 }
 
-.neu-button-secondary:hover:not(:disabled) {
-  background-color: #f1f5f9 !important;
-  border-color: #94a3b8 !important;
-  color: #0f172a !important;
-  transform: translateY(-1px);
-}
+/* ---------- Badges, inputs, drawers, modals (§5-§7) ---------- */
+.status-pill { border-radius: var(--radius-pill); padding: 4px 12px; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; display: inline-flex; align-items: center; gap: 6px; }
+.status-pill--ok { background: var(--brand-tint); color: var(--brand-text); }
+.status-pill--info { background: var(--info-bg); color: var(--info-fg); border: 1px solid var(--info-border); }
+.status-pill--warn { background: var(--warning-bg); color: var(--warning-fg); border: 1px solid var(--warning-border); }
+.status-pill--danger { background: var(--danger-bg); color: var(--danger-fg); border: 1px solid var(--danger-border); }
+.status-pill--muted { background: var(--bg-surface); color: var(--text-muted); }
 
-.neu-pill {
-  background-color: #ffffff;
-  box-shadow: 3px 3px 8px rgba(148, 163, 184, 0.25), -3px -3px 8px rgba(255, 255, 255, 0.95);
-  border: 1.5px solid #cbd5e1;
+.field-input {
+  width: 100%; border-radius: var(--radius-control);
+  border: 1px solid var(--border-hair); background: #FFFFFF;
+  padding: 10px 14px; font-size: 14px; color: var(--text-primary);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
+.field-input:focus { outline: none; border-color: var(--brand-dark); box-shadow: 0 0 0 3px var(--brand-tint); }
+.field-input::placeholder { color: var(--text-disabled); }
 
-.neu-pill-active {
-  background-color: #2563eb !important;
-  color: #ffffff !important;
-  box-shadow: inset 2px 2px 5px rgba(0, 0, 0, 0.2);
-  border-color: #2563eb !important;
+.drawer-scrim { position: fixed; inset: 0; width: 100vw; height: 100vh; background-color: var(--bg-scrim); backdrop-filter: blur(4px); z-index: 99998; animation: fadeIn 180ms ease; }
+.drawer-shell {
+  position: fixed; top: 0; right: 0; bottom: 0; width: 560px; max-width: 100vw; height: 100vh;
+  background-color: #FFFFFF; box-shadow: var(--shadow-drawer); z-index: 99999;
+  display: flex; flex-direction: column; overflow: hidden;
+  animation: slideInRight 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
+.drawer-item { padding: 24px 32px; border-bottom: 1px solid var(--border-faint); background-color: #FFFFFF; display: flex; align-items: flex-start; gap: 16px; transition: background-color 120ms ease; }
+.drawer-item:hover { background-color: var(--bg-muted); }
+
+.transition-smooth { transition: all 180ms cubic-bezier(0.16, 1, 0.3, 1); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes scaleInSubtle { from { opacity: 0; transform: scale(0.97) translateY(8px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+/* Legacy neumorphic helpers — remapped to design system so old pages keep rendering */
+.neu-card, .neu-flat, .neu-pill { background-color: #FFFFFF; border: 1px solid var(--border-faint); border-radius: var(--radius-card); box-shadow: var(--shadow-diffuse); }
+.neu-inset { background-color: var(--bg-surface); border: 1px solid var(--border-hair); border-radius: var(--radius-inner); box-shadow: none; }
+.neu-button-primary { background-color: var(--brand-primary) !important; color: var(--brand-primary-fg) !important; border-radius: var(--radius-pill) !important; font-weight: 700 !important; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; border: none !important; box-shadow: none !important; }
+.neu-button-primary:hover:not(:disabled) { background-color: var(--brand-primary-hover) !important; transform: translateY(-1px); box-shadow: none !important; }
+.neu-button-secondary { background-color: #FFFFFF !important; color: var(--text-primary) !important; border: 1px solid var(--border-hair) !important; border-radius: var(--radius-pill) !important; font-weight: 600 !important; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: none !important; }
+.neu-pill-active { background-color: var(--brand-tint) !important; color: var(--brand-text) !important; border-color: rgba(22,51,0,0.14) !important; box-shadow: none !important; }

@@ -127,7 +127,7 @@ export default function ResultsPage() {
   if (error) {
     return (
       <div className="max-w-3xl mx-auto py-12">
-        <div className="neu-card rounded-2xl p-6 border-red-200 text-red-600 flex items-center gap-3">
+        <div className="bento-card rounded-2xl p-6 border-red-200 text-red-600 flex items-center gap-3">
           <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -140,7 +140,7 @@ export default function ResultsPage() {
   if (!data || !video) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="neu-card p-6 rounded-2xl flex items-center gap-3 text-slate-700">
+        <div className="bento-card p-6 rounded-2xl flex items-center gap-3 text-slate-700">
           <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -196,16 +196,28 @@ export default function ResultsPage() {
           </p>
         </div>
 
-        <div>
+        <div className="flex items-center gap-2">
           <a
             href={`/api/v1/videos/${id}/biomechanics/export.csv`}
             download
-            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-black px-5 py-3 rounded-xl shadow-lg shadow-blue-600/30 inline-flex items-center gap-2 cursor-pointer transition-all"
+            className="pill-btn--primary"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
             </svg>
             <span>Export CSV</span>
+          </a>
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/videos/${id}/report.pdf`}
+            className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-black px-5 py-3 rounded-xl shadow-lg shadow-red-600/30 inline-flex items-center gap-2 cursor-pointer transition-all"
+          >
+            <span>PDF Report</span>
+          </a>
+          <a
+            href={`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/videos/${id}/report.xlsx`}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black px-5 py-3 rounded-xl shadow-lg shadow-emerald-600/30 inline-flex items-center gap-2 cursor-pointer transition-all"
+          >
+            <span>Excel</span>
           </a>
         </div>
       </div>
@@ -217,8 +229,8 @@ export default function ResultsPage() {
           return (
             <div 
               key={s.metric_name} 
-              className="bg-white rounded-2xl p-5 border-2 border-slate-300 relative group flex flex-col justify-between"
-              style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+              className="bento-card p-5 relative group flex flex-col justify-between"
+             
             >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-xs font-black uppercase tracking-wider text-slate-600 truncate" title={formatMetricName(s.metric_name)}>
@@ -244,8 +256,8 @@ export default function ResultsPage() {
 
         {data.limb_symmetry_index !== null && (
           <div 
-            className="bg-white rounded-2xl p-5 border-2 border-slate-300 flex flex-col justify-between"
-            style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+            className="bento-card p-5 flex flex-col justify-between"
+           
           >
             <div className="flex justify-between items-start mb-2">
               <h3 className="text-xs font-black uppercase tracking-wider text-slate-600">
@@ -267,8 +279,8 @@ export default function ResultsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Kinematic Overlay Video */}
         <div 
-          className="bg-white rounded-2xl border-2 border-slate-300 overflow-hidden flex flex-col"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card overflow-hidden flex flex-col"
+         
         >
           <div className="px-6 py-4 border-b-2 border-slate-200 bg-slate-50 flex items-center justify-between">
             <h3 className="text-sm font-black text-slate-900">Kinematic Pose Overlay</h3>
@@ -295,8 +307,8 @@ export default function ResultsPage() {
 
         {/* Joint Angles Chart */}
         <div 
-          className="bg-white rounded-2xl border-2 border-slate-300 p-6 flex flex-col"
-          style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+          className="bento-card p-6 flex flex-col"
+         
         >
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-black text-slate-900">Joint Angles Over Time</h3>
@@ -351,8 +363,8 @@ export default function ResultsPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Risk Score Breakdown Card */}
           <div 
-            className="bg-white rounded-2xl border-2 border-slate-300 p-6 lg:col-span-1 flex flex-col justify-between"
-            style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+            className="bento-card p-6 lg:col-span-1 flex flex-col justify-between"
+           
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -361,7 +373,7 @@ export default function ResultsPage() {
               </div>
 
               {riskScore.status === "insufficient_baseline_data" ? (
-                <div className="bg-slate-50 border-2 border-slate-300 rounded-xl p-5 text-center text-slate-600 my-4">
+                <div className="bg-slate-50 rounded-xl p-5 text-center text-slate-600 my-4">
                   <p className="font-black text-xs text-slate-800 mb-1">Baseline In Progress</p>
                   <p className="text-xs font-semibold text-slate-600">Need 10 verified samples to score. Have {riskScore.have}.</p>
                 </div>
@@ -423,8 +435,8 @@ export default function ResultsPage() {
           {/* Recommendations Card */}
           {recommendations && recommendations.length > 0 && (
             <div 
-              className="bg-white rounded-2xl border-2 border-slate-300 p-6 lg:col-span-2 flex flex-col justify-between"
-              style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+              className="bento-card p-6 lg:col-span-2 flex flex-col justify-between"
+             
             >
               <div>
                 <div className="flex items-center justify-between mb-4">

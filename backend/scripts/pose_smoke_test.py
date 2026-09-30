@@ -12,50 +12,41 @@ import os
 
 
 def test_mediapipe(video_path: str) -> bool:
-    """Run MediaPipe Pose on a video and confirm landmarks are extracted."""
+    """Run the real pipeline MediaPipe pass on a video and confirm landmarks."""
     try:
+        import sys
         import mediapipe as mp
         import cv2
 
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+        from app.modules.pose.pipeline import run_mediapipe_full_pass, track_persons
+
         print(f"[MediaPipe] Version: {mp.__version__}")
         print(f"[MediaPipe] Processing: {video_path}")
-
-        mp_pose = mp.solutions.pose
-        pose = mp_pose.Pose(
-            static_image_mode=False,
-            model_complexity=1,
-            min_detection_confidence=0.5,
-            min_tracking_confidence=0.5,
-        )
 
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             print(f"[MediaPipe] ERROR: Cannot open video: {video_path}")
             return False
-
-        frames_processed = 0
-        frames_with_landmarks = 0
-
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frames_processed += 1
-            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            results = pose.process(rgb)
-            if results.pose_landmarks:
-                frames_with_landmarks += 1
-            if frames_processed >= 30:  # Process max 30 frames for smoke test
-                break
-
         cap.release()
-        pose.close()
 
-        print(f"[MediaPipe] Frames processed: {frames_processed}")
-        print(f"[MediaPipe] Frames with landmarks: {frames_with_landmarks}")
+        # Track first (exercises YOLO tracking + main-subject selection)...
+        tracking = track_persons(video_path, model=None, stride=5)
+        print(f"[MediaPipe] Tracking: max_persons={tracking['max_persons']} "
+              f"main_track={tracking['main_track_id']} tracked={tracking['tracked']}")
+        boxes = None
+        if tracking["main_track_id"] is not None:
+            main_frames = tracking["tracks"][tracking["main_track_id"]]
+            boxes = {i: main_frames.get(i) for i in range(tracking["frames_processed"])}
 
-        if frames_processed == 0:
-            print("[MediaPipe] ERROR: No frames read from video")
+        # ...then pose on the tracked subject (None = full-frame fallback).
+        frame_results, detection_rate = run_mediapipe_full_pass(video_path, subject_boxes=boxes)
+
+        print(f"[MediaPipe] Frames with landmarks: {len(frame_results)}")
+        print(f"[MediaPipe] Detection rate: {detection_rate:.0%}")
+
+        if not frame_results:
+            print("[MediaPipe] ERROR: No landmarks extracted from any frame")
             return False
 
         print("[MediaPipe] ✓ PASSED — MediaPipe Pose is functional")

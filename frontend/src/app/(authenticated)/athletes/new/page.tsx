@@ -79,8 +79,8 @@ export default function AddAthletePage() {
 
       <form 
         onSubmit={handleSubmit} 
-        className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-slate-300 space-y-5"
-        style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+        className="bento-card p-6 sm:p-8 space-y-5"
+       
       >
         <div>
           <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
@@ -92,7 +92,7 @@ export default function AddAthletePage() {
             required
             value={formData.sport_type}
             onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
             placeholder="e.g. Basketball, Soccer, Sprinting"
           />
         </div>
@@ -106,7 +106,7 @@ export default function AddAthletePage() {
             name="position"
             value={formData.position}
             onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
             placeholder="e.g. Point Guard, Midfielder, Sprinter"
           />
         </div>
@@ -121,7 +121,7 @@ export default function AddAthletePage() {
             required
             value={formData.date_of_birth}
             onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-bold text-sm focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
           />
         </div>
 
@@ -137,7 +137,7 @@ export default function AddAthletePage() {
               value={formData.height_cm}
               onChange={handleChange}
               placeholder="e.g. 185"
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
             />
           </div>
           <div>
@@ -151,7 +151,7 @@ export default function AddAthletePage() {
               value={formData.weight_kg}
               onChange={handleChange}
               placeholder="e.g. 80"
-              className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm placeholder-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
             />
           </div>
         </div>
@@ -164,7 +164,7 @@ export default function AddAthletePage() {
             name="dominant_side"
             value={formData.dominant_side}
             onChange={handleChange}
-            className="w-full px-4 py-3 rounded-xl bg-slate-50 border-2 border-slate-300 text-slate-900 font-bold text-sm focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-900 font-bold text-sm focus:bg-white focus:border-blue-600 focus:outline-none transition-all"
           >
             <option value="">Select Dominant Side...</option>
             <option value="right">Right</option>
@@ -176,14 +176,14 @@ export default function AddAthletePage() {
         <div className="pt-4 flex items-center justify-end gap-3">
           <Link
             href="/athletes"
-            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl border-2 border-slate-300 transition-all cursor-pointer shadow-xs"
+            className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition-all cursor-pointer shadow-xs"
           >
             Cancel
           </Link>
           <button
             type="submit"
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-black text-xs sm:text-sm px-6 py-3 rounded-xl shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 cursor-pointer"
+            className="pill-btn--primary"
           >
             {loading ? "Registering..." : "Register Athlete"}
           </button>

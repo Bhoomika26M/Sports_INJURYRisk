@@ -43,6 +43,12 @@ export default function UploadVideoPage() {
     e.preventDefault();
     if (!file || !selectedAthlete) return;
 
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    if (extension !== "mp4" && extension !== "mov") {
+      setError(`Unsupported format ".${extension}". The platform strictly requires .mp4 or .mov files (use "squat_sample.mp4").`);
+      return;
+    }
+
     if (file.size > 200 * 1024 * 1024) {
       setError("File exceeds 200MB limit.");
       return;
@@ -124,8 +130,8 @@ export default function UploadVideoPage() {
 
       <form 
         onSubmit={handleUpload} 
-        className="bg-white rounded-2xl p-6 sm:p-8 border-2 border-slate-300 shadow-md space-y-6"
-        style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+        className="bento-card p-6 sm:p-8 shadow-md space-y-6"
+       
       >
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
@@ -135,7 +141,7 @@ export default function UploadVideoPage() {
             value={selectedAthlete} 
             onChange={e => setSelectedAthlete(e.target.value)}
             disabled={uploading}
-            className="w-full bg-slate-50 border-2 border-slate-300 text-slate-900 font-semibold rounded-xl p-3.5 text-sm focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
+            className="w-full bg-slate-50 text-slate-900 font-semibold rounded-xl p-3.5 text-sm focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
           >
             {athletes.map(a => {
               const label = a.full_name
@@ -159,7 +165,7 @@ export default function UploadVideoPage() {
               value={movementType} 
               onChange={e => setMovementType(e.target.value)}
               disabled={uploading}
-              className="w-full bg-slate-50 border-2 border-slate-300 text-slate-900 font-semibold rounded-xl p-3.5 text-sm focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
+              className="w-full bg-slate-50 text-slate-900 font-semibold rounded-xl p-3.5 text-sm focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
             >
               <option value="squat">Squat</option>
               <option value="deadlift">Deadlift</option>
@@ -175,7 +181,7 @@ export default function UploadVideoPage() {
               value={cameraView} 
               onChange={e => setCameraView(e.target.value)}
               disabled={uploading}
-              className="w-full bg-slate-50 border-2 border-slate-300 text-slate-900 font-semibold rounded-xl p-3.5 text-sm focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
+              className="w-full bg-slate-50 text-slate-900 font-semibold rounded-xl p-3.5 text-sm focus:bg-white focus:border-blue-600 focus:outline-none focus:ring-4 focus:ring-blue-500/20 transition-all"
             >
               <option value="sagittal">Sagittal (Side View)</option>
               <option value="frontal">Frontal (Front/Back)</option>
@@ -220,7 +226,7 @@ export default function UploadVideoPage() {
           <button 
             type="submit" 
             disabled={uploading || !file || !selectedAthlete}
-            className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-extrabold py-4 px-6 rounded-xl text-base shadow-lg shadow-blue-600/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="pill-btn--primary w-full justify-center"
           >
             {uploading ? (
               <span className="flex items-center justify-center gap-2">

@@ -20,10 +20,14 @@ arq==0.26.0
 # File handling
 aiofiles==23.2.1
 
-# Pose estimation
-mediapipe==0.10.21
+# Pose estimation (dual-API: solutions on py3.12 Docker, tasks on py3.13 host)
+mediapipe>=0.10.21
 ultralytics==8.3.145
 opencv-python-headless==4.11.0.86
+
+# M4 reports (PDF/Excel export, methodology_note preserved on export)
+reportlab==4.2.5
+openpyxl==3.1.5
 
 # Testing
 pytest==8.4.1

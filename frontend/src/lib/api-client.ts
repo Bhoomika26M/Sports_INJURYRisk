@@ -97,15 +97,23 @@ export const apiClient = {
         });
       } else {
         if (typeof window !== "undefined") {
-          document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
-          window.location.href = "/login";
+          document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
+          if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
+            window.location.href = "/login";
+          }
         }
       }
     }
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(response.status, errorData, errorData?.detail?.error?.message || "API request failed");
+      let msg = errorData?.detail?.error?.message;
+      if (!msg && Array.isArray(errorData?.detail)) {
+        msg = errorData.detail.map((d: any) => d.msg || d.message).join("; ");
+      } else if (!msg && typeof errorData?.detail === "string") {
+        msg = errorData.detail;
+      }
+      throw new ApiError(response.status, errorData, msg || "API request failed");
     }
 
     if (response.status === 204) {

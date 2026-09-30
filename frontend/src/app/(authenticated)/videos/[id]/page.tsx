@@ -79,7 +79,7 @@ export default function VideoStatusPage() {
   if (!video) {
     return (
       <div className="max-w-2xl mx-auto py-20 flex items-center justify-center">
-        <div className="neu-card p-6 rounded-2xl flex items-center gap-3 text-slate-700">
+        <div className="bento-card p-6 rounded-2xl flex items-center gap-3 text-slate-700">
           <svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -114,8 +114,8 @@ export default function VideoStatusPage() {
       </div>
 
       <div 
-        className="bg-white rounded-2xl border-2 border-slate-300 overflow-hidden"
-        style={{ boxShadow: "6px 6px 16px rgba(148, 163, 184, 0.38), -6px -6px 16px rgba(255, 255, 255, 0.95)" }}
+        className="bento-card overflow-hidden"
+       
       >
         {/* Video Thumbnail area */}
         <div className="aspect-video bg-slate-900 relative flex items-center justify-center">
@@ -155,7 +155,7 @@ export default function VideoStatusPage() {
                 <span className="text-blue-600 font-black">{video.progress_pct}%</span>
               </div>
 
-              <div className="w-full bg-slate-100 border-2 border-slate-300 rounded-full h-4 overflow-hidden p-0.5">
+              <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden p-0.5">
                 <div 
                   className="bg-blue-600 h-full rounded-full transition-all duration-700 shadow-sm" 
                   style={{ width: `${Math.max(8, video.progress_pct)}%` }}

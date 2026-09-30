@@ -10,6 +10,8 @@ from app.modules.auth.router import router as auth_router
 from app.modules.athletes.router import router as athletes_router
 from app.modules.videos.router import router as videos_router
 from app.modules.risk_scoring.router import router as risk_scoring_router
+from app.modules.notifications.router import router as notifications_router
+from app.modules.analytics.router import router as analytics_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,6 +35,8 @@ app.include_router(auth_router)
 app.include_router(athletes_router)
 app.include_router(videos_router)
 app.include_router(risk_scoring_router)
+app.include_router(notifications_router)
+app.include_router(analytics_router)
 
 
 @app.get("/health")

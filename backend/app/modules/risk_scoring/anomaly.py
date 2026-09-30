@@ -28,7 +28,7 @@ def invalidate_model_cache(movement_type: str) -> None:
         if key.startswith(f"{movement_type}:"):
             _model_cache.pop(key, None)
 
-def compute_anomaly_scores(sample_vectors: np.ndarray, baseline_vectors: np.ndarray, min_samples: int = 10, cache_key: str | None = None) -> list[float]:
+def compute_anomaly_scores(sample_vectors: np.ndarray, baseline_vectors: np.ndarray, min_samples: int = 10, cache_key: str | None = None, metric_name: str = "") -> list[float]:
     """
     sample_vectors: this video's per-frame validated metric values, shape (n_frames, n_features)
     baseline_vectors: historical validated metric values for this movement_type, shape (n_baseline, n_features)
@@ -36,13 +36,8 @@ def compute_anomaly_scores(sample_vectors: np.ndarray, baseline_vectors: np.ndar
     baseline's own decision_function distribution (see Section 2 for why — a fixed linear
     rescaling was tested and rejected for producing an uninformative narrow spread).
     """
-    # Note: caller should catch this and inject the metric name, or we can just leave it to the caller if we don't have it here. 
-    # Actually wait, `compute_anomaly_scores` doesn't know the metric name. The caller `get_risk_score` will pass it.
-    # Let me check get_risk_score. Oh, wait, the fix in the prompt says:
-    # `raise InsufficientBaselineError(m_name, len(hist_values), MIN_BASELINE_SAMPLES)` where it's raised in `get_risk_score`'s loop.
-    # But wait, `compute_anomaly_scores` raises it currently on line 40!
-    # Let's change `compute_anomaly_scores` to accept `metric_name` or just remove the check from `compute_anomaly_scores`?
-    # Wait, the prompt says "where it's raised in get_risk_score's loop". Let me view `risk_scoring/scoring.py`!
+    if len(baseline_vectors) < min_samples:
+        raise InsufficientBaselineError(metric_name, len(baseline_vectors), min_samples)
 
     if cache_key:
         model, baseline_scores = _get_or_fit_model(cache_key, baseline_vectors)

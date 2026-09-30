@@ -30,12 +30,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const bootstrap = async () => {
       try {
-        await apiClient.refresh(); // This now sets inMemoryToken inside api-client
-        const userData = await apiClient.fetchWithAuth("/auth/me");
-        setUser(userData);
+        const token = await apiClient.refresh();
+        if (token) {
+          const userData = await apiClient.fetchWithAuth("/auth/me");
+          setUser(userData);
+        } else {
+          setUser(null);
+          apiClient.setToken(null);
+          if (typeof document !== "undefined") {
+            document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
+          }
+        }
       } catch (err) {
         setUser(null);
         apiClient.setToken(null);
+        if (typeof document !== "undefined") {
+          document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
+        }
       } finally {
         setLoading(false);
       }

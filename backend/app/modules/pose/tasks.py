@@ -10,7 +10,7 @@ from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntr
 from app.modules.videos.models import Video, VideoProcessingStatus, PoseFrame, BiomechanicalMetric
 from app.modules.risk_scoring.models import MovementBaseline, RiskScore
 from app.modules.recommendations.models import Recommendation
-from app.modules.pose.pipeline import run_yolo_person_check, run_mediapipe_full_pass, extract_thumbnail
+from app.modules.pose.pipeline import track_persons, run_mediapipe_full_pass, extract_thumbnail
 from app.modules.biomechanics.calculations import (
     knee_flexion_angle, trunk_lean_angle, knee_valgus_flag, limb_symmetry_index, METRIC_CONFIDENCE
 )
@@ -150,15 +150,26 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             video = await get_video(db, video_id)
             local_path = await download_from_storage(video.storage_key)
 
-            # Step 1 — person-count pre-check (YOLO26-pose, sampled frames, cheap and fast)
-            person_counts = run_yolo_person_check(local_path, ctx.get("yolo_model"), sample_frames=10)
-            if max(person_counts, default=0) == 0:
-                raise VideoProcessingError("no_person_detected", "No person detected in any sampled frame.")
-            if max(person_counts) > 1:
-                raise VideoProcessingError(
-                    "multiple_people_detected",
-                    "More than one person detected. This pilot requires single-person clips."
+            # Step 1 — YOLO tracking across every frame: count people AND lock
+            # onto the main athlete (most frames present, largest on ties) so
+            # multi-person videos analyze one consistent person instead of
+            # failing. See docs/DECISIONS.md (multi-person tracking).
+            tracking = track_persons(local_path, ctx.get("yolo_model"), stride=1)
+            person_counts = tracking["person_counts"]
+            if tracking["max_persons"] == 0:
+                raise VideoProcessingError("no_person_detected", "No person detected in any frame.")
+            main_track_id = tracking["main_track_id"]
+            subject_boxes: dict[int, tuple | None] | None = None
+            if main_track_id is not None:
+                main_frames = tracking["tracks"][main_track_id]
+                subject_boxes = {i: main_frames.get(i) for i in range(tracking["frames_processed"])}
+                coverage = len(main_frames) / max(1, tracking["frames_processed"])
+                logger.info(
+                    f"Tracking {tracking['max_persons']} person(s), main subject is track {main_track_id} "
+                    f"(present in {len(main_frames)}/{tracking['frames_processed']} frames, {coverage:.0%} coverage)"
                 )
+            else:
+                logger.warning("No track IDs available — running untracked full-frame pose")
                 
             # Generate thumbnail before long processing starts
             thumbnail_filename = f"thumb_{video_id}.jpg"
@@ -181,13 +192,15 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             def sync_progress(pct):
                 asyncio.run_coroutine_threadsafe(_progress(pct), loop)
 
-            # Step 2 — full MediaPipe pass, every frame, world landmarks only
+            # Step 2 — full MediaPipe pass, every frame, world landmarks only.
+            # Frames with a tracked-subject box are cropped to the main athlete.
             frame_results, detection_rate = await loop.run_in_executor(
                 None,
                 lambda: run_mediapipe_full_pass(
                     local_path,
                     annotate_output_path=annotated_path,
-                    progress_callback=sync_progress
+                    progress_callback=sync_progress,
+                    subject_boxes=subject_boxes,
                 )
             )
             
@@ -207,12 +220,17 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             await update_video_status(
                 db, video_id, VideoProcessingStatus.completed,
                 processing_completed_at=now(),
-                person_count_detected=max(person_counts),
+                person_count_detected=max(person_counts, default=0),
                 detection_rate=detection_rate,
                 annotated_video_key=annotated_path,
                 progress_pct=100
             )
-            return {"status": "completed", "frames_processed": len(frame_results)}
+            return {
+                "status": "completed",
+                "frames_processed": len(frame_results),
+                "tracked_subject_id": main_track_id,
+                "max_persons": max(person_counts, default=0),
+            }
 
         except VideoProcessingError as e:
             await update_video_status(db, video_id, VideoProcessingStatus.failed, error_code=e.code, error_message=e.message)
