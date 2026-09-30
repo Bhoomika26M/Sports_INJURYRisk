@@ -145,6 +145,10 @@ from fastapi import Form
 async def upload_and_process_video(
     file: UploadFile = File(...), 
     activity: str = Form("Unknown"),
+    surface_type: str = Form("Unknown"),
+    footwear: str = Form("Unknown"),
+    rpe: int = Form(5),
+    sleep_quality: int = Form(5),
     current_user: models.User = Depends(get_current_user)
 ):
     # Save the uploaded file
@@ -154,7 +158,9 @@ async def upload_and_process_video(
     
     # Process the video
     try:
-        result = process_video_with_mediapipe(file_path, "processed", activity)
+        result = process_video_with_mediapipe(
+            file_path, "processed", activity, surface_type, footwear, rpe, sleep_quality
+        )
         return {
             "message": "Video processed successfully", 
             "original_file": file.filename,

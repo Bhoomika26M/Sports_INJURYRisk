@@ -17,6 +17,10 @@ const ACTIVITIES = [
 export default function VideoUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [activity, setActivity] = useState<string>("Squatting");
+  const [surfaceType, setSurfaceType] = useState<string>("Unknown");
+  const [footwear, setFootwear] = useState<string>("Unknown");
+  const [rpe, setRpe] = useState<number>(5);
+  const [sleepQuality, setSleepQuality] = useState<number>(5);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
@@ -42,7 +46,7 @@ export default function VideoUploadPage() {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No authorization token found");
 
-      const response = await uploadVideo(token, file, activity);
+      const response = await uploadVideo(token, file, activity, surfaceType, footwear, rpe, sleepQuality);
       setResult(response);
     } catch (err: any) {
       setError(err.message || "An error occurred during video upload and processing.");
@@ -62,11 +66,11 @@ export default function VideoUploadPage() {
         {/* Upload Form */}
         <div className="glass-panel p-8 rounded-2xl">
           <form onSubmit={handleUpload} className="space-y-6">
-            
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">Supported Activity</label>
-              <select 
-                value={activity} 
+              <select
+                value={activity}
                 onChange={(e) => setActivity(e.target.value)}
                 className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all appearance-none"
               >
@@ -76,14 +80,70 @@ export default function VideoUploadPage() {
               </select>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Surface Type</label>
+                <select
+                  value={surfaceType}
+                  onChange={(e) => setSurfaceType(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all appearance-none"
+                >
+                  <option value="Unknown">Unknown</option>
+                  <option value="Grass">Grass</option>
+                  <option value="Artificial Turf">Artificial Turf</option>
+                  <option value="Hardwood">Hardwood</option>
+                  <option value="Track">Track</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Footwear</label>
+                <select
+                  value={footwear}
+                  onChange={(e) => setFootwear(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all appearance-none"
+                >
+                  <option value="Unknown">Unknown</option>
+                  <option value="Cleats">Cleats</option>
+                  <option value="Running Shoes">Running Shoes</option>
+                  <option value="Barefoot">Barefoot</option>
+                  <option value="Court Shoes">Court Shoes</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">RPE (1-10)</label>
+                <input
+                  type="number"
+                  min="1" max="10"
+                  value={rpe}
+                  onChange={(e) => setRpe(parseInt(e.target.value))}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Sleep Quality (1-10)</label>
+                <input
+                  type="number"
+                  min="1" max="10"
+                  value={sleepQuality}
+                  onChange={(e) => setSleepQuality(parseInt(e.target.value))}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <label className="text-sm font-medium text-slate-300">Video File</label>
               <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors bg-slate-900/30">
-                <input 
-                  type="file" 
-                  accept="video/mp4,video/quicktime" 
+                <input
+                  type="file"
+                  accept="video/mp4,video/quicktime"
                   onChange={handleFileChange}
-                  className="hidden" 
+                  className="hidden"
                   id="video-upload"
                 />
                 <label htmlFor="video-upload" className="cursor-pointer flex flex-col items-center">
@@ -104,8 +164,8 @@ export default function VideoUploadPage() {
               </div>
             )}
 
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               disabled={uploading || !file}
               className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -125,17 +185,17 @@ export default function VideoUploadPage() {
         {/* Results Panel */}
         <div className="glass-panel p-8 rounded-2xl flex flex-col">
           <h3 className="text-lg font-bold text-white mb-6 border-b border-slate-800 pb-4">Analysis Results</h3>
-          
+
           {result ? (
             <div className="space-y-6 flex-1">
               <div className="aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-700 relative">
-                <video 
-                  controls 
+                <video
+                  controls
                   className="w-full h-full object-contain"
                   src={`http://127.0.0.1:8000${result.processed_url}`}
                 />
                 <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs text-white flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span> 
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
                   Motion Enhanced
                 </div>
               </div>
@@ -150,6 +210,7 @@ export default function VideoUploadPage() {
                   <div className={`text-xl font-bold ${result.analytics.risk_score > 30 ? 'text-rose-400' : 'text-emerald-400'}`}>
                     {result.analytics.risk_score} <span className="text-sm font-normal text-slate-500">/ 100</span>
                   </div>
+                  <div className="text-xs mt-1 text-slate-400">Risk Level: <span className="text-white font-medium">{result.analytics.risk_level}</span></div>
                 </div>
               </div>
 
@@ -164,7 +225,7 @@ export default function VideoUploadPage() {
                   </div>
                 ))}
               </div>
-              
+
               <div className="text-xs text-slate-500 text-center pt-2">
                 Processed {result.analytics.frame_count} frames at {Math.round(result.analytics.fps)} FPS
               </div>
@@ -174,7 +235,7 @@ export default function VideoUploadPage() {
               <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
               </svg>
-              <p>Upload a video to see frame extraction, <br/>motion enhancement, and risk detection results.</p>
+              <p>Upload a video to see frame extraction, <br />motion enhancement, and risk detection results.</p>
             </div>
           )}
         </div>

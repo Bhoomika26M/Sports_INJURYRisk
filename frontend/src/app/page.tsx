@@ -18,7 +18,7 @@ export default function Home() {
   const handleGoogleAuth = async () => {
     const userEmail = prompt("Enter your Google Email for Demo Login:", "user@gmail.com");
     if (!userEmail) return;
-    
+
     setLoading(true);
     setError("");
     try {
@@ -36,7 +36,7 @@ export default function Home() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    
+
     try {
       if (isLogin) {
         const data = await login(email, password);
@@ -68,28 +68,28 @@ export default function Home() {
       {/* Background decoration */}
       <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/20 blur-[120px]" />
-      
+
       <div className="z-10 w-full max-w-5xl px-6 py-20 flex flex-col md:flex-row items-center gap-12">
-        
+
         {/* Left column: Hero content */}
         <div className="flex-1 space-y-8 text-center md:text-left">
           <div className="inline-block px-4 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-sm font-medium tracking-wide">
             AI-Powered Biomechanics
           </div>
-          
+
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight">
             Predict &amp; Prevent <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-500">
               Sports Injuries
             </span>
           </h1>
-          
+
           <p className="text-lg md:text-xl text-slate-400 max-w-xl mx-auto md:mx-0">
             Advanced pose estimation and biomechanical analysis to identify risks before injuries happen. Trusted by top athletes, coaches, and medical teams.
           </p>
-          
+
           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 justify-center md:justify-start">
-            <Link 
+            <Link
               href="/dashboard"
               className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:-translate-y-0.5 w-full sm:w-auto text-center"
             >
@@ -105,37 +105,37 @@ export default function Home() {
         <div className="flex-1 w-full max-w-md">
           <div className="glass-panel p-8 rounded-2xl relative group">
             <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
-            
+
             <div className="relative z-10 space-y-6">
               <div className="text-center">
                 <h3 className="text-2xl font-bold text-white mb-2">{isLogin ? "Platform Access" : "Create Account"}</h3>
                 <p className="text-slate-400 text-sm">{isLogin ? "Sign in to your intelligent sports hub" : "Join the sports injury prevention platform"}</p>
               </div>
-              
+
               <form className="space-y-4" onSubmit={handleSubmit}>
                 {error && <div className="text-rose-500 text-sm font-medium">{error}</div>}
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-slate-300">Email Address</label>
-                  <input 
-                    type="email" 
-                    placeholder="coach@team.com" 
+                  <input
+                    type="email"
+                    placeholder="coach@team.com"
                     className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 placeholder:text-slate-600"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
-                
+
                 <div className="space-y-1">
                   <label className="text-sm font-medium text-slate-300">Password</label>
                   <div className="relative">
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      placeholder="••••••••" 
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
                       className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 placeholder:text-slate-600"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
-                    <button 
+                    <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 text-sm font-medium"
@@ -148,7 +148,7 @@ export default function Home() {
                 {!isLogin && (
                   <div className="space-y-1">
                     <label className="text-sm font-medium text-slate-300">Role</label>
-                    <select 
+                    <select
                       className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 appearance-none"
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
@@ -172,7 +172,7 @@ export default function Home() {
                   </div>
                 )}
 
-                <button 
+                <button
                   type="submit"
                   disabled={loading}
                   className="block w-full py-3 px-4 bg-white text-slate-900 text-center font-bold rounded-xl hover:bg-slate-200 transition-colors mt-6 disabled:opacity-50"
@@ -200,10 +200,10 @@ export default function Home() {
                   {isLogin ? "Sign In with Google" : "Register with Google"}
                 </button>
               </form>
-              
+
               <div className="text-center mt-4">
-                <button 
-                  onClick={() => setIsLogin(!isLogin)} 
+                <button
+                  onClick={() => setIsLogin(!isLogin)}
                   className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
                 >
                   {isLogin ? "Need an account? Register" : "Already have an account? Sign in"}

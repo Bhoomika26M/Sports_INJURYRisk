@@ -41,3 +41,18 @@ class Token(BaseModel):
 class GoogleLogin(BaseModel):
     email: str
     role: Optional[str] = "Athlete"
+
+class VideoAnalysisResponse(BaseModel):
+    id: int
+    activity: str
+    surface_type: Optional[str] = None
+    footwear: Optional[str] = None
+    rpe: Optional[int] = None
+    sleep_quality: Optional[int] = None
+    risk_score: float
+    risk_level: str
+    injury_probabilities: str
+    corrective_recommendation: str
+    created_at: str
+    class Config:
+        from_attributes = True

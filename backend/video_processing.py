@@ -18,7 +18,7 @@ def calculate_angle(a, b, c):
     ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
     return ang + 360 if ang < 0 else ang
 
-def process_video_with_mediapipe(input_path: str, output_dir: str, activity: str = "Unknown"):
+def process_video_with_mediapipe(input_path: str, output_dir: str, activity: str = "Unknown", surface_type: str = "Unknown", footwear: str = "Unknown", rpe: int = 5, sleep_quality: int = 5):
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
         raise Exception("Error opening video stream or file")
@@ -130,8 +130,38 @@ def process_video_with_mediapipe(input_path: str, output_dir: str, activity: str
         risk_flags.append("Monitoring knee valgus and sudden directional changes")
         risk_score += 15
             
+    # Environmental & Equipment Modifiers
+    if surface_type == "Artificial Turf" and footwear == "Cleats":
+        risk_flags.append("Turf + Cleats detected (Increased ACL strain risk)")
+        risk_score += 15
+    elif surface_type == "Hardwood" and footwear == "Running Shoes":
+        risk_flags.append("Hardwood + Running shoes (Potential grip/slip hazard)")
+        risk_score += 10
+
+    # Subjective Wellness Modifiers
+    fatigue_modifier = 0
+    if rpe > 7:
+        fatigue_modifier += 10
+        risk_flags.append("High Perceived Exertion (Fatigue risk)")
+    if sleep_quality < 5:
+        fatigue_modifier += 15
+        risk_flags.append("Poor Sleep Quality (CNS fatigue risk)")
+        
+    risk_score += fatigue_modifier
+            
     if not risk_flags:
         risk_flags.append("Optimal biomechanics observed")
+        
+    # Risk level categorization
+    total_risk = min(risk_score, 100)
+    if total_risk < 20:
+        risk_level = "Low"
+    elif total_risk < 50:
+        risk_level = "Moderate"
+    elif total_risk < 80:
+        risk_level = "High"
+    else:
+        risk_level = "Critical"
         
     return {
         "filename": filename,
@@ -139,8 +169,13 @@ def process_video_with_mediapipe(input_path: str, output_dir: str, activity: str
             "activity_analyzed": activity,
             "min_knee_angle": round(min_knee_angle, 2),
             "max_knee_extension": round(max_knee_extension, 2),
-            "risk_score": min(risk_score, 100),
+            "risk_score": total_risk,
+            "risk_level": risk_level,
             "risk_flags": risk_flags,
+            "surface_type": surface_type,
+            "footwear": footwear,
+            "rpe": rpe,
+            "sleep_quality": sleep_quality,
             "frame_count": frame_count,
             "fps": fps
         }

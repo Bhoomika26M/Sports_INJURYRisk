@@ -116,10 +116,14 @@ export const updateAthleteProfile = async (token: string, profileData: any) => {
   return response.json();
 };
 
-export const uploadVideo = async (token: string, file: File, activity: string) => {
+export const uploadVideo = async (token: string, file: File, activity: string, surfaceType: string = "Unknown", footwear: string = "Unknown", rpe: number = 5, sleepQuality: number = 5) => {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("activity", activity);
+  formData.append("surface_type", surfaceType);
+  formData.append("footwear", footwear);
+  formData.append("rpe", rpe.toString());
+  formData.append("sleep_quality", sleepQuality.toString());
 
   const response = await fetch(`${API_URL}/video/upload`, {
     method: "POST",

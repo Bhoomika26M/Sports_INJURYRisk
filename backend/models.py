@@ -26,3 +26,21 @@ class AthleteProfile(Base):
     training_load = Column(String)
 
     user = relationship("User", back_populates="athlete_profile")
+
+class VideoAnalysis(Base):
+    __tablename__ = "video_analyses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    activity = Column(String)
+    surface_type = Column(String)
+    footwear = Column(String)
+    rpe = Column(Integer)
+    sleep_quality = Column(Integer)
+    risk_score = Column(Float)
+    risk_level = Column(String)
+    injury_probabilities = Column(String)
+    corrective_recommendation = Column(String)
+    created_at = Column(String)
+
+    user = relationship("User")
