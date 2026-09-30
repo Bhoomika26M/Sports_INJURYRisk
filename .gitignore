@@ -16,10 +16,11 @@ ENV/
 .coverage
 htmlcov/
 
-# Models / Data
+# Models / Data (auto-downloaded at runtime, never committed)
 *.pt
 *.onnx
 *.weights
+*.task
 uploads/
 test-assets/
 
