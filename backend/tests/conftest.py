@@ -1,109 +1,70 @@
-"""Shared test fixtures for the backend test suite."""
+"""Shared test fixtures — real Postgres (localhost:5433 test db), tables per test."""
 
-import asyncio
 import os
+
+os.environ["DATABASE_URL"] = os.environ.get(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://injury_user:changeme_in_production@localhost:5433/injury_detection_test",
+)
+os.environ["REDIS_URL"] = os.environ.get("TEST_REDIS_URL", "redis://localhost:6379/1")
+
 from typing import AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
-# Override env before importing app
-os.environ["DATABASE_URL"] = os.environ.get(
-    "TEST_DATABASE_URL",
-    "postgresql+asyncpg://injury_user:changeme_in_production@postgres:5432/injury_detection",
-)
-
-from app.database import Base, get_db
-from app.main import app
-
-# Import all models so metadata knows about them
-from app.modules.users.models import User, RefreshToken  # noqa: F401
-from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntry  # noqa: F401
-from app.modules.videos.models import Video, PoseFrame, BiomechanicalMetric  # noqa: F401
-
 from sqlalchemy.pool import NullPool
 
-# Test database engine
-test_engine = create_async_engine(
-    os.environ["DATABASE_URL"],
-    echo=False,
-    poolclass=NullPool,
-)
+from app.database import Base, get_db
+from app.main import app as fastapi_app
 
-TestSessionLocal = async_sessionmaker(
-    test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+import app.modules.users.models  # noqa: F401
+import app.modules.athletes.models  # noqa: F401
+import app.modules.video.models  # noqa: F401
+import app.modules.risk_scoring.models  # noqa: F401
+import app.modules.recommendations.models  # noqa: F401
+import app.modules.notifications.models  # noqa: F401
+
+test_engine = create_async_engine(os.environ["DATABASE_URL"], echo=False, poolclass=NullPool)
+TestSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """Provide a clean database session for each test.
+    from app.seed import seed_movements
 
-    Creates all tables before the test and drops them after.
-    """
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
     async with TestSessionLocal() as session:
+        await seed_movements(session)
+        await session.commit()
         yield session
-
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
 
 
 @pytest_asyncio.fixture(scope="function")
 async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
-    """Provide an async HTTP client wired to the test database."""
-
     async def override_get_db():
         yield db_session
 
-    app.dependency_overrides[get_db] = override_get_db
-
-    transport = ASGITransport(app=app)
+    fastapi_app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-
-    app.dependency_overrides.clear()
-
-
-async def create_test_user(
-    client: AsyncClient,
-    email: str = "test@example.com",
-    password: str = "testpassword123",
-    full_name: str = "Test User",
-    role: str = "coach",
-) -> dict:
-    """Helper: register a user and return the response data."""
-    response = await client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": email,
-            "password": password,
-            "full_name": full_name,
-            "role": role,
-        },
-    )
-    return response
+    fastapi_app.dependency_overrides.clear()
 
 
-async def login_test_user(
-    client: AsyncClient,
-    email: str = "test@example.com",
-    password: str = "testpassword123",
-) -> dict:
-    """Helper: login a user and return (response, access_token)."""
-    response = await client.post(
-        "/api/v1/auth/login",
-        json={"email": email, "password": password},
-    )
-    return response
+async def register_and_login(client: AsyncClient, email: str, role: str) -> str:
+    await client.post("/api/v1/auth/register", json={
+        "email": email, "password": "testpassword123",
+        "full_name": f"Test {role}", "role": role,
+    })
+    resp = await client.post("/api/v1/auth/login", json={"email": email, "password": "testpassword123"})
+    assert resp.status_code == 200, resp.text
+    return resp.json()["access_token"]
 
 
-def auth_header(access_token: str) -> dict:
-    """Build an Authorization header dict."""
-    return {"Authorization": f"Bearer {access_token}"}
+def auth_header(token: str) -> dict:
+    return {"Authorization": f"Bearer {token}"}

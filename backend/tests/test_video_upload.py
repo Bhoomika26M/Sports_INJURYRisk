@@ -1,6 +1,5 @@
-import pytest
-import re
-from app.modules.videos.router import _safe_filename
+from app.modules.video.router import _safe_filename
+
 
 def test_safe_filename_rejects_path_traversal():
     assert _safe_filename("../../../etc/passwd") == "upload.mp4"

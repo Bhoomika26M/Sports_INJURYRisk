@@ -18,9 +18,10 @@ from app.core.security import hash_password
 from app.database import async_session_factory, engine, Base
 from app.modules.users.models import User, UserRole
 from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntry
-import app.modules.videos.models  # register Video model
+import app.modules.video.models  # register Video model
 import app.modules.risk_scoring.models  # register Risk models
 import app.modules.recommendations.models  # register Recommendation models
+import app.modules.notifications.models  # register Notification model
 
 
 logging.basicConfig(level=logging.INFO)
@@ -281,6 +282,91 @@ async def seed_training_loads(db: AsyncSession, athletes: list[Athlete]) -> None
     await db.flush()
 
 
+MOVEMENT_TYPES = [
+    {"code": "squatting", "display_name": "Squatting", "camera_views": ["sagittal", "frontal", "other"], "phases": ["descent", "bottom", "ascent"]},
+    {"code": "landing", "display_name": "Landing", "camera_views": ["sagittal", "frontal", "other"], "phases": ["initial_contact", "loading", "propulsion"]},
+    {"code": "running", "display_name": "Running", "camera_views": ["sagittal", "frontal", "other"], "phases": ["initial_contact", "midstance", "terminal_stance", "swing"]},
+    {"code": "sprinting", "display_name": "Sprinting", "camera_views": ["sagittal", "frontal", "other"], "phases": ["acceleration", "max_velocity", "deceleration"]},
+    {"code": "jumping", "display_name": "Jumping", "camera_views": ["sagittal", "frontal", "other"], "phases": ["countermovement", "propulsion", "flight", "landing"]},
+    {"code": "throwing", "display_name": "Throwing", "camera_views": ["sagittal", "frontal", "other"], "phases": ["windup", "early_cocking", "late_cocking", "acceleration", "deceleration", "follow_through"]},
+    {"code": "cutting", "display_name": "Cutting", "camera_views": ["sagittal", "frontal", "other"], "phases": ["approach", "plant", "push_off", "exit"]},
+]
+
+MOVEMENT_METRICS = [
+    ("squatting", "knee_flexion_angle_left", "sagittal", "validated"),
+    ("squatting", "knee_flexion_angle_right", "sagittal", "validated"),
+    ("squatting", "hip_flexion_angle_left", "sagittal", "validated"),
+    ("squatting", "hip_flexion_angle_right", "sagittal", "validated"),
+    ("squatting", "trunk_lean_angle", "sagittal", "validated"),
+    ("squatting", "knee_valgus_deviation_left", "frontal", "qualitative"),
+    ("squatting", "knee_valgus_deviation_right", "frontal", "qualitative"),
+    ("landing", "knee_flexion_angle_left", "sagittal", "validated"),
+    ("landing", "knee_flexion_angle_right", "sagittal", "validated"),
+    ("landing", "hip_flexion_angle_left", "sagittal", "validated"),
+    ("landing", "hip_flexion_angle_right", "sagittal", "validated"),
+    ("landing", "trunk_lean_angle", "sagittal", "validated"),
+    ("landing", "knee_valgus_deviation_left", "frontal", "qualitative"),
+    ("landing", "knee_valgus_deviation_right", "frontal", "qualitative"),
+    ("running", "knee_flexion_angle_left", "sagittal", "validated"),
+    ("running", "knee_flexion_angle_right", "sagittal", "validated"),
+    ("running", "hip_flexion_angle_left", "sagittal", "validated"),
+    ("running", "hip_flexion_angle_right", "sagittal", "validated"),
+    ("running", "trunk_lean_angle", "sagittal", "validated"),
+    ("running", "knee_valgus_deviation_left", "frontal", "qualitative"),
+    ("running", "knee_valgus_deviation_right", "frontal", "qualitative"),
+    ("sprinting", "hip_flexion_angle_left", "sagittal", "validated"),
+    ("sprinting", "hip_flexion_angle_right", "sagittal", "validated"),
+    ("sprinting", "knee_flexion_angle_left", "sagittal", "validated"),
+    ("sprinting", "knee_flexion_angle_right", "sagittal", "validated"),
+    ("sprinting", "trunk_lean_angle", "sagittal", "validated"),
+    ("sprinting", "knee_valgus_deviation_left", "frontal", "qualitative"),
+    ("sprinting", "knee_valgus_deviation_right", "frontal", "qualitative"),
+    ("jumping", "knee_flexion_angle_left", "sagittal", "validated"),
+    ("jumping", "knee_flexion_angle_right", "sagittal", "validated"),
+    ("jumping", "hip_flexion_angle_left", "sagittal", "validated"),
+    ("jumping", "hip_flexion_angle_right", "sagittal", "validated"),
+    ("jumping", "trunk_lean_angle", "sagittal", "validated"),
+    ("jumping", "knee_valgus_deviation_left", "frontal", "qualitative"),
+    ("jumping", "knee_valgus_deviation_right", "frontal", "qualitative"),
+    ("throwing", "trunk_rotation", "sagittal", "validated"),
+    ("throwing", "trunk_lean_angle", "sagittal", "validated"),
+    ("cutting", "knee_flexion_angle_left", "sagittal", "validated"),
+    ("cutting", "knee_flexion_angle_right", "sagittal", "validated"),
+    ("cutting", "trunk_lean_angle", "sagittal", "validated"),
+    ("cutting", "knee_valgus_deviation_left", "frontal", "qualitative"),
+    ("cutting", "knee_valgus_deviation_right", "frontal", "qualitative"),
+]
+
+
+async def seed_movements(db: AsyncSession) -> None:
+    """Seed movement_types + movement_metrics registry (idempotent)."""
+    from app.modules.video.models import MovementType, MovementMetric
+
+    for mt in MOVEMENT_TYPES:
+        existing = await db.get(MovementType, mt["code"])
+        if existing:
+            continue
+        db.add(MovementType(**mt))
+        logger.info(f"Created movement_type: {mt['code']}")
+    await db.flush()
+
+    for movement_type, metric_name, plane, confidence in MOVEMENT_METRICS:
+        result = await db.execute(
+            select(MovementMetric).where(
+                MovementMetric.movement_type == movement_type,
+                MovementMetric.metric_name == metric_name,
+            )
+        )
+        if result.scalar_one_or_none():
+            continue
+        db.add(MovementMetric(
+            movement_type=movement_type, metric_name=metric_name,
+            plane=plane, confidence=confidence, unit="degrees",
+        ))
+    await db.flush()
+    logger.info("Movement registry seeded")
+
+
 async def run_seed():
     """Main seed function — creates all demo data."""
     logger.info("=" * 60)
@@ -293,6 +379,7 @@ async def run_seed():
             athletes = await seed_athletes(db, users)
             await seed_injury_history(db, athletes)
             await seed_training_loads(db, athletes)
+            await seed_movements(db)
             await db.commit()
             logger.info("=" * 60)
             logger.info("SEEDING COMPLETE")
