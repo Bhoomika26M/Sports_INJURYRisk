@@ -42,3 +42,5 @@ dist/
 /temp_unzip/
 /prompts/
 /.agents/
+/archive/
+*.log
