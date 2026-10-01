@@ -1,7 +1,7 @@
 """Risk scoring Pydantic schemas."""
 
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 SupportedMovementType = Literal[
@@ -31,3 +31,21 @@ class ScoreBreakdown(BaseModel):
     prior_injury_flag: ScoreComponent
     acwr_flag: ScoreComponent | None = None
     fatigue_flag: ScoreComponent | None = None
+
+
+class BaselineUnitCoverage(BaseModel):
+    have: int
+    need: int
+
+
+class InsufficientBaselineResponse(BaseModel):
+    """HTTP 202 body. ``unit`` says what ``have``/``need`` count: distinct videos or athletes,
+    or per-metric frames -- never an unlabelled "samples"."""
+
+    status: Literal["insufficient_baseline_data"] = "insufficient_baseline_data"
+    metric_name: str
+    unit: Literal["videos", "athletes", "frames"]
+    have: int
+    need: int
+    coverage: dict[Literal["videos", "athletes", "frames"], BaselineUnitCoverage]
+    message: str

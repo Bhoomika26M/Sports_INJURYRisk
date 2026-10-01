@@ -19,9 +19,12 @@ class MovementBaseline(Base):
     athlete_id = Column(UUID(as_uuid=True), ForeignKey("athletes.id"), nullable=True)
     movement_type = Column(String(50), nullable=False)
     metric_name = Column(String(50), nullable=False)
-    mean_value = Column(Float, nullable=False)
-    std_dev = Column(Float, nullable=False)
-    sample_size = Column(Integer, nullable=False)
+    # NULL = insufficient baseline ("we don't know"). Never store a fabricated 0.0 +/- 0.0.
+    mean_value = Column(Float, nullable=True)
+    std_dev = Column(Float, nullable=True)
+    sample_size = Column(Integer, nullable=False)  # unit: per-metric validated FRAME rows
+    video_count = Column(Integer, nullable=False, default=0, server_default="0")    # distinct completed videos
+    athlete_count = Column(Integer, nullable=False, default=0, server_default="0")  # distinct athletes
     computed_at = Column(DateTime(timezone=True), default=now, nullable=False)
 
 

@@ -131,7 +131,7 @@ CREATE TABLE biomechanical_metrics (
     metric_name     VARCHAR(50) NOT NULL,
     metric_value    NUMERIC(8,3) NOT NULL,
     plane           VARCHAR(20) NOT NULL CHECK (plane IN ('sagittal','frontal','transverse')),
-    confidence      VARCHAR(10) NOT NULL CHECK (confidence IN ('validated','qualitative')),
+    confidence      VARCHAR(20) NOT NULL CHECK (confidence IN ('validated','qualitative')),
     created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -151,9 +151,11 @@ CREATE TABLE movement_baselines (
     athlete_id     UUID REFERENCES athletes(id),  -- NULL = population-level (only kind built in M3 v1)
     movement_type  VARCHAR(50) NOT NULL,
     metric_name    VARCHAR(50) NOT NULL,
-    mean_value     NUMERIC(8,3) NOT NULL,
-    std_dev        NUMERIC(8,3) NOT NULL,
-    sample_size    INTEGER NOT NULL CHECK (sample_size >= 0),
+    mean_value     NUMERIC(8,3),           -- NULL = insufficient baseline ("unknown"), never a fabricated 0 (migration 0003)
+    std_dev        NUMERIC(8,3),           -- NULL = insufficient baseline
+    sample_size    INTEGER NOT NULL CHECK (sample_size >= 0),  -- unit: per-metric validated FRAME rows
+    video_count    INTEGER NOT NULL DEFAULT 0,   -- distinct completed videos behind the row (migration 0003)
+    athlete_count  INTEGER NOT NULL DEFAULT 0,   -- distinct athletes behind the row (migration 0003)
     computed_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
     UNIQUE(athlete_id, movement_type, metric_name)
 );

@@ -4,7 +4,7 @@ import logging
 from typing import Annotated, Optional
 
 import jwt
-from fastapi import Cookie, Depends, HTTPException, Request, status
+from fastapi import Cookie, Depends, HTTPException, Path, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +16,13 @@ from app.modules.users.models import User, UserRole
 logger = logging.getLogger(__name__)
 
 bearer_scheme = HTTPBearer(auto_error=False)
+
+# A path ID that must be a UUID. Without this a malformed ID reaches Postgres and surfaces as an
+# unhandled DBAPIError (HTTP 500) instead of a 422 validation error.
+UuidPath = Annotated[
+    str,
+    Path(pattern=r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"),
+]
 
 
 async def get_current_user(

@@ -8,15 +8,15 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_role
+from app.core.deps import UuidPath, get_current_user, require_role
 from app.database import get_db
 from app.modules.users.models import User, UserRole
 from app.modules.video.models import Video, BiomechanicalMetric, VideoProcessingStatus
 from app.modules.athletes.models import Athlete, InjuryHistory
 from app.modules.risk_scoring.models import MovementBaseline, AnomalyScore, RiskScore
 from app.modules.recommendations.models import Recommendation
-from app.modules.risk_scoring.baselines import recompute_baseline_debounced, MIN_BASELINE_SAMPLES
-from app.modules.risk_scoring.anomaly import compute_anomaly_scores, InsufficientBaselineError
+from app.modules.risk_scoring.baselines import recompute_baseline_debounced, BaselineShortfall
+from app.modules.risk_scoring.service import compute_video_anomaly, insufficient_baseline_payload
 from app.modules.risk_scoring.scoring import compute_risk_score, upsert_risk_score
 from app.modules.recommendations.rules import generate_recommendations
 from app.modules.risk_scoring.schemas import BaselineRecomputeRequest
@@ -66,7 +66,7 @@ def _can_access_athlete(user: User, athlete: Athlete) -> bool:
 
 @router.get("/videos/{video_id}/risk-score")
 async def get_risk_score(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     recompute: bool = False,
@@ -98,40 +98,13 @@ async def get_risk_score(
     if not metrics:
         raise api_error(400, "BAD_REQUEST", "No validated metrics found for this video")
 
-    import numpy as np
-    anomaly_percentiles = []
-
-    video_metric_names = set(m.metric_name for m in metrics)
-    for m_name in sorted(video_metric_names):
-        hist_stmt = (
-            select(BiomechanicalMetric.metric_value)
-            .join(Video, Video.id == BiomechanicalMetric.video_id)
-            .where(
-                Video.movement_type == video.movement_type,
-                BiomechanicalMetric.metric_name == m_name,
-                BiomechanicalMetric.confidence == 'validated',
-                Video.processing_status == VideoProcessingStatus.completed
-            )
+    anomaly = await compute_video_anomaly(db, video, list(metrics))
+    if isinstance(anomaly, BaselineShortfall):
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content=insufficient_baseline_payload(anomaly).model_dump(),
         )
-        hist_values = (await db.scalars(hist_stmt)).all()
-        if len(hist_values) < MIN_BASELINE_SAMPLES:
-            return JSONResponse(
-                status_code=status.HTTP_202_ACCEPTED,
-                content={"status": "insufficient_baseline_data", "metric_name": m_name, "have": len(hist_values), "need": MIN_BASELINE_SAMPLES}
-            )
-
-        baseline_vectors = np.array(hist_values).reshape(-1, 1)
-        sample_values = [m.metric_value for m in metrics if m.metric_name == m_name]
-        sample_vectors = np.array(sample_values).reshape(-1, 1)
-
-        try:
-            scores = compute_anomaly_scores(sample_vectors, baseline_vectors, MIN_BASELINE_SAMPLES, cache_key=f"{video.movement_type}:{m_name}", metric_name=m_name)
-            anomaly_percentiles.extend(scores)
-        except InsufficientBaselineError as e:
-            return JSONResponse(
-                status_code=status.HTTP_202_ACCEPTED,
-                content={"status": "insufficient_baseline_data", "metric_name": e.metric_name, "have": e.have, "need": e.need}
-            )
+    anomaly_percentiles = anomaly.frame_scores
 
     # LSI from biomechanics
     stmt = (
@@ -172,7 +145,10 @@ async def get_risk_score(
     except Exception:
         pass
 
-    risk_result = compute_risk_score(anomaly_percentiles, lsi, has_prior_injury, acwr, rpe_trend)
+    risk_result = compute_risk_score(
+        anomaly_percentiles, lsi, has_prior_injury, acwr, rpe_trend,
+        baseline_note=f"baseline: {anomaly.baseline_videos} other videos / {anomaly.baseline_athletes} athletes, this video excluded",
+    )
 
     risk_score = await upsert_risk_score(
         db=db,
@@ -228,7 +204,7 @@ async def get_risk_score(
 
 @router.get("/videos/{video_id}/recommendations")
 async def get_recommendations(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):

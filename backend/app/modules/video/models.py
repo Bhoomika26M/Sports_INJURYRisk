@@ -123,7 +123,7 @@ class BiomechanicalMetric(Base):
         # CHECK constraint added by migration
     )
     confidence: Mapped[str] = mapped_column(
-        String(10), nullable=False,
+        String(20), nullable=False,  # 'qualitative' is 11 chars; widened from 10 in migration 0003
         # CHECK constraint added by migration
     )
     movement_phase: Mapped[str | None] = mapped_column(String(50), nullable=True)
