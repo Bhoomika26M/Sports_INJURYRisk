@@ -1,5 +1,6 @@
 """Recommendation rules — map flagged metrics to corrective exercises."""
 
+from app.modules.risk_scoring.constants import ANOMALY_REVIEW_POINTS, ANOMALY_SIGNIFICANT_POINTS
 from app.modules.risk_scoring.schemas import ScoreBreakdown
 
 
@@ -12,9 +13,9 @@ RECOMMENDATION_RULES = [
         "title": "Address limb asymmetry",
         "description": "Single-leg strengthening work (single-leg squats, Bulgarian split squats, Nordic hamstring curls) targeting the weaker side, per standard ACL-prevention programs such as FIFA 11+.",
     },
-    # Movement anomaly > 40
+    # Movement anomaly component above the moderate-band floor (25 of 70 points)
     {
-        "trigger": lambda breakdown: breakdown.movement_anomaly.points > 40,
+        "trigger": lambda breakdown: breakdown.movement_anomaly.points > ANOMALY_REVIEW_POINTS,
         "category": "mobility",
         "priority": 1,
         "title": "Movement pattern review",
@@ -46,7 +47,7 @@ RECOMMENDATION_RULES = [
     },
     # High movement anomaly (specific metrics)
     {
-        "trigger": lambda breakdown: breakdown.movement_anomaly.points > 60,
+        "trigger": lambda breakdown: breakdown.movement_anomaly.points > ANOMALY_SIGNIFICANT_POINTS,
         "category": "mobility",
         "priority": 1,
         "title": "Significant movement deviation detected",

@@ -1,9 +1,22 @@
-"""Risk scoring — transparent additive composite with cited weights."""
+"""Risk scoring — transparent additive composite with cited weights.
+
+``anomaly_scores`` are per-frame scores on the 0-anchored scale defined in anomaly.py
+(0 = inside the baseline's normal envelope). The movement component is 0.7 x their mean, so a
+perfectly normal athlete now contributes ~0 points (previously ~37 of 70 by construction).
+
+Category cut-points (constants.RISK_CATEGORY_UPPER_BOUNDS): low <=25, moderate <=50, high <=75,
+critical >75. They are kept at 25/50/75 because (a) they were written as if 0 meant "no anomaly",
+which is now true, and (b) there is no injury-outcome data to recalibrate against -- they are
+conventional quarter bands of a bounded index, NOT risk probabilities. The movement component
+caps at 70, so "critical" cannot be reached by movement pattern alone: it needs corroborating
+flags (asymmetry / prior injury / load / fatigue). That is deliberate.
+"""
 
 import numpy as np
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.risk_scoring.constants import RISK_CATEGORY_TOP, RISK_CATEGORY_UPPER_BOUNDS
 from app.modules.risk_scoring.models import RiskScore
 from app.modules.risk_scoring.schemas import ScoreBreakdown, ScoreComponent
 
@@ -19,6 +32,7 @@ def compute_risk_score(
     has_prior_relevant_injury: bool,
     acwr: float | None = None,          # from training load (when ≥28 days data)
     rpe_trend: float | None = None,     # from training load RPE trend
+    baseline_note: str | None = None,   # what the anomaly baseline was made of, for transparency
 ) -> dict:
     """Composite score, every component visible in the breakdown — never a single unexplained number."""
 
@@ -42,17 +56,10 @@ def compute_risk_score(
 
     overall = min(100.0, base + asymmetry_points + injury_points + acwr_points + fatigue_points)
 
-    if overall <= 25:
-        category = "low"
-    elif overall <= 50:
-        category = "moderate"
-    elif overall <= 75:
-        category = "high"
-    else:
-        category = "critical"
+    category = next((name for name, upper in RISK_CATEGORY_UPPER_BOUNDS if overall <= upper), RISK_CATEGORY_TOP)
 
     breakdown = ScoreBreakdown(
-        movement_anomaly=ScoreComponent(points=round(base, 1), max=70.0, detail=f"mean anomaly percentile: {round(float(np.mean(anomaly_scores)), 1) if anomaly_scores else None}"),
+        movement_anomaly=ScoreComponent(points=round(base, 1), max=70.0, detail=_anomaly_detail(anomaly_scores, baseline_note)),
         asymmetry_flag=ScoreComponent(points=asymmetry_points, max=15.0, flagged=asymmetry_flag, lsi=limb_symmetry_index, caveat=LSI_CAVEAT),
         prior_injury_flag=ScoreComponent(points=injury_points, max=10.0, flagged=has_prior_relevant_injury),
         acwr_flag=ScoreComponent(points=acwr_points, max=10.0, flagged=acwr_flag, acwr=acwr),
@@ -60,6 +67,14 @@ def compute_risk_score(
     )
 
     return {"overall_score": round(overall, 1), "risk_category": category, "score_breakdown": breakdown}
+
+
+def _anomaly_detail(anomaly_scores: list[float], baseline_note: str | None) -> str:
+    if not anomaly_scores:
+        return "no validated frames scored"
+    mean = round(float(np.mean(anomaly_scores)), 1)
+    text = f"mean frame anomaly score: {mean} (0 = inside the baseline's normal envelope, 100 = far outside)"
+    return f"{text}; {baseline_note}" if baseline_note else text
 
 
 async def upsert_risk_score(db: AsyncSession, video_id: str, athlete_id: str, overall_score: float, risk_category: str, score_breakdown: dict) -> RiskScore:
