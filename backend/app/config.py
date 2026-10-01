@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     google_client_secret: Optional[str] = None
     google_redirect_uri: str = "http://localhost:8000/api/v1/auth/google/callback"
 
+    # Browser-facing URL of the Next.js app. The OAuth callback redirects here once the refresh
+    # cookie is set; no token is ever placed in a URL.
+    frontend_url: str = "http://localhost:3000"
+
+    # Secure flag on auth cookies. Default True (AGENTS.md: httpOnly, secure, SameSite=Lax).
+    # Set COOKIE_SECURE=false ONLY for local plain-http development in a browser that refuses
+    # Secure cookies on http://localhost (e.g. Safari).
+    cookie_secure: bool = True
+
     # Backend
     backend_cors_origins: str = "http://localhost:3000"
     backend_host: str = "0.0.0.0"

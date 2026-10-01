@@ -79,6 +79,9 @@ def _baseline_rows_stmt(movement_type: str, metric_name: str, *, exclude_video_i
         .where(
             Video.movement_type == movement_type,
             Video.processing_status == VideoProcessingStatus.completed,
+            # Only clean footage defines "normal": partial-coverage and multi-person clips (identity or
+            # coverage caveat) are scored for their own athlete but never contribute to a population baseline.
+            Video.coverage_caveat.is_(None),
             BiomechanicalMetric.metric_name == metric_name,
             BiomechanicalMetric.confidence == "validated",
         )

@@ -110,7 +110,15 @@ async def movement_type_analytics(db: AsyncSession, user: User, movement_type: s
 
     baseline_data = {}
     for b in baselines:
-        baseline_data[b.metric_name] = {"mean": b.mean_value, "std": b.std_dev, "sample_size": b.sample_size}
+        baseline_data[b.metric_name] = {
+            "mean": b.mean_value,   # None = insufficient baseline ("unknown"), never a fabricated 0
+            "std": b.std_dev,
+            "sufficient": b.mean_value is not None,
+            "sample_size": b.sample_size,
+            "sample_size_unit": "frames",
+            "video_count": b.video_count,
+            "athlete_count": b.athlete_count,
+        }
 
     anomaly_scores = [float(a.anomaly_score) for a in anomalies]
     anomaly_dist = {

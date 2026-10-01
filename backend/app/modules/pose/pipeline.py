@@ -110,6 +110,17 @@ def select_main_track(tracks: dict[int, dict[int, tuple]]) -> int | None:
     return max(tracks.items(), key=_score)[0]
 
 
+def should_skip_frame(box, subject_boxes, full_frame_fallback: bool) -> bool:
+    """True when pose must NOT be attempted on this frame.
+
+    Tracking is active (``subject_boxes`` given) but the selected athlete is absent from this frame and the
+    video has several people: a full-frame pose pass would measure whichever OTHER person it finds and silently
+    mix identities into the athlete's metrics. Single-person videos keep the full-frame fallback (nobody else
+    to mix up), as do untracked videos (``subject_boxes`` is None).
+    """
+    return box is None and subject_boxes is not None and not full_frame_fallback
+
+
 def _reset_tracker_state(model) -> None:
     """Best-effort reset of the YOLO tracker's persistent state.
 
@@ -142,6 +153,7 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
         "main_track_id": int | None (see select_main_track),
         "max_persons": int,
         "frames_processed": int,
+        "frame_width"/"frame_height": int | None (pixels),
         "tracked": bool (False when the model has no .track or IDs came back empty,
                          meaning per-frame identity is unavailable),
     }
@@ -153,6 +165,8 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
     use_track = callable(getattr(model, "track", None))
 
     cap = cv2.VideoCapture(video_path)
+    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or None
+    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or None
     tracks: dict[int, dict[int, tuple]] = {}
     person_counts: list[int] = []
     saw_ids = False
@@ -195,6 +209,8 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
         "max_persons": max(person_counts, default=0),
         "frames_processed": frame_idx,
         "tracked": saw_ids,
+        "frame_width": frame_width,
+        "frame_height": frame_height,
     }
 
 
@@ -237,7 +253,7 @@ def _draw_mapped_landmarks(frame, norm_landmarks, origin_x, origin_y, crop_w, cr
         cv2.circle(frame, (int(fx * full_w), int(fy * full_h)), 3, (0, 255, 0), -1)
 
 
-def _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes=None):
+def _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes=None, full_frame_fallback=True):
     writer = None
     if annotate_output_path:
         writer = cv2.VideoWriter(annotate_output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
@@ -257,8 +273,9 @@ def _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output
             else:
                 crop, ox, oy, ch, cw = None, 0, 0, height, width
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            result = pose.process(rgb)
-            if result.pose_world_landmarks:
+            skip = should_skip_frame(box, subject_boxes, full_frame_fallback)
+            result = None if skip else pose.process(rgb)
+            if result is not None and result.pose_world_landmarks:
                 frame_results.append({
                     "frame_number": frame_idx,
                     "timestamp_ms": timestamp_ms,
@@ -287,7 +304,7 @@ def _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output
     return frame_results, detection_rate
 
 
-def _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes=None):
+def _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes=None, full_frame_fallback=True):
     from mediapipe.tasks.python import vision
     from mediapipe.tasks.python.core.base_options import BaseOptions
     from mediapipe.tasks.python.vision.core.vision_task_running_mode import VisionTaskRunningMode
@@ -319,9 +336,12 @@ def _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_
             else:
                 crop, ox, oy, ch, cw = None, 0, 0, height, width
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-            result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            if result.pose_world_landmarks:
+            skip = should_skip_frame(box, subject_boxes, full_frame_fallback)
+            result = None
+            if not skip:
+                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+                result = landmarker.detect_for_video(mp_image, timestamp_ms)
+            if result is not None and result.pose_world_landmarks:
                 frame_results.append({
                     "frame_number": frame_idx,
                     "timestamp_ms": timestamp_ms,
@@ -351,7 +371,8 @@ def _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_
 
 
 def run_mediapipe_full_pass(video_path: str, annotate_output_path: str | None = None, progress_callback=None,
-                            subject_boxes: dict[int, tuple | None] | None = None):
+                            subject_boxes: dict[int, tuple | None] | None = None,
+                            full_frame_fallback: bool = True):
     """
     Run MediaPipe pose over all frames.
     Extract world landmarks, and optionally burn the skeleton into an output video.
@@ -360,6 +381,10 @@ def run_mediapipe_full_pass(video_path: str, annotate_output_path: str | None = 
     athlete — frames with a box are cropped to the subject before pose, so
     multi-person videos analyze one consistent person. None = full-frame
     behavior (legacy, single-person clips).
+    `full_frame_fallback`: when tracking is active and the athlete's box is missing on a frame, run full-frame
+    pose anyway (True, safe for single-person clips) or skip the frame (False, required for multi-person clips
+    so another person is never measured as the athlete). The detection rate then means "frames where the
+    selected athlete was measured".
     """
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -368,9 +393,9 @@ def run_mediapipe_full_pass(video_path: str, annotate_output_path: str | None = 
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
     try:
         if _HAS_LEGACY_POSE:
-            return _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes)
+            return _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes, full_frame_fallback)
         logger.info("mp.solutions.pose unavailable, using Tasks PoseLandmarker")
-        return _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes)
+        return _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes, full_frame_fallback)
     finally:
         cap.release()
 

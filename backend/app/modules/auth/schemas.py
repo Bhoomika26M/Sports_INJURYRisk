@@ -44,8 +44,3 @@ class GoogleUserInfo(BaseModel):
     name: str | None = None
     picture: str | None = None
     email_verified: bool = False
-
-
-class GoogleLoginRequest(BaseModel):
-    code: str
-    redirect_uri: str

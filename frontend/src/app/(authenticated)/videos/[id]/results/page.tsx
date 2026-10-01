@@ -98,7 +98,13 @@ export default function ResultsPage() {
           <div>
             <h2 className="bento-hero__title">Baseline building</h2>
             <p className="bento-hero__subtitle">
-              {insufficient.have}/{insufficient.need} validated samples for {insufficient.metric_name}. Scores unlock at {insufficient.need}.
+              {insufficient.message}
+            </p>
+            <p className="bento-hero__subtitle" style={{ marginTop: 8 }}>
+              Reference data so far (this video is never counted in its own baseline):{" "}
+              {(["videos", "athletes"] as const)
+                .map((u) => `${insufficient.coverage?.[u]?.have ?? 0}/${insufficient.coverage?.[u]?.need ?? "?"} ${u}`)
+                .join(" · ")}
             </p>
           </div>
         </section>

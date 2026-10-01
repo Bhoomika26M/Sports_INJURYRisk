@@ -13,6 +13,7 @@ from app.modules.video.models import Video, VideoProcessingStatus, PoseFrame, Bi
 from app.modules.risk_scoring.models import MovementBaseline, RiskScore
 from app.modules.recommendations.models import Recommendation
 from app.modules.pose.pipeline import track_persons, run_mediapipe_full_pass, extract_thumbnail
+from app.modules.pose.coverage import assess_coverage, summarize_tracking
 from app.modules.biomechanics.calculations import (
     knee_flexion_angle, trunk_lean_angle, knee_valgus_flag, limb_symmetry_index, METRIC_CONFIDENCE
 )
@@ -22,9 +23,15 @@ logger = logging.getLogger(__name__)
 
 
 class VideoProcessingError(Exception):
-    def __init__(self, code: str, message: str):
+    """The video itself is the problem. ``person_count_detected`` / ``detection_rate`` are persisted with
+    the failure so the UI can explain it (previously both were NULL on every failed video)."""
+
+    def __init__(self, code: str, message: str, *, person_count_detected: int | None = None,
+                 detection_rate: float | None = None):
         self.code = code
         self.message = message
+        self.person_count_detected = person_count_detected
+        self.detection_rate = detection_rate
         super().__init__(message)
 
 
@@ -142,8 +149,17 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             tracking = track_persons(local_path, ctx.get("yolo_model"), stride=1)
             person_counts = tracking["person_counts"]
             if tracking["max_persons"] == 0:
-                raise VideoProcessingError("no_person_detected", "No person detected in any frame.")
+                raise VideoProcessingError(
+                    "no_person_detected", "No person detected in any frame.",
+                    person_count_detected=0, detection_rate=0.0,
+                )
             main_track_id = tracking["main_track_id"]
+            summary = summarize_tracking(tracking)
+            logger.info(
+                f"Coverage inputs for {video_id}: {summary.substantive_tracks} substantive track(s) of "
+                f"{summary.tracks_seen} ID(s), max {summary.max_persons} in one frame, subject height "
+                f"{summary.subject_height_px} px, main track coverage {summary.main_track_coverage:.0%}"
+            )
             subject_boxes: dict[int, tuple | None] | None = None
             if main_track_id is not None:
                 main_frames = tracking["tracks"][main_track_id]
@@ -186,15 +202,19 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                     annotate_output_path=annotated_path,
                     progress_callback=sync_progress,
                     subject_boxes=subject_boxes,
+                    # Several people: never fall back to full-frame pose on frames where the athlete is
+                    # untracked, or another person gets measured as the athlete.
+                    full_frame_fallback=not summary.multi_person,
                 )
             )
 
-            if detection_rate < 0.70:
+            assessment = assess_coverage(summary, detection_rate)
+            if assessment.outcome == "reject":
                 raise VideoProcessingError(
-                    "low_detection_quality",
-                    f"Pose detected in only {detection_rate:.0%} of frames — below the 70% floor. "
-                    f"Check lighting, framing, and that the full body is in view."
+                    assessment.code, assessment.message,
+                    person_count_detected=max(person_counts), detection_rate=detection_rate,
                 )
+            # "partial" is accepted with an explicit caveat; "ok" carries a note only for multi-person clips.
 
             await store_pose_frames(db, video_id, frame_results)
 
@@ -208,6 +228,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 processing_completed_at=now(),
                 person_count_detected=max(person_counts),
                 detection_rate=detection_rate,
+                coverage_caveat=assessment.caveat,
                 annotated_video_key=annotated_path,
                 progress_pct=100
             )
@@ -216,10 +237,18 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 "frames_processed": len(frame_results),
                 "tracked_subject_id": main_track_id,
                 "max_persons": max(person_counts, default=0),
+                "coverage": assessment.outcome,
             }
 
         except VideoProcessingError as e:
-            await update_video_status(db, video_id, VideoProcessingStatus.failed, error_code=e.code, error_message=e.message)
+            diagnostics = {}
+            if e.person_count_detected is not None:
+                diagnostics["person_count_detected"] = e.person_count_detected
+            if e.detection_rate is not None:
+                diagnostics["detection_rate"] = e.detection_rate
+            await update_video_status(
+                db, video_id, VideoProcessingStatus.failed, error_code=e.code, error_message=e.message, **diagnostics
+            )
             return {"status": "failed", "reason": e.code}
         except Exception as e:
             logger.exception(f"Unexpected error processing video {video_id}")

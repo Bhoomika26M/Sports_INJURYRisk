@@ -37,6 +37,7 @@ class VideoResponse(BaseModel):
     detection_rate: Optional[float] = None
     error_code: Optional[str] = None
     error_message: Optional[str] = None
+    coverage_caveat: Optional[str] = None
     job_id: Optional[str] = None
     progress_pct: int
     annotated_video_key: Optional[str] = None

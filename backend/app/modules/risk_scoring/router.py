@@ -64,6 +64,15 @@ def _can_access_athlete(user: User, athlete: Athlete) -> bool:
     return False
 
 
+def _data_quality(video: Video) -> dict:
+    """What the pose pipeline could actually measure, so a score is never read as more certain than it is."""
+    return {
+        "detection_rate": float(video.detection_rate) if video.detection_rate is not None else None,
+        "person_count_detected": video.person_count_detected,
+        "caveat": video.coverage_caveat,
+    }
+
+
 @router.get("/videos/{video_id}/risk-score")
 async def get_risk_score(
     video_id: UuidPath,
@@ -85,7 +94,8 @@ async def get_risk_score(
             "overall_score": existing_score.overall_score,
             "risk_category": existing_score.risk_category,
             "score_breakdown": existing_score.score_breakdown,
-            "methodology_note": existing_score.methodology_note
+            "methodology_note": existing_score.methodology_note,
+            "data_quality": _data_quality(video),
         }
 
     # Fetch validated metrics for this video
@@ -198,7 +208,8 @@ async def get_risk_score(
         "overall_score": risk_score.overall_score,
         "risk_category": risk_score.risk_category,
         "score_breakdown": risk_score.score_breakdown,
-        "methodology_note": risk_score.methodology_note
+        "methodology_note": risk_score.methodology_note,
+        "data_quality": _data_quality(video),
     }
 
 

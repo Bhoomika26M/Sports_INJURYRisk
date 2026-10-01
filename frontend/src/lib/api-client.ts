@@ -1,3 +1,5 @@
+import { clearSessionHint } from "@/lib/session-hint";
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 export class ApiError extends Error {
@@ -94,7 +96,7 @@ export const apiClient = {
         });
       } else {
         if (typeof window !== "undefined") {
-          document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
+          clearSessionHint();
           if (window.location.pathname !== "/login" && window.location.pathname !== "/register") {
             window.location.href = "/login";
           }

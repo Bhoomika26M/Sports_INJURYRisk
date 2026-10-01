@@ -113,16 +113,27 @@ async def revoke_refresh_token(db: AsyncSession, refresh_token: str) -> None:
         pass  # Best effort
 
 
+class OAuthError(Exception):
+    """A Google sign-in failure that is safe to show the user. ``code`` is a stable machine value."""
+
+    def __init__(self, code: str, message: str):
+        self.code, self.message = code, message
+        super().__init__(f"{code}: {message}")
+
+
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
+
+
 async def get_google_user_info(access_token: str) -> GoogleUserInfo:
-    """Fetch user info from Google using access token."""
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(
-            "https://www.googleapis.com/oauth2/v3/userinfo",
-            headers={"Authorization": f"Bearer {access_token}"},
-            timeout=10.0,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+    """Fetch user info from Google using the Google access token."""
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                GOOGLE_USERINFO_URL, headers={"Authorization": f"Bearer {access_token}"}, timeout=10.0,
+            )
+            resp.raise_for_status()
+            data = resp.json()
         return GoogleUserInfo(
             sub=data["sub"],
             email=data["email"],
@@ -130,43 +141,69 @@ async def get_google_user_info(access_token: str) -> GoogleUserInfo:
             picture=data.get("picture"),
             email_verified=data.get("email_verified", False),
         )
+    except httpx.HTTPStatusError as e:
+        raise OAuthError("oauth_userinfo_failed", "Google rejected the profile request") from e
+    except (httpx.RequestError, KeyError, ValueError) as e:
+        raise OAuthError("oauth_provider_unavailable", "Could not read the Google profile") from e
+
+
+async def exchange_google_code(code: str, redirect_uri: str) -> str:
+    """Exchange an authorization code for a Google access token. Single-use, short-lived codes mean an
+    expired/replayed/forged code fails here as ``oauth_code_invalid``."""
+    from app.config import settings
+
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                GOOGLE_TOKEN_URL,
+                data={
+                    "code": code,
+                    "client_id": settings.google_client_id,
+                    "client_secret": settings.google_client_secret,
+                    "redirect_uri": redirect_uri,
+                    "grant_type": "authorization_code",
+                },
+                timeout=10.0,
+            )
+            resp.raise_for_status()
+            return resp.json()["access_token"]
+    except httpx.HTTPStatusError as e:
+        raise OAuthError("oauth_code_invalid", "The Google sign-in code was rejected or has expired") from e
+    except (httpx.RequestError, KeyError, ValueError) as e:
+        raise OAuthError("oauth_provider_unavailable", "Could not reach Google") from e
 
 
 async def handle_google_callback(db: AsyncSession, code: str, redirect_uri: str) -> tuple[User, str, str]:
-    """Exchange Google auth code for tokens, create/get user, return user + token pair."""
-    from app.config import settings
+    """Exchange Google auth code, find/link/create the user, return user + token pair.
 
-    async with httpx.AsyncClient() as client:
-        token_resp = await client.post(
-            "https://oauth2.googleapis.com/token",
-            data={
-                "code": code,
-                "client_id": settings.google_client_id,
-                "client_secret": settings.google_client_secret,
-                "redirect_uri": redirect_uri,
-                "grant_type": "authorization_code",
-            },
-            timeout=10.0,
-        )
-        token_resp.raise_for_status()
-        token_data = token_resp.json()
+    Account linking is unchanged (google_id first, then email), with three guards that an
+    unauthenticated sign-in path needs:
+      * Google must assert the email is verified -- otherwise anyone could claim an existing
+        password account by registering its address at an IdP that does not verify it.
+      * An account already linked to a DIFFERENT Google subject is never silently re-used.
+      * Deactivated accounts cannot sign in this way either.
+    """
+    google_access_token = await exchange_google_code(code, redirect_uri)
+    google_user = await get_google_user_info(google_access_token)
 
-    google_user = await get_google_user_info(token_data["access_token"])
+    if not google_user.email_verified:
+        raise OAuthError("oauth_email_unverified", "Your Google account email is not verified")
 
-    # Find or create user
     user = await db.scalar(select(User).where(User.google_id == google_user.sub))
     if not user:
         user = await db.scalar(select(User).where(User.email == google_user.email))
 
     if user:
-        # Link Google account if not already
+        if user.google_id and user.google_id != google_user.sub:
+            raise OAuthError("oauth_account_conflict", "This email is linked to a different Google account")
+        if not user.is_active:
+            raise OAuthError("oauth_account_disabled", "This account is deactivated")
         if not user.google_id:
             user.google_id = google_user.sub
             user.avatar_url = google_user.picture
             await db.commit()
             await db.refresh(user)
     else:
-        # Create new user via Google
         user = User(
             email=google_user.email,
             password_hash="",

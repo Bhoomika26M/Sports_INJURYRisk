@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { apiClient } from "@/lib/api-client";
+import { clearSessionHint, setSessionHint } from "@/lib/session-hint";
 
 interface User {
   id: string;
@@ -32,11 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (token) {
           const userData = await apiClient.fetchWithAuth("/auth/me");
           setUser(userData);
+          setSessionHint();
         } else {
           setUser(null);
+          clearSessionHint();
         }
       } catch {
         setUser(null);
+        clearSessionHint();
       } finally {
         setLoading(false);
       }
@@ -47,13 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = (token: string, userData: User) => {
     apiClient.setToken(token);
     setUser(userData);
+    setSessionHint();
   };
 
   const logout = () => {
     apiClient.setToken(null);
     setUser(null);
     if (typeof window !== "undefined") {
-      document.cookie = "refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; Max-Age=0";
+      clearSessionHint();
       window.location.href = "/login";
     }
   };

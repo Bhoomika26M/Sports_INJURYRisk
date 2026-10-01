@@ -66,6 +66,9 @@ class Video(Base):
     detection_rate: Mapped[float | None] = mapped_column(Numeric(4, 3))
     error_code: Mapped[str | None] = mapped_column(String(50))
     error_message: Mapped[str | None] = mapped_column(Text)
+    # NULL = one clearly-tracked athlete at full (>=70%) pose coverage. Otherwise a human-readable caveat:
+    # partial coverage and/or several people in frame (which track was analysed). Not an error.
+    coverage_caveat: Mapped[str | None] = mapped_column(Text)
     job_id: Mapped[str | None] = mapped_column(String(255))
     progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     annotated_video_key: Mapped[str | None] = mapped_column(String(500))

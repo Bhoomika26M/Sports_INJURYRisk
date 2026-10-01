@@ -47,12 +47,16 @@ export default function ScientistDashboard() {
         <div className="bento-card p-6">
           <h3 className="font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Baselines</h3>
           {!data ? <p className="text-sm" style={{ color: "var(--text-secondary)" }}>Loading…</p> :
-            Object.keys(data.baselines).length === 0 ? <p className="text-sm" style={{ color: "var(--text-secondary)" }}>No baselines yet (need 10+ validated samples).</p> :
+            Object.keys(data.baselines).length === 0 ? <p className="text-sm" style={{ color: "var(--text-secondary)" }}>No baselines yet. A baseline needs at least 5 completed videos from at least 3 athletes.</p> :
             <div className="space-y-2">
               {Object.entries(data.baselines).map(([name, b]: any) => (
                 <div key={name} className="flex justify-between text-sm">
                   <span style={{ color: "var(--text-primary)" }}>{name}</span>
-                  <span style={{ color: "var(--text-secondary)" }}>μ {b.mean} · σ {b.std} · n={b.sample_size}</span>
+                  <span style={{ color: "var(--text-secondary)" }}>
+                    {b.sufficient
+                      ? `μ ${b.mean} · σ ${b.std} · ${b.video_count} videos / ${b.athlete_count} athletes (${b.sample_size} frames)`
+                      : `not enough data yet · ${b.video_count} videos / ${b.athlete_count} athletes`}
+                  </span>
                 </div>
               ))}
             </div>}

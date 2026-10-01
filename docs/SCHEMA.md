@@ -101,6 +101,7 @@ CREATE TABLE videos (
     detection_rate              NUMERIC(4,3),
     error_code                  VARCHAR(50),
     error_message                TEXT,
+    coverage_caveat   TEXT,                -- NULL = one clearly-tracked athlete at full coverage; else partial-coverage / multi-person note (migration 0004). Not an error.
     job_id                      VARCHAR(255),
     progress_pct                 INTEGER NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100),
     annotated_video_key          VARCHAR(500),

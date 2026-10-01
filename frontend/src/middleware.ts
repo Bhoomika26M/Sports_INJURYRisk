@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const refreshToken = request.cookies.get("refresh_token");
-  
+  // The backend's refresh_token cookie is httpOnly and scoped to /api/v1/auth, so the browser never sends
+  // it to these page routes (previously every login bounced straight back to /login). The frontend sets a
+  // non-secret presence flag instead; the API remains the real authorisation boundary.
+  const hasSession = request.cookies.get("session_active");
+
   // Protect all authenticated routes
   if (
     request.nextUrl.pathname.startsWith("/dashboard") ||
@@ -11,7 +14,7 @@ export function middleware(request: NextRequest) {
     request.nextUrl.pathname.startsWith("/notifications") ||
     request.nextUrl.pathname.startsWith("/reports")
   ) {
-    if (!refreshToken) {
+    if (!hasSession) {
       return NextResponse.redirect(new URL("/login", request.url));
     }
   }

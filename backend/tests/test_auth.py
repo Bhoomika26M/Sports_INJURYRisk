@@ -73,7 +73,12 @@ async def test_refresh_rotation(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_google_login_url_configured(client: AsyncClient):
+async def test_google_login_redirects_to_google_when_configured(client: AsyncClient, monkeypatch):
+    # Was: 200 + JSON {"url": ...}, which a browser navigation renders as raw JSON. Full coverage of the
+    # flow (state, callback, linking, failures) lives in tests/test_google_oauth.py.
+    from app.config import settings
+    monkeypatch.setattr(settings, "google_client_id", "cid")
+    monkeypatch.setattr(settings, "google_client_secret", "secret")
     resp = await client.get("/api/v1/auth/google")
-    assert resp.status_code == 200
-    assert "accounts.google.com" in resp.json()["url"]
+    assert resp.status_code == 302
+    assert resp.headers["location"].startswith("https://accounts.google.com/")
