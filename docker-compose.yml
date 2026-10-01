@@ -1,3 +1,14 @@
+# Container-correct service URLs for the backend and the arq worker.
+#
+# `environment:` takes precedence over `env_file:`. The repo .env is written for HOST-side runs
+# (DATABASE_URL=...@localhost:5433/..., REDIS_URL=redis://localhost:6379/...). Inside a container
+# `localhost` is the container itself, so without this override the backend cannot reach Postgres.
+# Host-side (non-Docker) runs are unaffected: they read .env directly and never see this file.
+x-container-env: &container-env
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD:-changeme_in_production}@postgres:5432/${POSTGRES_DB:-injury_detection}
+  DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD:-changeme_in_production}@postgres:5432/${POSTGRES_DB:-injury_detection}
+  REDIS_URL: redis://redis:6379/0
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -34,6 +45,7 @@ services:
       - "8000:8000"
     env_file:
       - .env
+    environment: *container-env
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,6 +63,7 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    environment: *container-env
     depends_on:
       postgres:
         condition: service_healthy

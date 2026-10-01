@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.core.health import router as health_router
 from app.modules.auth.router import router as auth_router
 from app.modules.athletes.router import router as athletes_router
 from app.modules.video.router import router as videos_router
@@ -31,6 +32,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(athletes_router)
 app.include_router(videos_router)
