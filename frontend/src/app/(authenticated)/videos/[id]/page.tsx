@@ -13,6 +13,7 @@ type Video = {
   annotated_video_key?: string;
   storage_key?: string;
   error_message?: string | null;
+  coverage_caveat?: string | null;
   fps: number;
   duration_seconds: number;
 };
@@ -71,6 +72,12 @@ export default function VideoDetailPage() {
         <div className="bento-card p-6 border-red-200" style={{ color: "var(--danger-fg)" }}>
           <h3 className="font-semibold mb-1">Processing Failed</h3>
           <p className="text-sm">Error: {video.error_message || "Unknown error"}</p>
+        </div>
+      )}
+
+      {video.processing_status === "completed" && video.coverage_caveat && (
+        <div className="bento-card p-4 text-sm" style={{ color: "var(--text-secondary)", borderLeft: "4px solid var(--warn, #B45309)" }}>
+          <strong style={{ color: "var(--text-primary)" }}>Data quality note.</strong> {video.coverage_caveat}
         </div>
       )}
 

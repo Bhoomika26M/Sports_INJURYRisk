@@ -2,7 +2,7 @@
 
 Revision ID: 0003
 Revises: 0002
-Create Date: 2026-09-30
+Create Date: 2026-10-02
 
 1. movement_baselines.mean_value / std_dev become NULLable. Insufficient baselines used to be
    stored as 0.0 +/- 0.0, a plausible-looking wrong number. NULL means "we don't know".

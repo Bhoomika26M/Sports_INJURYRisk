@@ -2,24 +2,31 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-09-30
-**Verified by:** postgres+redis via Docker, `alembic upgrade head` clean, seed idempotent, `pytest` 46/46 green, `npm run build` clean (16 routes), `/health` 200 against live server.
+**Last verified:** 2026-10-02
+**Verified by (this session, real runs):** native PostgreSQL 16.15 + Redis (Docker was **not** available), `alembic upgrade head` clean from an empty database (0001 → 0004) with 0003/0004 downgrade/upgrade round trips, `python -m app.seed` run twice (idempotent; 7 users, 7 movement types), `pytest tests/` → **189 passed, 0 failed, 0 skipped**, a live `uvicorn` answering `/health` 200 and `/health/ready` 200, `npm run build` → compiled + type-checked, 17 routes.
+**Caveats on those runs:** (1) `ultralytics` was replaced by a stub that raises if YOLO is instantiated (torch does not fit in that sandbox); nothing in the test suite runs real YOLO. (2) The frontend build was run with the `next/font/google` import temporarily swapped for a system font (Google Fonts is unreachable there) and then reverted — an unmodified build was not run. (3) `static-ffmpeg==2.5.1` did not resolve from that environment's package index (see DECISIONS.md open items).
 
 ---
 
 ## Current status
 
-**Rebuild (all 4 milestones) — Backend + API complete and verified.** Fresh schema (`0001_init` + `0002_widen_confidence`), 7-movement registry seeded, JWT + Google OAuth2 scaffold, YOLO tracking with main-subject selection, 7 movement-specific biomechanics calculators, Isolation Forest anomaly + transparent composite scoring (anomaly/asymmetry/prior-injury/ACWR/fatigue), rule-based recommendations, team/coach/movement analytics, notifications, PDF/Excel/CSV exports with methodology_note.
+**Backend + API complete and verified at unit / DB / ASGI / live-HTTP level.** Schema `0001_init` → `0002_widen_confidence` → `0003_baseline_honesty_and_confidence_width` → `0004_video_coverage_caveat`; 7-movement registry seeded; JWT + a real Google OAuth2 authorization-code flow (state-validated, httpOnly refresh cookie; Google itself faked in tests); YOLO tracking with main-subject selection and pose-coverage diagnostics; 7 movement-specific biomechanics calculators; Isolation Forest anomaly scoring on a **0-anchored** scale, scored against a **leave-one-video-out** baseline that must contain ≥5 videos from ≥3 athletes (else HTTP 202 `insufficient_baseline_data`); transparent composite scoring (anomaly / asymmetry / prior-injury / ACWR / fatigue); rule-based recommendations; analytics; notifications; PDF/Excel/CSV exports with `methodology_note`; `/health` (liveness) and `/health/ready` (Postgres + Redis).
 
-**Frontend — all pages built, `npm run build` clean.** Design-system shell (sidebar/topbar/canvas), login/register (+Google button), landing, 5 role dashboards (athlete/coach/physio/scientist/admin with role router), athletes CRUD + ACWR view, video upload/detail/results (recharts + exports), notifications, reports.
+**Frontend — all pages built; build compiles and type-checks (17 routes).** Includes the Google callback route (`/auth/callback`), login error messages for failed Google sign-in, and data-quality banners for partial-coverage / multi-person videos.
 
-**Not yet verified:** end-to-end video processing on a real clip (needs YOLO/MediaPipe model downloads + arq worker running); Google OAuth2 needs real client credentials; S3/R2 swap still mocked to local disk; no browser-based manual UI pass yet.
+**Not yet verified (be honest about these):**
+- **End-to-end video processing on a real clip was NOT re-run in this session** (no clip in the repo archive, no MediaPipe pose model reachable, no YOLO). A previous session reported 213/213 frames, 1065 metrics and a risk score of 44.7 / moderate; **that score is obsolete** — it predates the trunk-lean fix, the leave-one-out baseline and the 0-anchored scale. On a database holding only that one clip the endpoint now correctly returns **202**, not a score. `scripts/e2e_video_check.py` handles both outcomes and must be re-run on a machine with the clip and model weights.
+- **Real multi-person clips** (`test-assets/internet-clips/7a6W56OeU8w.mp4`, `Px4cyTAHrWc.mp4`) were not available. The coverage diagnostics are verified by unit tests and by `process_video` integration tests with fake YOLO / MediaPipe passes, not on real footage. The 160 px / 40% / 10%-of-frames thresholds are unvalidated heuristics.
+- **Google OAuth against real Google, and any real-browser session** (including the new `session_active` middleware hint): untested. Needs real client credentials and a manual browser pass.
+- **`docker compose up`** was not run. The container-URL fix is verified by resolving the compose file's effective environment and by running the app in a simulated container network (DECISIONS.md, container-URLs entry).
+- Existing stored risk scores computed under the old calibration are not invalidated; use `?recompute=true`.
+- S3/R2 swap still mocked to local disk.
 
 | Milestone | Modules | Status |
 |---|---|---|
-| M1 — auth, athletes, env setup | 1, 2 | complete (verified) |
-| M2 — video, pose, biomechanics | 3, 4, 5 | complete (verified, unit + API level) |
-| M3 — risk scoring, recommendations | 6, 7, 8, 9 | complete (verified) |
+| M1 — auth, athletes, env setup | 1, 2 | complete (verified; Google flow verified with a faked Google only) |
+| M2 — video, pose, biomechanics | 3, 4, 5 | complete (verified at unit / DB level; real-clip run owed) |
+| M3 — risk scoring, recommendations | 6, 7, 8, 9 | complete (verified; calibration measured on synthetic production-scale data, not real athletes) |
 | M4 — dashboards, notifications, reports, deploy | 10, 11, 12, 13 | complete except deploy (verified: build + API level, no live deploy) |
 
 ---

@@ -2,7 +2,7 @@
 
 Revision ID: 0004
 Revises: 0003
-Create Date: 2026-09-30
+Create Date: 2026-10-02
 
 Additive and nullable. NULL = a single clearly-tracked athlete at full pose coverage.
 """

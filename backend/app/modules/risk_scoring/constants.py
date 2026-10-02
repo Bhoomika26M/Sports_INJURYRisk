@@ -4,7 +4,7 @@ History: this module replaces the single ``MIN_BASELINE_SAMPLES = 10``, which
 counted per-frame metric ROWS. One 7-second clip of one athlete yields hundreds
 of rows, so that gate was satisfied by a single video of a single person and the
 ``insufficient_baseline_data`` guard effectively never fired. See
-docs/DECISIONS.md (2026-09-30, "Baseline sufficiency counts videos and athletes").
+docs/DECISIONS.md (2026-10-02, "Baseline sufficiency counts videos and athletes").
 """
 
 # --- Baseline sufficiency (the gate that stops us fabricating a score) --------

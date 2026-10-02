@@ -114,6 +114,12 @@ export default function ResultsPage() {
         </section>
       )}
 
+      {risk?.data_quality?.caveat && (
+        <section className="bento-card p-4 text-sm" style={{ color: "var(--text-secondary)", borderLeft: "4px solid var(--warn, #B45309)" }}>
+          <strong style={{ color: "var(--text-primary)" }}>Data quality note.</strong> {risk.data_quality.caveat}
+        </section>
+      )}
+
       {risk?.methodology_note && (
         <p className="text-xs italic" style={{ color: "var(--text-muted)" }}>{risk.methodology_note}</p>
       )}
