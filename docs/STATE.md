@@ -3,8 +3,37 @@
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
 **Last verified:** 2026-10-02
-**Verified by (this session, real runs):** native PostgreSQL 16.15 + Redis (Docker was **not** available), `alembic upgrade head` clean from an empty database (0001 → 0004) with 0003/0004 downgrade/upgrade round trips, `python -m app.seed` run twice (idempotent; 7 users, 7 movement types), `pytest tests/` → **189 passed, 0 failed, 0 skipped**, a live `uvicorn` answering `/health` 200 and `/health/ready` 200, `npm run build` → compiled + type-checked, 17 routes.
-**Caveats on those runs:** (1) `ultralytics` was replaced by a stub that raises if YOLO is instantiated (torch does not fit in that sandbox); nothing in the test suite runs real YOLO. (2) The frontend build was run with the `next/font/google` import temporarily swapped for a system font (Google Fonts is unreachable there) and then reverted — an unmodified build was not run. (3) `static-ffmpeg==2.5.1` did not resolve from that environment's package index (see DECISIONS.md open items).
+**Verified by (2026-10-02, real runs):** docker compose postgres+redis healthy on 5433/6379; `alembic upgrade head` clean (single head `0004`); `pytest tests/` → **191 passed, 0 failed, 0 skipped**; **all 9 clips in `/data` processed end-to-end with real YOLO 8.4.166 + real MediaPipe** (6 completed, 3 correctly rejected); UI verified in headless Chrome against the live stack — login, role-routed dashboard, `/videos`, `/videos/{id}/results` all render real data.
+**Two bugs found and fixed this session:**
+1. `backend/alembic/env.py` read `DATABASE_URL_SYNC` from `os.environ` instead of app settings, so a **host-side `alembic upgrade head` silently fell back to the container hostname `postgres:5432`** and failed with "could not translate host name". It now uses `settings.database_url_sync`, which honours `backend/.env` on the host and the compose-exported env var in Docker.
+2. `BiomechanicsFrame` was missing `model_config = {"from_attributes": True}` (the convention already used by `VideoResponse`, `AthleteResponse`, `Notification` and auth schemas), so **`GET /videos/{id}/biomechanics` returned 500 for any video that had metrics**. Caught by `tests/test_regressions.py::test_biomechanics_endpoint_serializes_stored_frames`, which was failing. Now 191/191.
+
+**Real-clip results (`/data`, all 9 processed with real models — the run STATE.md previously said was owed):**
+
+| Movement | Clip | Detection | Outcome |
+|---|---|---|---|
+| squatting | barbell_back_squat_side_view | 94.4% | completed, 743 frames, 3,715 metrics |
+| landing | single_leg_drop_soft_landing | 97.5% | completed, 272 frames |
+| landing | one_foot_landing_pivot | 93.0% | completed, 348 frames (6 persons max) |
+| jumping | box_jump_demo (3840x2026 AV1) | 100% | completed, 235 frames |
+| throwing | shot_put_slow_motion | 100% | completed, 767 frames |
+| cutting | aquabag_punch_cod | 84.4% | completed, 577 frames |
+| running | running_form_side_view | 30.9% | **rejected** `multiple_people_subject_unstable` |
+| cutting | 180_cut_mechanics | 41.9% | **rejected** `multiple_people_subject_unstable` |
+| sprinting | sprint_speed_drills | 14.9% | **rejected** `multiple_people_subject_unstable` |
+
+The three rejections are **correct behaviour**, not failures: each clip has 2-6 people in frame and the selected athlete could not be tracked in >=70% of frames, so the pipeline refuses to measure rather than substituting another person. This is the first validation of the 70% / 160px / track-stability thresholds on real footage — previously only covered by unit tests with fake YOLO/MediaPipe.
+
+**Open data-quality findings (not fixed — see DECISIONS.md):**
+- **Angle conventions are inconsistent between metrics.** `knee_flexion_angle_*` is reported as deviation from full extension (0 = straight, deep squat ~120), `trunk_lean_angle` as deviation from upright (0 = vertical), but `hip_flexion_angle_*` reads ~160-176 deg on clips where the athlete is standing or landing (i.e. it is a raw included angle where 180 = extended). The results page renders all three as a bare "Peak N°", so a physio comparing "hip 176°" with "knee 36°" is comparing opposite conventions with nothing on screen saying so.
+- **`trunk_lean_angle` still produces impossible outliers** on newly processed clips: `landing_single_leg_drop_soft_landing` has median 16.7 deg but p95 **152.6 deg**.
+- **Stale pre-fix rows remain in the database.** `squat_sample.mp4` was processed *before* the trunk-lean axis fix and stores `trunk_lean_angle` median **164.4 deg**. New clips are fine (medians 6-47 deg), which confirms the axis fix worked, but the old rows must be recomputed (`?recompute=true`) or purged before any of this data is shown to a user.
+
+**Still not verified:**
+- **Google OAuth against real Google**, and the OAuth browser landing: untested (no client credentials).
+- **Risk scoring has never returned a 200 on real footage.** Baselines require >=5 completed videos of the same movement type from >=3 athletes; the database cannot satisfy this with 9 clips. Every real clip correctly returns HTTP 202 `insufficient_baseline_data` (e.g. "0 of 5 videos"). The 0-anchored anomaly scale is still only verified on synthetic data.
+- **Full HTTP upload path** (`/upload-url` → PUT → `/confirm-upload` → arq worker enqueue) is not yet exercised; the 9 clips were run through `scripts/e2e_video_check.py`, which calls the real `process_video` coroutine directly and inserts the `Video` row itself, bypassing the upload endpoint and the Redis/arq hop.
+- S3/R2 swap still mocked to local disk. Deploy still owed.
 
 ---
 

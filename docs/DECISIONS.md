@@ -170,3 +170,29 @@ fully adequate for this project's person-count pre-check use case.
 ## Open questions
 
 - **Storage:** local-disk mock (M2) needs a real S3/R2 swap before any deployment beyond local dev/demo — see `IMPLEMENTATION_REVIEW.md` M1.
+
+### 2026-10-02 - Host-side alembic reads settings, not os.environ
+**Decision:** `backend/alembic/env.py` now takes the migration URL from `app.config.settings.database_url_sync` instead of `os.environ.get("DATABASE_URL_SYNC", <container default>)`.
+**Why:** `Settings` has `model_config = {"env_file": ".env"}`, so it resolves `backend/.env` for a host run, while compose still wins inside Docker because pydantic-settings gives real env vars priority over `.env`. The old code bypassed settings entirely and fell through to the container hostname `postgres:5432`, making the documented `cd backend && alembic upgrade head` fail with "could not translate host name".
+
+### 2026-10-02 - `BiomechanicsFrame` uses `from_attributes`
+**Decision:** added `model_config = {"from_attributes": True}` to `BiomechanicsFrame`, matching `VideoResponse`, `AthleteResponse`, `Notification` and the auth schemas.
+**Why:** the router passes raw `BiomechanicalMetric` ORM rows straight into `BiomechanicsResponse`, so without it pydantic raised `model_type` and the endpoint 500'd for every video that had metrics. `tests/test_regressions.py` guards this.
+
+### 2026-10-02 - `puppeteer-core` added as a frontend devDependency
+**Decision:** `npm i -D puppeteer-core` only. **Not** `@sparticuz/chromium`.
+**Why:** needed to drive a real browser against the live stack for the UI verification STATE.md owed. A full Chrome is already installed on this machine, so the ~50MB AWS-Lambda-specific `@sparticuz/chromium` the `frontend/e2e/README.md` suggests is unnecessary; `puppeteer-core` downloads no browser. Used for local verification only, alongside the pre-existing `frontend/e2e/` harness.
+
+### 2026-10-02 - OPEN: joint-angle conventions differ between metrics and are not labelled
+**Question:** `knee_flexion_angle_*` is stored as deviation from full extension (0 = straight), `trunk_lean_angle` as deviation from upright (0 = vertical), but `hip_flexion_angle_*` behaves like a raw included angle (180 = extended, giving ~160-176 deg on clips where the athlete is standing or landing). The results page shows every metric as a bare "Peak N deg".
+**Why it matters:** a physiotherapist reading "hip flexion 176 deg" beside "knee flexion 36 deg" is comparing opposite conventions with nothing on screen saying so. This is a false-precision risk, not just a UI nit.
+**Needed decision:** either normalise all joint angles to one convention (and name it in the schema + UI), or label the convention per metric. Not guessed - flagged.
+**Also observed:** `trunk_lean_angle` still yields p95 = 152.6 deg on `landing_single_leg_drop_soft_landing` (median 16.7 deg), i.e. impossible outliers survive on newly processed clips, so the axis fix corrected the bulk but not every frame.
+
+### 2026-10-02 - OPEN: pre-fix metric rows are still stored in the dev database
+**Question:** `squat_sample.mp4` rows were computed before the trunk-lean axis fix and hold `trunk_lean_angle` median 164.4 deg. New clips are correct (medians 6-47 deg).
+**Needed decision:** recompute with `?recompute=true` or purge, before any of this data is shown to a user or used to build a baseline. Left in place so the discrepancy stays visible rather than being silently deleted.
+
+### 2026-10-02 - OPEN: risk scoring has never scored real footage
+**Question:** leave-one-video-out baselines need >=5 completed videos of one movement type from >=3 athletes. With 9 clips that is unreachable, so every real clip honestly returns HTTP 202 `insufficient_baseline_data`.
+**Needed decision:** whether to author/segment enough footage per movement type to exercise the 200 path on real data, or to accept synthetic-data verification for the anomaly scale. Flagged rather than faked by seeding synthetic rows.

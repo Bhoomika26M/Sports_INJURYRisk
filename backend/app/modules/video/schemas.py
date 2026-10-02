@@ -72,6 +72,8 @@ class BiomechanicsFrame(BaseModel):
     confidence: str
     movement_phase: Optional[str] = None
 
+    model_config = {"from_attributes": True}
+
 
 class BiomechanicsResponse(BaseModel):
     video_id: str

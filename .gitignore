@@ -45,3 +45,4 @@ dist/
 /.agents/
 /archive/
 *.log
+/data/

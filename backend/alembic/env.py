@@ -14,6 +14,7 @@ from sqlalchemy import engine_from_config, pool
 # Add the backend directory to sys.path so app imports work
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from app.config import settings
 from app.database import Base
 
 # Import all models so they register with Base.metadata
@@ -28,11 +29,13 @@ from app.modules.analytics.models import ReportExport # noqa: F401
 # this is the Alembic Config object
 config = context.config
 
-# Override sqlalchemy.url from environment
-database_url = os.environ.get(
-    "DATABASE_URL_SYNC",
-    "postgresql+psycopg2://injury_user:changeme_in_production@postgres:5432/injury_detection",
-)
+# Override sqlalchemy.url from application settings.
+# Settings (not os.environ) so alembic honours backend/.env on a host run. Previously this read
+# os.environ directly, so a host-side `alembic upgrade head` silently fell through to the
+# container-internal default host `postgres:5432` and failed to resolve. Inside Docker,
+# compose exports DATABASE_URL_SYNC, and pydantic-settings gives real env vars priority over
+# .env, so the container still resolves to postgres:5432.
+database_url = settings.database_url_sync
 config.set_main_option("sqlalchemy.url", database_url)
 
 # Interpret the config file for Python logging
