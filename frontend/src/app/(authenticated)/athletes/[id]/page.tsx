@@ -1,232 +1,250 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api-client";
-import { useParams, useRouter } from "next/navigation";
+import { use, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+import { useAcwr, useAthlete, useInjuries, useTrainingLoad, useVideos } from "@/lib/hooks";
+import {
+  athleteName, canManageAthletes, formatDate, formatDateTime, humanize, initials, movementLabel,
+} from "@/lib/format";
+import { EditAthleteModal, InjuryModal, TrainingModal } from "@/components/athlete-forms";
+import { BackLink } from "@/components/back-link";
+import { Avatar, Badge, StatusBadge } from "@/components/badges";
+import { ConfirmDialog } from "@/components/dialog";
+import { EmptyState, ErrorState, ListSkeleton, PageSkeleton } from "@/components/feedback";
+import { Icon } from "@/components/icons";
+import { useToast } from "@/components/toast";
 
-type Athlete = {
-  id: string;
-  full_name: string | null;
-  sport_type: string;
-  position: string | null;
-  date_of_birth: string;
-  height_cm: number | null;
-  weight_kg: number | null;
-  dominant_side: string | null;
-  age: number | null;
-  user_id: string | null;
-  coach_id: string | null;
-};
+type Tab = "videos" | "injuries" | "training";
+type Pending = { kind: "athlete" } | { kind: "injury"; id: string } | { kind: "training"; id: string } | null;
 
-type Injury = {
-  id: string;
-  injury_type: string;
-  body_part: string;
-  injury_date: string;
-  recovery_date: string | null;
-  severity: string | null;
-  notes: string | null;
-};
-
-type TrainingLoad = {
-  id: string;
-  entry_date: string;
-  session_type: string | null;
-  duration_minutes: number | null;
-  rpe: number | null;
-  session_load: number | null;
-  notes: string | null;
-};
-
-export default function AthleteDetailPage() {
-  const params = useParams();
+export default function AthleteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
-  const id = params.id as string;
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const canManage = canManageAthletes(user?.role); // coach/admin: edit profile, remove injuries/sessions
+  const isAdmin = user?.role === "admin"; // the API only lets admins delete an athlete
 
-  const [athlete, setAthlete] = useState<Athlete | null>(null);
-  const [injuries, setInjuries] = useState<Injury[]>([]);
-  const [trainingLoads, setTrainingLoads] = useState<TrainingLoad[]>([]);
-  const [acwr, setAcwr] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"profile" | "injuries" | "training" | "videos">("profile");
+  const athleteQ = useAthlete(id);
+  const acwrQ = useAcwr(id);
+  const injuriesQ = useInjuries(id);
+  const trainingQ = useTrainingLoad(id);
+  const videosQ = useVideos({ athleteId: id, pageSize: 50 });
 
-  const load = async () => {
-    try {
-      const [a, i, t, ac] = await Promise.all([
-        apiClient.fetchWithAuth(`/athletes/${id}`),
-        apiClient.fetchWithAuth(`/athletes/${id}/injuries`),
-        apiClient.fetchWithAuth(`/athletes/${id}/training-load`),
-        apiClient.fetchWithAuth(`/athletes/${id}/acwr`),
+  const [tab, setTab] = useState<Tab>("videos");
+  const [modal, setModal] = useState<"edit" | "injury" | "training" | null>(null);
+  const [pending, setPending] = useState<Pending>(null);
+
+  const remove = useMutation({
+    mutationFn: async (p: NonNullable<Pending>) => {
+      if (p.kind === "athlete") return api.del(`/athletes/${id}`);
+      return api.del(`/athletes/${id}/${p.kind === "injury" ? "injuries" : "training-load"}/${p.id}`);
+    },
+    onSuccess: async (_d, p) => {
+      if (p.kind === "athlete") {
+        await queryClient.invalidateQueries({ queryKey: ["athletes"] });
+        toast.success("Athlete deleted.");
+        router.replace("/athletes");
+        return;
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["athlete", id, p.kind === "injury" ? "injuries" : "training"] }),
+        queryClient.invalidateQueries({ queryKey: ["athlete", id, "acwr"] }),
       ]);
-      setAthlete(a);
-      setInjuries(i.items || []);
-      setTrainingLoads(t.items || []);
-      setAcwr(ac);
-    } catch (e: any) {
-      setError(e.message || "Failed to load athlete");
-    } finally {
-      setLoading(false);
-    }
-  };
+      toast.success(p.kind === "injury" ? "Injury removed." : "Session removed.");
+      setPending(null);
+    },
+    onError: (e) => {
+      setPending(null);
+      toast.error(e instanceof Error ? e.message : "That didn't work. Please try again.");
+    },
+  });
 
-  useEffect(() => { load(); }, [id]);
+  if (athleteQ.isPending) return <PageSkeleton rows={3} />;
+  if (athleteQ.isError) {
+    const notFound = athleteQ.error instanceof ApiError && athleteQ.error.status === 404;
+    return (
+      <>
+        <BackLink href="/athletes">Athletes</BackLink>
+        <ErrorState
+          title={notFound ? "Athlete not found" : "Couldn't load this athlete"}
+          message={notFound ? "They may have been removed, or you may not have access." : athleteQ.error.message}
+          onRetry={notFound ? undefined : () => athleteQ.refetch()}
+        />
+      </>
+    );
+  }
 
-  const handleDelete = async (type: "injury" | "training", itemId: string) => {
-    if (!confirm(`Delete this ${type} record?`)) return;
-    try {
-      await apiClient.fetchWithAuth(`/athletes/${id}/${type === "injury" ? "injuries" : "training-load"}/${itemId}`, { method: "DELETE" });
-      load();
-    } catch (e: any) {
-      alert(e.message || "Failed to delete");
-    }
-  };
-
-  if (loading) return <div className="bento-card p-6 flex items-center gap-3" style={{ color: "var(--text-primary)" }}><svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--brand-dark)" }}><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span className="text-sm font-bold">Loading...</span></div>;
-  if (error) return <div className="status-pill status-pill--danger p-4">{error}</div>;
-  if (!athlete) return <div className="status-pill status-pill--danger p-4">Athlete not found</div>;
+  const a = athleteQ.data;
+  const name = athleteName(a);
+  const acwr = acwrQ.data;
+  const tabs: [Tab, string][] = [["videos", "Videos"], ["injuries", "Injuries"], ["training", "Training"]];
 
   return (
-    <div className="space-y-6">
-      <div className="bento-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="status-pill status-pill--muted">{athlete.sport_type}</span>
-            <span className="text-xs font-bold" style={{ color: "var(--text-muted)" }}>Athlete Profile</span>
-          </div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{athlete.full_name || "Unnamed Athlete"}</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>Age: {athlete.age ?? "—"} • {athlete.sport_type} • {athlete.position || "No position"}</p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Link href={`/athletes/${id}/edit`} className="pill-btn--outline text-xs">Edit Profile</Link>
-          <Link href={`/videos/upload?athlete_id=${id}`} className="pill-btn--primary text-xs">Upload Video</Link>
-        </div>
-      </div>
+    <>
+      {user?.role !== "athlete" && <BackLink href="/athletes">Athletes</BackLink>}
 
-      <div className="flex gap-2 border-b" style={{ borderColor: "var(--border-faint)" }}>
-        {["profile", "injuries", "training", "videos"].map((tab) => (
-          <button key={tab} onClick={() => setActiveTab(tab as any)} className={`px-4 py-3 text-sm font-medium transition-colors ${activeTab === tab ? "border-b-2" : "border-b-2 border-transparent"} ${activeTab === tab ? "text-primary" : "text-muted"}`} style={{ borderColor: activeTab === tab ? "var(--brand-primary)" : "transparent", color: activeTab === tab ? "var(--text-primary)" : "var(--text-muted)" }}>
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === "profile" && athlete && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bento-card p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Physical Details</h3>
-            <dl className="space-y-3">
-              <div className="grid grid-cols-2 gap-2"><dt className="text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Height</dt><dd style={{ color: "var(--text-primary)" }}>{athlete.height_cm ? `${athlete.height_cm} cm` : "—"}</dd></div>
-              <div className="grid grid-cols-2 gap-2"><dt className="text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Weight</dt><dd style={{ color: "var(--text-primary)" }}>{athlete.weight_kg ? `${athlete.weight_kg} kg` : "—"}</dd></div>
-              <div className="grid grid-cols-2 gap-2"><dt className="text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Dominant Side</dt><dd style={{ color: "var(--text-primary)" }}>{athlete.dominant_side || "—"}</dd></div>
-              <div className="grid grid-cols-2 gap-2"><dt className="text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Date of Birth</dt><dd style={{ color: "var(--text-primary)" }}>{athlete.date_of_birth}</dd></div>
-              <div className="grid grid-cols-2 gap-2"><dt className="text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Age</dt><dd style={{ color: "var(--text-primary)" }}>{athlete.age !== null ? `${athlete.age} yrs` : "—"}</dd></div>
-            </dl>
-          </div>
-          <div className="bento-card p-6">
-            <h3 className="font-semibold mb-4" style={{ color: "var(--text-primary)" }}>ACWR (Acute:Chronic Workload Ratio)</h3>
-            {acwr?.acwr ? (
-              <div className="space-y-3">
-                <div className="flex justify-between"><span className="text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>ACWR</span><span className="font-bold text-lg" style={{ color: acwr.flagged ? "var(--danger-fg)" : "var(--text-primary)" }}>{acwr.acwr}</span></div>
-                <div className="flex justify-between"><span className="text-xs" style={{ color: "var(--text-muted)" }}>Acute Load (7d)</span><span style={{ color: "var(--text-primary)" }}>{acwr.acute_load}</span></div>
-                <div className="flex justify-between"><span className="text-xs" style={{ color: "var(--text-muted)" }}>Chronic Load (28d avg × 7)</span><span style={{ color: "var(--text-primary)" }}>{acwr.chronic_load}</span></div>
-                <div className="status-pill" style={{ background: acwr.flagged ? "var(--warning-bg)" : "var(--brand-tint)", color: acwr.flagged ? "var(--warning-fg)" : "var(--brand-text)" }}>
-                  {acwr.flagged ? "⚠ Elevated — reduce load this week" : "✓ Within normal range"}
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>{acwr?.message || "Insufficient training load data (need ≥7 days with session_load)"}</p>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === "injuries" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Injury History</h3>
-            <button className="pill-btn--primary text-xs" onClick={() => router.push(`/athletes/${id}/injuries/new`)}>Add Injury</button>
-          </div>
-          {injuries.length === 0 ? (
-            <div className="bento-card p-6 text-center" style={{ color: "var(--text-secondary)" }}>No injury records yet.</div>
-          ) : (
-            <div className="bento-card overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: "var(--border-faint)" }}>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Injury Type</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Body Part</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Date</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Severity</th>
-                    <th className="text-right p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Actions</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                    {injuries.map((inj) => (
-                      <tr key={inj.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: "var(--border-faint)" }}>
-                        <td className="p-4 font-medium" style={{ color: "var(--text-primary)" }}>{inj.injury_type}</td>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-secondary)" }}>{inj.body_part}</td>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-secondary)" }}>{inj.injury_date}</td>
-                        <td className="p-4"><span className="status-pill" style={{ background: inj.severity === "severe" ? "var(--danger-bg)" : inj.severity === "moderate" ? "var(--warning-bg)" : "var(--brand-tint)", color: inj.severity === "severe" ? "var(--danger-fg)" : inj.severity === "moderate" ? "var(--warning-fg)" : "var(--brand-text)" }}>{inj.severity || "—"}</span></td>
-                        <td className="p-4 text-right"><button onClick={() => handleDelete("injury", inj.id)} className="text-xs" style={{ color: "var(--danger-fg)" }}>Delete</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-              </table>
+      {/* ---------- Header ---------- */}
+      <section className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <Avatar text={initials(name)} size={64} />
+          <div className="min-w-0">
+            <h1 className="truncate text-[28px] font-bold leading-tight tracking-tight text-ink">{name}</h1>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Badge tone="ok">{humanize(a.sport_type)}</Badge>
+              {a.position && <Badge>{a.position}</Badge>}
+              {a.age != null && <Badge>{a.age} years</Badge>}
+              {a.dominant_side && <Badge>{humanize(a.dominant_side)}-sided</Badge>}
             </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Link href={`/videos/upload?athlete_id=${a.id}`} className="btn btn-primary"><Icon name="upload" className="h-4 w-4" /> Analyze video</Link>
+          {canManage && (
+            <>
+              <button onClick={() => setModal("edit")} className="btn btn-outline"><Icon name="edit" className="h-4 w-4" /> Edit</button>
+              {isAdmin && (
+                <button onClick={() => setPending({ kind: "athlete" })} aria-label="Delete athlete" className="btn btn-ghost text-danger hover:!bg-danger-bg"><Icon name="trash" className="h-4 w-4" /></button>
+              )}
+            </>
           )}
         </div>
-      )}
+      </section>
 
-      {activeTab === "training" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Training Load</h3>
-            <button className="pill-btn--primary text-xs" onClick={() => router.push(`/athletes/${id}/training-load/new`)}>Add Entry</button>
-          </div>
-          {trainingLoads.length === 0 ? (
-            <div className="bento-card p-6 text-center" style={{ color: "var(--text-secondary)" }}>No training load entries yet.</div>
+      {/* ---------- At a glance ---------- */}
+      <section className="grid gap-4 sm:grid-cols-3">
+        <div className="card-soft p-6">
+          <p className="stat-label">Height</p>
+          <span className="stat-value">{a.height_cm ? `${Math.round(a.height_cm)} cm` : "—"}</span>
+        </div>
+        <div className="card-soft p-6">
+          <p className="stat-label">Weight</p>
+          <span className="stat-value">{a.weight_kg ? `${Math.round(a.weight_kg)} kg` : "—"}</span>
+        </div>
+        <div className="card-soft p-6">
+          <p className="stat-label">Training load balance</p>
+          {acwrQ.isPending ? (
+            <span className="stat-value text-ink-4">…</span>
+          ) : acwr?.acwr != null ? (
+            <>
+              <span className="stat-value">{acwr.acwr.toFixed(2)}</span>
+              <p className="mt-1.5"><Badge tone={acwr.flagged ? "warn" : "ok"}>{acwr.flagged ? "Above usual range" : "In usual range"}</Badge></p>
+            </>
           ) : (
-            <div className="bento-card overflow-hidden">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b" style={{ borderColor: "var(--border-faint)" }}>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Date</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Session Type</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Duration</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>RPE</th>
-                    <th className="text-left p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Load</th>
-                    <th className="text-right p-4 text-xs font-semibold uppercase" style={{ color: "var(--text-muted)" }}>Actions</th>
-                  </tr>
-                  </thead>
-                  <tbody>
-                    {trainingLoads.map((t) => (
-                      <tr key={t.id} className="border-b hover:bg-muted transition-colors" style={{ borderColor: "var(--border-faint)" }}>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-primary)" }}>{t.entry_date}</td>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-secondary)" }}>{t.session_type || "—"}</td>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-primary)" }}>{t.duration_minutes ?? "—"} min</td>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-primary)" }}>{t.rpe ?? "—"}</td>
-                        <td className="p-4 text-sm" style={{ color: "var(--text-primary)" }}>{t.session_load ?? "—"}</td>
-                        <td className="p-4 text-right"><button onClick={() => handleDelete("training", t.id)} className="text-xs" style={{ color: "var(--danger-fg)" }}>Delete</button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-              </table>
-            </div>
+            <p className="mt-2 text-sm text-ink-2">{acwr?.message ?? "Log a few weeks of sessions to see this."}</p>
           )}
         </div>
-      )}
+      </section>
 
-      {activeTab === "videos" && (
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>Videos</h3>
-            <Link href={`/videos/upload?athlete_id=${id}`} className="pill-btn--primary text-xs">Upload Video</Link>
-          </div>
-          <div className="bento-card p-6 text-center" style={{ color: "var(--text-secondary)" }}>Video list coming soon — use the athlete filter on the Videos page.</div>
+      {/* ---------- Tabs ---------- */}
+      <section className="flex flex-col gap-5">
+        <div className="tabs" role="tablist" aria-label="Athlete details">
+          {tabs.map(([key, label]) => (
+            <button key={key} role="tab" aria-selected={tab === key} className="tab" onClick={() => setTab(key)}>{label}</button>
+          ))}
         </div>
-      )}
-    </div>
+
+        {tab === "videos" && (
+          videosQ.isPending ? <ListSkeleton rows={2} /> :
+          videosQ.isError ? <ErrorState message={videosQ.error.message} onRetry={() => videosQ.refetch()} /> :
+          videosQ.data.items.length === 0 ? (
+            <EmptyState icon="video" title="No videos yet" action={{ label: "Analyze a video", href: `/videos/upload?athlete_id=${a.id}` }}>
+              Upload a short clip to see how {a.full_name ? a.full_name.split(" ")[0] : "this athlete"} moves.
+            </EmptyState>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {videosQ.data.items.map((v) => (
+                <li key={v.id}>
+                  <Link href={`/videos/${v.id}`} className="row">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-ink-2"><Icon name="film" /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-ink">{movementLabel(v.movement_type)}</p>
+                      <p className="text-sm text-ink-3">{formatDateTime(v.created_at)}</p>
+                    </div>
+                    <StatusBadge status={v.processing_status} />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )
+        )}
+
+        {tab === "injuries" && (
+          <>
+            <div className="flex justify-end"><button onClick={() => setModal("injury")} className="btn btn-soft btn-sm"><Icon name="plus" className="h-4 w-4" /> Add injury</button></div>
+            {injuriesQ.isPending ? <ListSkeleton rows={2} /> :
+             injuriesQ.isError ? <ErrorState message={injuriesQ.error.message} onRetry={() => injuriesQ.refetch()} /> :
+             injuriesQ.data.items.length === 0 ? (
+              <EmptyState icon="info" title="No injuries recorded">That&apos;s great. If something comes up, add it here for context.</EmptyState>
+             ) : (
+              <ul className="flex flex-col gap-3">
+                {injuriesQ.data.items.map((inj) => (
+                  <li key={inj.id} className="row !items-start">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink">{inj.injury_type} <span className="font-normal text-ink-3">· {inj.body_part}</span></p>
+                      <p className="text-sm text-ink-3">
+                        {formatDate(inj.injury_date)} → {inj.recovery_date ? formatDate(inj.recovery_date) : "ongoing"}
+                      </p>
+                      {inj.notes && <p className="mt-1.5 text-sm text-ink-2">{inj.notes}</p>}
+                    </div>
+                    {inj.severity && <Badge tone={inj.severity === "severe" ? "danger" : inj.severity === "moderate" ? "warn" : "muted"}>{humanize(inj.severity)}</Badge>}
+                    {canManage && <button onClick={() => setPending({ kind: "injury", id: inj.id })} aria-label={`Remove ${inj.injury_type}`} className="btn btn-ghost !h-9 !min-h-9 !w-9 !p-0"><Icon name="trash" className="h-4 w-4" /></button>}
+                  </li>
+                ))}
+              </ul>
+             )}
+          </>
+        )}
+
+        {tab === "training" && (
+          <>
+            <div className="flex justify-end"><button onClick={() => setModal("training")} className="btn btn-soft btn-sm"><Icon name="plus" className="h-4 w-4" /> Log session</button></div>
+            {trainingQ.isPending ? <ListSkeleton rows={2} /> :
+             trainingQ.isError ? <ErrorState message={trainingQ.error.message} onRetry={() => trainingQ.refetch()} /> :
+             trainingQ.data.items.length === 0 ? (
+              <EmptyState icon="clock" title="No sessions logged">Log sessions to track training load over time.</EmptyState>
+             ) : (
+              <ul className="flex flex-col gap-3">
+                {trainingQ.data.items.map((t) => (
+                  <li key={t.id} className="row">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold text-ink">{t.session_type || "Training session"}</p>
+                      <p className="text-sm text-ink-3">
+                        {formatDate(t.entry_date)}
+                        {t.duration_minutes != null && ` · ${t.duration_minutes} min`}
+                        {t.rpe != null && ` · effort ${t.rpe}/10`}
+                      </p>
+                    </div>
+                    {t.session_load != null && <Badge>Load {Math.round(t.session_load)}</Badge>}
+                    {canManage && <button onClick={() => setPending({ kind: "training", id: t.id })} aria-label="Remove this session" className="btn btn-ghost !h-9 !min-h-9 !w-9 !p-0"><Icon name="trash" className="h-4 w-4" /></button>}
+                  </li>
+                ))}
+              </ul>
+             )}
+          </>
+        )}
+      </section>
+
+      <EditAthleteModal athlete={a} open={modal === "edit"} onClose={() => setModal(null)} />
+      <InjuryModal athleteId={id} open={modal === "injury"} onClose={() => setModal(null)} />
+      <TrainingModal athleteId={id} open={modal === "training"} onClose={() => setModal(null)} />
+
+      <ConfirmDialog
+        open={pending !== null}
+        onClose={() => setPending(null)}
+        onConfirm={() => pending && remove.mutate(pending)}
+        busy={remove.isPending}
+        title={pending?.kind === "athlete" ? "Delete this athlete?" : pending?.kind === "injury" ? "Remove this injury?" : "Remove this session?"}
+        message={pending?.kind === "athlete"
+          ? "Their profile, videos, injuries and training history will be removed for good."
+          : "This will be removed from their history. It can't be undone."}
+        confirmLabel={pending?.kind === "athlete" ? "Delete athlete" : "Remove"}
+      />
+    </>
   );
 }

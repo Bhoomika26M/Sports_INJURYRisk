@@ -1,60 +1,53 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { apiClient } from "@/lib/api-client";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { useMovementTypes } from "@/lib/hooks";
+import { cameraLabel } from "@/lib/format";
+import type { TeamOverview } from "@/lib/types";
+import { PageHeader } from "@/components/page-header";
+import { ErrorState, PageSkeleton } from "@/components/feedback";
+import { StatCard } from "@/components/stat-card";
+import { ActionCard } from "@/components/action-card";
 
 export default function AdminDashboard() {
-  const [overview, setOverview] = useState<any>(null);
-  const [movements, setMovements] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const q = useQuery({ queryKey: ["team-overview"], queryFn: () => api.get<TeamOverview>("/analytics/team-overview") });
+  const typesQ = useMovementTypes();
 
-  useEffect(() => {
-    Promise.all([
-      apiClient.fetchWithAuth("/analytics/team-overview"),
-      apiClient.fetchWithAuth("/videos/movement-types"),
-    ]).then(([o, m]) => { setOverview(o); setMovements(m); })
-      .catch((e: any) => setError(e.message));
-  }, []);
-
-  if (error) return <div className="status-pill status-pill--danger p-4">{error}</div>;
-  if (!overview) return <div className="bento-card p-6">Loading platform overview…</div>;
+  if (q.isPending) return <PageSkeleton />;
+  if (q.isError) return <ErrorState message={q.error.message} onRetry={() => q.refetch()} />;
+  const o = q.data;
 
   return (
-    <div>
-      <section className="bento-hero bento-hero--yellow">
-        <div>
-          <h2 className="bento-hero__title">Platform administration</h2>
-          <p className="bento-hero__subtitle">
-            {overview.total_athletes} athletes · {overview.total_videos} videos ·
-            {overview.videos_processing} processing · {overview.videos_failed} failed
-          </p>
-        </div>
+    <>
+      <PageHeader title="Overview" subtitle="How the whole platform is doing." />
+
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard label="Athletes" value={o.total_athletes} />
+        <StatCard label="Videos" value={o.total_videos} />
+        <StatCard label="Analyzed" value={o.videos_completed} hint={o.videos_processing > 0 ? `${o.videos_processing} in progress` : undefined} />
+        <StatCard label="Needs attention" value={o.videos_failed} hint="Failed to process" />
       </section>
 
-      <section style={{ marginTop: 32 }}>
-        <h3 className="text-xl font-semibold mb-4" style={{ color: "var(--text-primary)" }}>Movement registry</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {movements.map((m: any) => (
-            <div key={m.code} className="dashed-action-card" style={{ cursor: "default" }}>
-              <div className="dashed-action-card__content">
-                <span className="dashed-action-card__title">{m.display_name}</span>
-                <span className="dashed-action-card__desc">
-                  {m.metrics.length} metrics · views: {m.camera_views.join(", ")}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      {typesQ.data && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-lg font-semibold text-ink">Supported movements</h2>
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {typesQ.data.map((t) => (
+              <li key={t.code} className="row !justify-between">
+                <span className="font-medium text-ink">{t.display_name}</span>
+                <span className="text-sm text-ink-3">{t.camera_views.map(cameraLabel).join(" · ")} · {t.metrics.length} metrics</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
-      <section style={{ marginTop: 32 }}>
-        <div className="flex gap-3 flex-wrap">
-          <Link href="/athletes" className="pill-btn--outline text-xs">Manage athletes</Link>
-          <Link href="/reports" className="pill-btn--outline text-xs">All reports</Link>
-          <Link href="/notifications" className="pill-btn--outline text-xs">Notifications</Link>
-        </div>
+      <section className="grid gap-4 sm:grid-cols-3">
+        <ActionCard href="/athletes" icon="users" title="Athletes" body="Browse profiles." />
+        <ActionCard href="/videos" icon="video" title="Videos" body="Recent analyses." />
+        <ActionCard href="/reports" icon="file" title="Reports" body="Exports." />
       </section>
-    </div>
+    </>
   );
 }

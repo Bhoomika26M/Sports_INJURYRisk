@@ -1,92 +1,152 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api-client";
-import { useParams, useRouter } from "next/navigation";
+import { use, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+import { useAthlete, useVideo } from "@/lib/hooks";
+import { cameraLabel, canManageAthletes, formatDateTime, formatDuration, movementLabel, processingFailureHelp } from "@/lib/format";
+import { BackLink } from "@/components/back-link";
+import { PageHeader } from "@/components/page-header";
+import { StatusBadge } from "@/components/badges";
+import { AuthVideo } from "@/components/auth-media";
+import { ConfirmDialog } from "@/components/dialog";
+import { Icon } from "@/components/icons";
+import { ErrorState, PageSkeleton, Spinner } from "@/components/feedback";
+import { useToast } from "@/components/toast";
 
-type Video = {
-  id: string;
-  original_filename: string;
-  movement_type: string;
-  camera_view: string;
-  processing_status: string;
-  annotated_video_key?: string;
-  storage_key?: string;
-  error_message?: string | null;
-  coverage_caveat?: string | null;
-  fps: number;
-  duration_seconds: number;
-};
-
-export default function VideoDetailPage() {
-  const params = useParams();
+export default function VideoDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const router = useRouter();
-  const { id } = params;
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const { user } = useAuth();
+  const videoQ = useVideo(id);
+  const v = videoQ.data;
+  const athleteQ = useAthlete(v?.athlete_id ?? "");
+  const [source, setSource] = useState<"annotated" | "original">("annotated");
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const [video, setVideo] = useState<Video | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const del = useMutation({
+    mutationFn: () => api.del(`/videos/${id}`),
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ["video", id] });
+      queryClient.invalidateQueries({ queryKey: ["videos"] });
+      toast.success("Video deleted.");
+      router.replace("/videos");
+    },
+    onError: (e) => {
+      setConfirmDelete(false);
+      toast.error(e instanceof Error ? e.message : "We couldn't delete that video.");
+    },
+  });
 
-  useEffect(() => {
-    apiClient.fetchWithAuth(`/videos/${id}`).then(setVideo).catch((e: any) => setError(e.message)).finally(() => setLoading(false));
-  }, [id]);
+  if (videoQ.isPending) return <PageSkeleton rows={2} />;
+  if (videoQ.isError || !v) {
+    const notFound = videoQ.error instanceof ApiError && videoQ.error.status === 404;
+    return (
+      <>
+        <BackLink href="/videos">All videos</BackLink>
+        <ErrorState
+          title={notFound ? "Video not found" : "Couldn't load this video"}
+          message={notFound ? "It may have been deleted, or you may not have access to it." : (videoQ.error?.message ?? "Please try again.")}
+          onRetry={notFound ? undefined : () => videoQ.refetch()}
+        />
+      </>
+    );
+  }
 
-  if (loading) return <div className="bento-card p-6 flex items-center gap-3" style={{ color: "var(--text-primary)" }}><svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24" style={{ color: "var(--brand-dark)" }}><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span className="text-sm font-bold">Loading...</span></div>;
-  if (error) return <div className="status-pill status-pill--danger p-4">{error}</div>;
-  if (!video) return <div className="status-pill status-pill--danger p-4">Video not found</div>;
-
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+  const hasAnnotated = !!v.annotated_video_key;
+  const effective = hasAnnotated ? source : "original";
+  const athleteName = athleteQ.data?.full_name || "Athlete";
+  const details: [string, string][] = [
+    ["Movement", movementLabel(v.movement_type)],
+    ["Camera", cameraLabel(v.camera_view)],
+    ["Length", formatDuration(v.duration_seconds)],
+    ["Quality", v.resolution_width ? `${v.resolution_width}×${v.resolution_height}${v.fps ? ` · ${Math.round(v.fps)} fps` : ""}` : "—"],
+    ["Uploaded", formatDateTime(v.created_at)],
+  ];
 
   return (
-    <div className="space-y-6">
-      <div className="bento-card p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="status-pill status-pill--muted">{video.movement_type}</span>
-            <span className="status-pill" style={{ background: video.processing_status === "completed" ? "var(--brand-tint)" : "var(--warning-bg)", color: video.processing_status === "completed" ? "var(--brand-text)" : "var(--warning-fg)" }}>
-              {video.processing_status}
-            </span>
+    <>
+      <PageHeader
+        back={<BackLink href="/videos">All videos</BackLink>}
+        title={`${movementLabel(v.movement_type)} · ${athleteName}`}
+        subtitle={<StatusBadge status={v.processing_status} />}
+        actions={
+          <>
+            {v.processing_status === "completed" && (
+              <Link href={`/videos/${v.id}/results`} className="btn btn-primary">See results <Icon name="chevron-right" className="h-4 w-4" /></Link>
+            )}
+            {canManageAthletes(user?.role) && (
+              <button onClick={() => setConfirmDelete(true)} className="btn btn-ghost text-danger hover:!bg-danger-bg">
+                <Icon name="trash" className="h-4 w-4" /> Delete
+              </button>
+            )}
+          </>
+        }
+      />
+
+      {v.processing_status === "completed" ? (
+        <section className="flex flex-col gap-4">
+          <AuthVideo
+            key={effective}
+            path={effective === "annotated" ? `/videos/${v.id}/annotated` : `/videos/${v.id}/file`}
+            label={effective === "annotated" ? "Video with body tracking overlay" : "Original video"}
+          />
+          {hasAnnotated && (
+            <div className="tabs" role="tablist" aria-label="Video version">
+              <button role="tab" className="tab" aria-selected={source === "annotated"} onClick={() => setSource("annotated")}>With tracking</button>
+              <button role="tab" className="tab" aria-selected={source === "original"} onClick={() => setSource("original")}>Original</button>
+            </div>
+          )}
+        </section>
+      ) : v.processing_status === "failed" ? (
+        <div className="card p-8 text-center" role="alert">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-danger-bg text-danger"><Icon name="alert" className="h-7 w-7" /></span>
+          <h2 className="mt-5 text-xl font-semibold text-ink">We couldn&apos;t analyze this video</h2>
+          <p className="mx-auto mt-2 max-w-md text-ink-2">{processingFailureHelp(v.error_code, v.error_message)}</p>
+          <Link href={`/videos/upload?athlete_id=${v.athlete_id}`} className="btn btn-primary mt-6">Try another video</Link>
+        </div>
+      ) : (
+        <div className="card p-8 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-brand-tint text-brand-dark"><Spinner className="h-6 w-6" /></span>
+          <h2 className="mt-5 text-xl font-semibold text-ink">
+            {v.processing_status === "pending_upload" ? "Waiting for the upload to finish" : "Analyzing movement"}
+          </h2>
+          <p className="mt-1 text-ink-2">{v.progress_pct > 0 ? `${v.progress_pct}% complete` : "This page updates by itself."}</p>
+          <div className={`progress mx-auto mt-6 max-w-md ${v.progress_pct === 0 ? "progress--indeterminate" : ""}`}><span style={{ width: `${Math.max(v.progress_pct, 4)}%` }} /></div>
+        </div>
+      )}
+
+      <section className="card-soft p-6 sm:p-8">
+        <dl className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-3">
+          <div>
+            <dt className="stat-label">Athlete</dt>
+            <dd className="mt-1 font-medium text-ink">
+              <Link href={`/athletes/${v.athlete_id}`} className="underline underline-offset-4 hover:text-brand-dark">{athleteName}</Link>
+            </dd>
           </div>
-          <h1 className="text-2xl font-bold" style={{ color: "var(--text-primary)" }}>{video.original_filename}</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-            {video.movement_type} • {video.camera_view} view • {video.duration_seconds?.toFixed(1)}s @ {video.fps?.toFixed(1)}fps
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button onClick={() => router.push(`/videos/${id}/results`)} className="pill-btn--primary" disabled={video.processing_status !== "completed"}>View Results</button>
-          <a href={`${apiBase}/videos/${id}/report.pdf`} className="pill-btn--soft">PDF Report</a>
-          <a href={`${apiBase}/videos/${id}/report.xlsx`} className="pill-btn--primary">Excel</a>
-        </div>
-      </div>
+          {details.map(([k, val]) => (
+            <div key={k}>
+              <dt className="stat-label">{k}</dt>
+              <dd className="mt-1 font-medium text-ink">{val}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
-      <div className="bento-card overflow-hidden">
-        <video
-          src={video.annotated_video_key ? `${apiBase}/videos/${id}/file` : `${apiBase}/local-storage/${video.storage_key}`}
-          controls
-          className="w-full aspect-video"
-          style={{ background: "var(--bg-muted)" }}
-        />
-      </div>
-
-      {video.processing_status === "failed" && (
-        <div className="bento-card p-6 border-red-200" style={{ color: "var(--danger-fg)" }}>
-          <h3 className="font-semibold mb-1">Processing Failed</h3>
-          <p className="text-sm">Error: {video.error_message || "Unknown error"}</p>
-        </div>
-      )}
-
-      {video.processing_status === "completed" && video.coverage_caveat && (
-        <div className="bento-card p-4 text-sm" style={{ color: "var(--text-secondary)", borderLeft: "4px solid var(--warn, #B45309)" }}>
-          <strong style={{ color: "var(--text-primary)" }}>Data quality note.</strong> {video.coverage_caveat}
-        </div>
-      )}
-
-      {video.processing_status === "processing" && (
-        <div className="bento-card p-6 text-center">
-          <div className="circle-action-btn mx-auto animate-spin" style={{ width: 48, height: 48, background: "var(--brand-tint)", color: "var(--brand-text)" }}>⏳</div>
-          <p className="mt-2" style={{ color: "var(--text-secondary)" }}>Video is still processing...</p>
-        </div>
-      )}
-    </div>
+      <ConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => del.mutate()}
+        busy={del.isPending}
+        title="Delete this video?"
+        message="The video and its analysis will be removed for good. This can't be undone."
+        confirmLabel="Delete video"
+      />
+    </>
   );
 }

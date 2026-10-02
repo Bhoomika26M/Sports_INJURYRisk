@@ -1,76 +1,80 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api-client";
-
-type Note = {
-  id: string; type: string; title: string; body: string;
-  read_at: string | null; created_at: string;
-};
+import Link from "next/link";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { useNotifications } from "@/lib/hooks";
+import { timeAgo } from "@/lib/format";
+import { PageHeader } from "@/components/page-header";
+import { Icon } from "@/components/icons";
+import { EmptyState, ErrorState, ListSkeleton, Spinner } from "@/components/feedback";
+import { useToast } from "@/components/toast";
 
 export default function NotificationsPage() {
-  const [items, setItems] = useState<Note[]>([]);
-  const [unread, setUnread] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const q = useNotifications();
+  const queryClient = useQueryClient();
+  const toast = useToast();
 
-  const load = async () => {
-    try {
-      const d = await apiClient.fetchWithAuth("/notifications?page_size=50");
-      setItems(d.items || []);
-      setUnread(d.unread_count || 0);
-    } catch (e: any) {
-      setError(e.message || "Failed to load notifications");
-    }
-  };
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["notifications"] });
+  const onError = (e: unknown) => toast.error(e instanceof Error ? e.message : "That didn't work. Please try again.");
 
-  useEffect(() => { load(); }, []);
+  const markOne = useMutation({ mutationFn: (id: string) => api.post(`/notifications/${id}/read`), onSuccess: refresh, onError });
+  const markAll = useMutation({
+    mutationFn: () => api.post("/notifications/read-all"),
+    onSuccess: async () => { await refresh(); toast.success("All caught up."); },
+    onError,
+  });
 
-  const markRead = async (noteId: string) => {
-    await apiClient.fetchWithAuth(`/notifications/${noteId}/read`, { method: "POST" });
-    load();
-  };
-
-  const markAll = async () => {
-    await apiClient.fetchWithAuth("/notifications/read-all", { method: "POST" });
-    load();
-  };
-
-  if (error) return <div className="status-pill status-pill--danger p-4">{error}</div>;
+  const unread = q.data?.unread_count ?? 0;
 
   return (
-    <div>
-      <section className="bento-hero bento-hero--blue">
-        <div>
-          <h2 className="bento-hero__title">Notifications</h2>
-          <p className="bento-hero__subtitle">{unread} unread — high-risk flags, processing updates, load warnings.</p>
-          {unread > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <button onClick={markAll} className="pill-btn--primary text-xs">Mark all read</button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <div className="bento-card" style={{ marginTop: 32, padding: "8px 0" }}>
-        {items.length === 0 && (
-          <div className="drawer-item text-sm" style={{ color: "var(--text-secondary)" }}>No notifications yet.</div>
+    <>
+      <PageHeader
+        title="Notifications"
+        subtitle={q.data ? (unread > 0 ? `${unread} unread` : "You're all caught up.") : undefined}
+        actions={unread > 0 && (
+          <button onClick={() => markAll.mutate()} disabled={markAll.isPending} className="btn btn-outline btn-sm">
+            {markAll.isPending ? <Spinner className="h-4 w-4" /> : <Icon name="check" className="h-4 w-4" />} Mark all as read
+          </button>
         )}
-        {items.map((n) => (
-          <div key={n.id} className="drawer-item">
-            <div style={{ flex: 1 }}>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="status-pill status-pill--info">{n.type.replace(/_/g, " ")}</span>
-                {!n.read_at && <span className="status-pill status-pill--danger">unread</span>}
-              </div>
-              <h3 className="font-semibold mt-1" style={{ color: "var(--text-primary)", fontSize: 15 }}>{n.title}</h3>
-              <p className="text-sm mt-1" style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>{n.body}</p>
-            </div>
-            {!n.read_at && (
-              <button onClick={() => markRead(n.id)} className="pill-btn--outline text-xs shrink-0">Mark read</button>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
+      />
+
+      {q.isPending ? (
+        <ListSkeleton />
+      ) : q.isError ? (
+        <ErrorState message={q.error.message} onRetry={() => q.refetch()} />
+      ) : q.data.items.length === 0 ? (
+        <EmptyState icon="bell" title="Nothing yet">We&apos;ll let you know here when something needs your attention.</EmptyState>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {q.data.items.map((n) => {
+            const isUnread = !n.read_at;
+            return (
+              <li key={n.id} className={`row !items-start ${isUnread ? "!bg-brand-tint/60" : ""}`}>
+                <span className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${isUnread ? "bg-white text-brand-dark" : "bg-white text-ink-3"}`}>
+                  <Icon name="bell" className="h-5 w-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-ink ${isUnread ? "font-semibold" : "font-medium"}`}>{n.title}</p>
+                  <p className="mt-0.5 text-sm text-ink-2">{n.body}</p>
+                  <p className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-3">
+                    {timeAgo(n.created_at)}
+                    {n.related_athlete_id && (
+                      <Link href={`/athletes/${n.related_athlete_id}`} className="font-medium text-brand-dark underline underline-offset-4">View athlete</Link>
+                    )}
+                  </p>
+                </div>
+                {isUnread && (
+                  <button onClick={() => markOne.mutate(n.id)} disabled={markOne.isPending && markOne.variables === n.id}
+                    aria-label={`Mark "${n.title}" as read`} className="btn btn-ghost btn-sm shrink-0">
+                    {markOne.isPending && markOne.variables === n.id ? <Spinner className="h-4 w-4" /> : "Mark read"}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { Spinner } from "@/components/feedback";
 
 // Landing page after Google sign-in. The backend has already set the httpOnly refresh cookie on the
 // redirect that brought the browser here. AuthProvider's bootstrap exchanges that cookie for an
@@ -18,9 +19,10 @@ export default function OAuthCallbackPage() {
   }, [loading, user, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--bg-muted)" }}>
-      <div className="bento-card p-6 text-sm font-bold" style={{ color: "var(--text-primary)" }}>
-        Completing sign-in…
+    <div className="flex min-h-screen items-center justify-center bg-wash px-4">
+      <div className="card flex w-full max-w-md flex-col items-center gap-3 p-10 text-center">
+        <Spinner className="h-5 w-5" />
+        <p className="text-sm font-bold text-ink">Completing sign-in&hellip;</p>
       </div>
     </div>
   );

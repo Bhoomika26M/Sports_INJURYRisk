@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { PageSkeleton } from "@/components/feedback";
 
 const ROLE_HOME: Record<string, string> = {
   athlete: "/dashboard/athlete",
@@ -13,14 +14,10 @@ const ROLE_HOME: Record<string, string> = {
 };
 
 export default function DashboardRouter() {
-  const { user, loading } = useAuth();
   const router = useRouter();
-
+  const { user } = useAuth();
   useEffect(() => {
-    if (!loading && user) {
-      router.replace(ROLE_HOME[user.role] || "/dashboard/athlete");
-    }
-  }, [loading, user, router]);
-
-  return <div className="bento-card p-6">Loading dashboard…</div>;
+    if (user) router.replace(ROLE_HOME[user.role] ?? "/dashboard/athlete");
+  }, [user, router]);
+  return <PageSkeleton rows={2} />;
 }

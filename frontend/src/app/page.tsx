@@ -1,73 +1,57 @@
 import Link from "next/link";
+import { Icon, type IconName } from "@/components/icons";
+import { Logo } from "@/components/logo";
+
+const FEATURES: { icon: IconName; title: string; body: string }[] = [
+  { icon: "upload", title: "Upload a short clip", body: "Squats, jumps, landings, running or cutting. A phone video is all you need." },
+  { icon: "activity", title: "See how the body moves", body: "Joint angles and left-right balance, measured from video and shown plainly." },
+  { icon: "chart", title: "Understand the signals", body: "A transparent score where every part is visible, plus simple next steps." },
+];
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "var(--bg-app)" }}>
-      <header className="app-header">
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="flex items-center gap-3">
-            <div className="circle-action-btn" style={{ width: 40, height: 40, fontSize: 20 }}>W</div>
-            <span className="font-bold text-base" style={{ color: "var(--text-primary)", letterSpacing: "-0.02em" }}>InjuryDetect</span>
-          </Link>
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/login" className="pill-btn--primary">Sign In</Link>
-          <Link href="/register" className="pill-btn--soft">Get Started</Link>
-        </div>
+    <div className="flex min-h-screen flex-col bg-canvas">
+      <header className="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-5">
+        <Logo href="/" />
+        <nav className="flex items-center gap-2" aria-label="Account">
+          <Link href="/login" className="btn btn-ghost btn-sm">Sign in</Link>
+          <Link href="/register" className="btn btn-primary btn-sm">Get started</Link>
+        </nav>
       </header>
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <section className="text-center max-w-3xl mx-auto">
-          <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-6" style={{ color: "var(--text-primary)", letterSpacing: "-0.03em" }}>
-            Sports Biomechanics & Injury Risk Intelligence
+      <main className="mx-auto w-full max-w-5xl flex-1 px-5">
+        <section className="mx-auto max-w-2xl py-16 text-center sm:py-24">
+          <h1 className="text-4xl font-bold leading-[1.1] tracking-tight text-ink sm:text-[52px]">
+            Movement screening, made simple
           </h1>
-          <p className="text-lg mb-10 max-w-2xl mx-auto" style={{ color: "var(--text-secondary)", lineHeight: 1.7 }}>
-            Movement screening, joint kinematics, and heuristic risk flags for athletes and coaches.
-            Upload a video, get actionable insights — no black boxes, no false precision.
+          <p className="mx-auto mt-6 max-w-xl text-lg text-ink-2">
+            Upload a short video and get clear movement insights for athletes — no black boxes, no false precision.
           </p>
-          <div className="flex items-center justify-center gap-4">
-            <Link href="/register" className="pill-btn--primary text-lg px-8 py-4">Start Free</Link>
-            <Link href="/login" className="pill-btn--soft text-lg px-8 py-4">Sign In</Link>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link href="/register" className="btn btn-primary !min-h-[52px] !px-8 !text-base">Create a free account</Link>
+            <Link href="/login" className="btn btn-soft !min-h-[52px] !px-8 !text-base">Sign in</Link>
           </div>
         </section>
 
-        <section className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="bento-card p-6">
-            <div className="circle-action-btn mb-4" style={{ width: 48, height: 48, fontSize: 22 }}>📹</div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>Upload & Analyze</h3>
-            <p style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
-              Upload movement videos (squat, jump, landing, running, cutting). Get joint angles, LSI, and qualitative valgus flags in minutes.
-            </p>
-          </div>
-          <div className="bento-card p-6">
-            <div className="circle-action-btn mb-4" style={{ width: 48, height: 48, fontSize: 22 }}>📊</div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>Transparent Risk Scoring</h3>
-            <p style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
-              Heuristic composite: movement anomaly vs. population baseline, LSI asymmetry flag, prior injury, ACWR, fatigue. Every component visible.
-            </p>
-          </div>
-          <div className="bento-card p-6">
-            <div className="circle-action-btn mb-4" style={{ width: 48, height: 48, fontSize: 22 }}>🧠</div>
-            <h3 className="text-lg font-semibold mb-2" style={{ color: "var(--text-primary)" }}>Actionable Recommendations</h3>
-            <p style={{ color: "var(--text-secondary)", lineHeight: 1.6 }}>
-              Rule-based corrective exercises mapped to flagged metrics — FIFA 11+, Copenhagen, Nordic, single-leg work. Priority-sorted.
-            </p>
-          </div>
+        <section className="grid gap-5 pb-16 sm:grid-cols-3" aria-label="How it works">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="card-soft p-7">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-brand-dark shadow-[var(--shadow-diffuse)]">
+                <Icon name={f.icon} className="h-6 w-6" />
+              </span>
+              <h2 className="mt-5 text-lg font-semibold text-ink">{f.title}</h2>
+              <p className="mt-1.5 text-ink-2">{f.body}</p>
+            </div>
+          ))}
         </section>
 
-        <section className="mt-20 max-w-3xl mx-auto text-center">
-          <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-            Built with honest science: no supervised injury prediction, no trained pose models, frontal-plane metrics are qualitative only.
-            <br />See <a href="/docs/SCIENCE_CONSTRAINTS.md" className="underline" style={{ color: "var(--brand-dark)" }}>SCIENCE_CONSTRAINTS.md</a> for details.
-          </p>
-        </section>
+        <p className="mx-auto max-w-xl pb-16 text-center text-sm text-ink-3">
+          Built on honest science: scores flag movement patterns worth a closer look, they don&apos;t predict injuries,
+          and front-view knee alignment is shown as a visual flag, never an exact angle.
+        </p>
       </main>
 
-      <footer className="border-t py-8" style={{ borderColor: "var(--border-faint)" }}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm" style={{ color: "var(--text-muted)" }}>
-          InjuryDetect v1.0 — Sports Biomechanics & Injury Risk Intelligence
-        </div>
-      </footer>
+      <footer className="border-t border-faint py-6 text-center text-sm text-ink-3">InjuryDetect</footer>
     </div>
   );
 }

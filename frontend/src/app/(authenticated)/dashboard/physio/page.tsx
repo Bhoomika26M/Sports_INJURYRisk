@@ -1,55 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { apiClient } from "@/lib/api-client";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api-client";
+import { useAuth } from "@/lib/auth-context";
+import { firstName, formatDate, humanize, initials } from "@/lib/format";
+import type { CoachDashboard } from "@/lib/types";
+import { PageHeader } from "@/components/page-header";
+import { Avatar, RiskBadge } from "@/components/badges";
+import { EmptyState, ErrorState, PageSkeleton } from "@/components/feedback";
+import { ActionCard } from "@/components/action-card";
 
 export default function PhysioDashboard() {
-  const [data, setData] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+  const q = useQuery({ queryKey: ["coach-dashboard"], queryFn: () => api.get<CoachDashboard>("/analytics/coach") });
 
-  useEffect(() => {
-    apiClient.fetchWithAuth("/analytics/coach")
-      .then(setData)
-      .catch((e: any) => setError(e.message));
-  }, []);
+  if (q.isPending) return <PageSkeleton />;
+  if (q.isError) return <ErrorState message={q.error.message} onRetry={() => q.refetch()} />;
 
-  if (error) return <div className="status-pill status-pill--danger p-4">{error}</div>;
-  if (!data) return <div className="bento-card p-6">Loading rehabilitation overview…</div>;
-
-  const flagged = (data.athletes || []).filter((a: any) =>
-    a.latest_risk_category === "high" || a.latest_risk_category === "critical");
+  const flagged = q.data.athletes.filter((a) => a.latest_risk_category === "high" || a.latest_risk_category === "critical");
 
   return (
-    <div>
-      <section className="bento-hero bento-hero--purple">
+    <>
+      <PageHeader title={`Hi ${firstName(user?.full_name)}`} subtitle="Athletes whose latest movement pattern deserves attention." />
+
+      <section className="hero hero--purple">
         <div>
-          <h2 className="bento-hero__title">Rehabilitation tracking</h2>
-          <p className="bento-hero__subtitle">
-            {flagged.length} athletes flagged high/critical · {data.athletes.length} under observation
-          </p>
+          <h2 className="text-2xl font-bold tracking-tight">
+            {flagged.length === 0 ? "All clear for now" : `${flagged.length} flagged · ${q.data.athletes.length} under observation`}
+          </h2>
+          <p className="mt-1 max-w-md opacity-80">Flags are pattern signals to look into, not diagnoses.</p>
         </div>
       </section>
 
-      <section className="bento-card" style={{ marginTop: 32, padding: "8px 0" }}>
-        {flagged.map((a: any) => (
-          <div key={a.athlete_id} className="drawer-item">
-            <div style={{ flex: 1 }}>
-              <div className="flex items-center gap-2">
-                <span className="font-semibold" style={{ color: "var(--text-primary)", fontSize: 15 }}>{a.name || "Unnamed"}</span>
-                <span className="status-pill status-pill--warn">{a.latest_risk_category} · {a.latest_risk_score}</span>
-              </div>
-              <div className="text-xs mt-1" style={{ color: "var(--text-secondary)" }}>
-                {a.sport} · last assessed {a.last_assessed ? a.last_assessed.slice(0, 10) : "never"}
-              </div>
-            </div>
-            <Link href={`/athletes/${a.athlete_id}`} className="pill-btn--outline text-xs">Review</Link>
-          </div>
-        ))}
-        {flagged.length === 0 && (
-          <div className="drawer-item text-sm" style={{ color: "var(--text-secondary)" }}>No athletes currently flagged. All clear.</div>
-        )}
+      {flagged.length === 0 ? (
+        <EmptyState icon="check" title="No one is flagged">Nobody currently shows a high or critical pattern.</EmptyState>
+      ) : (
+        <ul className="flex flex-col gap-3">
+          {flagged.map((a) => (
+            <li key={a.athlete_id}>
+              <Link href={`/athletes/${a.athlete_id}`} className="row">
+                <Avatar text={initials(a.name ?? humanize(a.sport))} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink">{a.name ?? `${humanize(a.sport)} athlete`}</p>
+                  <p className="truncate text-sm text-ink-3">{humanize(a.sport)}{a.last_assessed ? ` · assessed ${formatDate(a.last_assessed)}` : ""}</p>
+                </div>
+                {a.latest_risk_category && <RiskBadge category={a.latest_risk_category} />}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <section className="grid gap-4 sm:grid-cols-2">
+        <ActionCard href="/athletes" icon="users" title="All athletes" body="Browse everyone's profile." />
+        <ActionCard href="/videos" icon="video" title="Videos" body="Review recent analyses." />
       </section>
-    </div>
+    </>
   );
 }

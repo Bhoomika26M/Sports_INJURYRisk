@@ -1,59 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { apiClient } from "@/lib/api-client";
 import Link from "next/link";
-
-type VideoItem = {
-  id: string; original_filename: string; movement_type: string; processing_status: string;
-};
+import { useAllAthletes, useVideos } from "@/lib/hooks";
+import { athleteName, formatDateTime, movementLabel } from "@/lib/format";
+import { PageHeader } from "@/components/page-header";
+import { DownloadButton } from "@/components/download-button";
+import { EmptyState, ErrorState, ListSkeleton } from "@/components/feedback";
 
 export default function ReportsPage() {
-  const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
-
-  useEffect(() => {
-    apiClient.fetchWithAuth("/videos?page_size=50")
-      .then((d: any) => setVideos(d.items || []))
-      .catch((e: any) => setError(e.message || "Failed to load videos"));
-  }, []);
-
-  if (error) return <div className="status-pill status-pill--danger p-4">{error}</div>;
+  const q = useVideos({ pageSize: 50 });
+  const athletesQ = useAllAthletes();
+  const names = new Map((athletesQ.data?.items ?? []).map((a) => [a.id, athleteName(a)]));
+  const ready = (q.data?.items ?? []).filter((v) => v.processing_status === "completed");
 
   return (
-    <div>
-      <section className="bento-hero bento-hero--purple">
-        <div>
-          <h2 className="bento-hero__title">Reports & Export</h2>
-          <p className="bento-hero__subtitle">Methodology note preserved on every export. PDF for sharing, Excel for analysis, CSV for raw frames.</p>
-        </div>
-      </section>
+    <>
+      <PageHeader title="Reports" subtitle="Download any finished analysis as PDF, Excel or CSV." />
 
-      <div className="bento-card" style={{ marginTop: 32, padding: "8px 0" }}>
-        {videos.length === 0 && (
-          <div className="drawer-item text-sm" style={{ color: "var(--text-secondary)" }}>
-            No videos yet — <Link href="/videos/upload" className="underline" style={{ color: "var(--brand-dark)" }}>upload one</Link> to generate reports.
-          </div>
-        )}
-        {videos.map((v) => (
-          <div key={v.id} className="drawer-item">
-            <div style={{ flex: 1 }}>
-              <div className="font-semibold" style={{ color: "var(--text-primary)", fontSize: 15 }}>{v.original_filename}</div>
-              <div className="text-xs capitalize mt-1" style={{ color: "var(--text-secondary)" }}>
-                {v.movement_type} — {v.processing_status}
-              </div>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Link href={`/videos/${v.id}/results`} className="pill-btn--outline text-xs">View</Link>
-              {v.processing_status === "completed" && (<>
-                <a href={`${apiBase}/videos/${v.id}/report.pdf`} className="pill-btn--soft text-xs">PDF</a>
-                <a href={`${apiBase}/videos/${v.id}/report.xlsx`} className="pill-btn--primary text-xs">Excel</a>
-              </>)}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+      {q.isPending ? (
+        <ListSkeleton />
+      ) : q.isError ? (
+        <ErrorState message={q.error.message} onRetry={() => q.refetch()} />
+      ) : ready.length === 0 ? (
+        <EmptyState icon="file" title="No reports yet" action={{ label: "Analyze a video", href: "/videos/upload" }}>
+          Reports appear here once a video has finished analyzing.
+        </EmptyState>
+      ) : (
+        <>
+          <ul className="flex flex-col gap-3">
+            {ready.map((v) => (
+              <li key={v.id} className="row !flex-col !items-stretch sm:!flex-row sm:!items-center">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-semibold text-ink">{movementLabel(v.movement_type)} · {names.get(v.athlete_id) ?? "Athlete"}</p>
+                  <p className="text-sm text-ink-3">{formatDateTime(v.created_at)}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/videos/${v.id}/results`} className="btn btn-ghost btn-sm">View</Link>
+                  <DownloadButton path={`/videos/${v.id}/report.pdf`} filename={`report-${v.id}.pdf`} label="PDF" variant="soft" />
+                  <DownloadButton path={`/videos/${v.id}/report.xlsx`} filename={`report-${v.id}.xlsx`} label="Excel" />
+                  <DownloadButton path={`/videos/${v.id}/biomechanics/export.csv`} filename={`video-${v.id}.csv`} label="CSV" />
+                </div>
+              </li>
+            ))}
+          </ul>
+          {q.data.total > 50 && <p className="text-sm text-ink-3">Showing the 50 most recent videos. Older ones are under Videos.</p>}
+        </>
+      )}
+    </>
   );
 }
