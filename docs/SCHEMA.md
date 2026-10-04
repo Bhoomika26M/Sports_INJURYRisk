@@ -102,6 +102,7 @@ CREATE TABLE videos (
     error_code                  VARCHAR(50),
     error_message                TEXT,
     coverage_caveat   TEXT,                -- NULL = one clearly-tracked athlete at full coverage; else partial-coverage / multi-person note (migration 0004). Not an error.
+    analysis          JSONB,               -- video-level kinematic analysis, rep segmentation, and quality report (migration 0005). Nullable.
     job_id                      VARCHAR(255),
     progress_pct                 INTEGER NOT NULL DEFAULT 0 CHECK (progress_pct BETWEEN 0 AND 100),
     annotated_video_key          VARCHAR(500),
@@ -179,6 +180,7 @@ CREATE TABLE risk_scores (
     overall_score      NUMERIC(5,2) NOT NULL CHECK (overall_score BETWEEN 0 AND 100),
     risk_category      VARCHAR(20) NOT NULL CHECK (risk_category IN ('low','moderate','high','critical')),
     score_breakdown    JSONB NOT NULL,
+    assessment         JSONB,               -- full clinical risk assessment payload including category breakdowns and sub-scores (migration 0005). Nullable.
     methodology_note   TEXT NOT NULL DEFAULT 'Composite of movement-pattern anomaly vs. population baseline, a bounded symmetry flag, and a bounded prior-injury flag. Not a trained injury-prediction model. See docs/SCIENCE_CONSTRAINTS.md.',
     created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
 );
