@@ -1,171 +1,165 @@
-"""Anomaly detection — Isolation Forest defines "normal"; severity is measured from it.
+"""Movement anomaly detection — unsupervised, baseline-relative, no injury labels.
 
-WHAT THE SCORE MEANS (per frame, 0-100)
-    0    the frame lies inside the baseline's own normal envelope
-    50   the frame lies ``HALF_SATURATION_SIGMA`` (2.0) baseline robust-SDs outside it
-    ->100 the frame lies far outside it (never reaches 100)
+This is the honest ML component (docs/ARCHITECTURE.md §1): it compares a video to the
+population of *other* videos of the same movement type. It says "this movement pattern is
+unusual", never "this athlete will be injured".
 
-FORMULA (for one frame ``x``; baseline ``B`` is the leave-one-video-out population)
-    1. Fit ``IsolationForest(random_state=42)`` on ``B``; ``s(.)`` = its decision_function
-       (higher = more normal).
-    2. Knee ``k`` = the 5th percentile of ``s`` over ``B`` itself. The *core* is every
-       baseline frame with ``s >= k`` -- the 95% most-normal baseline frames.
-    3. If ``s(x) >= k``: score = 0.
-       Otherwise ``d`` = Euclidean distance from ``x`` to the nearest core frame, in units
-       of the baseline's robust SD per feature (``1.4826 * MAD``; falls back to the plain SD
-       when MAD is 0), and
-           score = 100 * (1 - 2 ** (-d / 2.0))
-       Monotone in ``d``, exactly 0 at the envelope edge, 50 at ``d = 2`` SD, 75 at 4 SD,
-       87.5 at 6 SD, bounded below 100.
-
-WHY NOT JUST RESCALE THE ISOLATION FOREST OUTPUT  (measured, see DECISIONS.md)
-    * The old percentile-rank-against-baseline has no zero anchor: the baseline's own median
-      frame is at the 50th percentile by construction, so an average athlete scored ~37/70.
-    * Isolation Forest saturates: any point outside the training range is isolated at the same
-      depth in every tree, so its decision score is the SAME for +4 SD and +8 SD (n=426:
-      -0.258 vs -0.275). No transform of that output can separate "clear" from "extreme".
-      The forest therefore decides *whether* a frame is outside the envelope (and copes with
-      multi-modal baselines such as a squat's standing/bottom modes); geometry decides *how far*.
-
-DIRECTION: unchanged and correct -- higher score = more anomalous. Do not invert it.
-
-LIMITS (honest)
-    * By construction ~5% of in-distribution frames register a (small) non-zero score.
-    * A multi-modal baseline has a wide robust SD (it spans every mode), so distances are
-      measured in units of the movement's whole range, which is lenient for within-mode
-      deviations. Conservative by design; revisit with real data.
-    * This is a pattern-deviation signal. It is NOT an injury probability (AGENTS.md law).
+Calibration note (why the score is tail-based)
+----------------------------------------------
+The percentile rank of a sample against its own baseline is uniformly distributed for a
+perfectly normal sample — its expected value is 50, not 0. Feeding that straight into a
+risk score made every normal video look "moderate". We therefore only score the *tail*:
+a video must be more unusual than ANOMALY_FLOOR_PCT of the baseline before it adds
+anything, reaching the maximum at the extreme. For a normal video the expected
+deviation score is ~5/100 (verified by simulation in tests/test_anomaly_detection.py).
 """
 
-import hashlib
-import time
-from dataclasses import dataclass
+from __future__ import annotations
 
 import numpy as np
 from sklearn.ensemble import IsolationForest
-from sklearn.neighbors import KDTree
 
-from app.modules.risk_scoring.constants import (
-    HALF_SATURATION_SIGMA,
-    MAD_TO_SIGMA,
-    MIN_BASELINE_FRAMES,
-    NORMAL_ENVELOPE_QUANTILE,
-)
-
-_MIN_SCALE = 1e-9
+from app.modules.risk_scoring.features import MEASUREMENT_NOISE_DEG, split_feature_key
 
 
 class InsufficientBaselineError(Exception):
-    """Raised when the baseline cannot support a score. ``unit`` names what ``have``/``need`` count."""
-
-    def __init__(self, metric_name: str, have: int, need: int, unit: str = "frames"):
-        self.metric_name, self.have, self.need, self.unit = metric_name, have, need, unit
-        super().__init__(f"Need {need} baseline {unit} for '{metric_name}', have {have}")
+    def __init__(self, metric_name: str, have: int, need: int):
+        self.metric_name, self.have, self.need = metric_name, have, need
+        super().__init__(f"Need {need} baseline samples for '{metric_name}', have {have}")
 
 
-@dataclass(frozen=True)
-class _FittedBaseline:
-    model: IsolationForest
-    knee: float               # 5th percentile of the baseline's own decision scores
-    core_tree: KDTree         # the 95% most-normal baseline frames, in scaled space
-    scale: np.ndarray         # per-feature robust SD of the baseline
-    n_baseline_frames: int
+# Only videos more unusual than this share of the baseline start to score.
+ANOMALY_FLOOR_PCT = 90.0
+# Percentile at/above which a video is recorded as a flagged anomaly.
+ANOMALY_FLAG_PCT = 95.0
+# |robust z| at/above which an individual feature is called out as deviating.
+FEATURE_Z_FLAG = 2.0
+# Scale floor for robust z (deg). Half the sagittal tracking RMSE: below this a
+# "deviation" is indistinguishable from pose-estimation noise.
+Z_SCALE_FLOOR = MEASUREMENT_NOISE_DEG / 2
 
 
-_model_cache: dict[str, tuple[float, _FittedBaseline]] = {}
-MODEL_CACHE_TTL_SECONDS = 300
-MODEL_CACHE_MAX_ENTRIES = 32
-
-
-def _fingerprint(arr: np.ndarray) -> str:
-    """Content hash, so a changed baseline can never be served a stale fitted model."""
-    data = np.ascontiguousarray(arr, dtype=np.float64)
-    h = hashlib.blake2b(digest_size=16)
-    h.update(str(data.shape).encode())
-    h.update(data.tobytes())
-    return h.hexdigest()
-
-
-def _robust_scale(baseline: np.ndarray) -> np.ndarray:
-    median = np.median(baseline, axis=0)
-    scale = MAD_TO_SIGMA * np.median(np.abs(baseline - median), axis=0)
-    fallback = baseline.std(axis=0)
-    scale = np.where(scale < _MIN_SCALE, fallback, scale)
-    return np.maximum(scale, _MIN_SCALE)
-
-
-def _fit_baseline(baseline: np.ndarray) -> _FittedBaseline:
-    model = IsolationForest(contamination="auto", random_state=42)
-    model.fit(baseline)
-    baseline_scores = model.decision_function(baseline)
-    knee = float(np.quantile(baseline_scores, NORMAL_ENVELOPE_QUANTILE))
-    scale = _robust_scale(baseline)
-    core = baseline[baseline_scores >= knee]
-    return _FittedBaseline(
-        model=model,
-        knee=knee,
-        core_tree=KDTree(core / scale),
-        scale=scale,
-        n_baseline_frames=len(baseline),
-    )
-
-
-def _get_or_fit(cache_key: str, baseline: np.ndarray) -> _FittedBaseline:
-    now = time.time()
-    full_key = f"{cache_key}:{_fingerprint(baseline)}"
-    cached = _model_cache.get(full_key)
-    if cached and (now - cached[0]) < MODEL_CACHE_TTL_SECONDS:
-        return cached[1]
-    fitted = _fit_baseline(baseline)
-    for key in [k for k, (ts, _) in _model_cache.items() if now - ts >= MODEL_CACHE_TTL_SECONDS]:
-        _model_cache.pop(key, None)
-    while len(_model_cache) >= MODEL_CACHE_MAX_ENTRIES:
-        _model_cache.pop(min(_model_cache, key=lambda k: _model_cache[k][0]), None)
-    _model_cache[full_key] = (now, fitted)
-    return fitted
-
-
-def invalidate_model_cache(movement_type: str) -> None:
-    """Call after a successful baseline recompute so a stale fitted model isn't reused."""
-    for key in list(_model_cache.keys()):
-        if key.startswith(f"{movement_type}:"):
-            _model_cache.pop(key, None)
-
-
-def severity_from_distance(distance_sd: np.ndarray | float) -> np.ndarray:
-    """Monotone, bounded map from distance-outside-the-envelope (baseline robust SDs) to 0-100."""
-    d = np.maximum(np.asarray(distance_sd, dtype=float), 0.0)
-    return 100.0 * (1.0 - np.power(2.0, -d / HALF_SATURATION_SIGMA))
+CROSSFIT_FOLDS = 5
 
 
 def compute_anomaly_scores(
     sample_vectors: np.ndarray,
     baseline_vectors: np.ndarray,
-    min_baseline_frames: int = MIN_BASELINE_FRAMES,
-    cache_key: str | None = None,
+    min_samples: int = 10,
     metric_name: str = "",
 ) -> list[float]:
+    """Percentile-rank anomaly score per sample row, 0-100 (higher = more unusual).
+
+    = % of the baseline that is MORE normal than the sample (docs/DECISIONS.md, 2026-07-11),
+    but cross-fitted: the baseline is split into folds, a forest is fit on all-but-one fold,
+    and the sample is ranked against the HELD-OUT fold scored by that same forest. Ranking a
+    sample against the very points the forest was trained on (the previous implementation)
+    makes every fresh sample look more anomalous than it is, because training points are
+    always favoured by the model that saw them. Held-out ranking is exchangeable under
+    "sample comes from the baseline", so a normal video's percentile is ~uniform.
     """
-    sample_vectors: this video's per-frame validated metric values, shape (n_frames, n_features)
-    baseline_vectors: the leave-one-video-out baseline for this movement_type, (n_baseline, n_features)
-    Returns one anomaly score per sample frame, 0-100 (see module docstring for the definition).
+    base = np.asarray(baseline_vectors, dtype=float)
+    x = np.asarray(sample_vectors, dtype=float)
+    n = len(base)
+    if n < min_samples:
+        raise InsufficientBaselineError(metric_name, n, min_samples)
 
-    ``min_baseline_frames`` is only the ESTIMATOR floor (unit: frames). Whether the baseline is a
-    real population -- distinct videos and athletes -- is decided upstream in baselines.py.
+    order = np.random.default_rng(42).permutation(n)
+    folds = np.array_split(order, min(CROSSFIT_FOLDS, n))
+    more_normal = np.zeros(len(x))
+    for held_idx in folds:
+        train_idx = np.setdiff1d(order, held_idx)
+        model = IsolationForest(n_estimators=100, contamination="auto", random_state=42)
+        model.fit(base[train_idx])
+        held_scores = model.decision_function(base[held_idx])
+        sample_scores = model.decision_function(x)
+        more_normal += (held_scores[None, :] > sample_scores[:, None]).sum(axis=1)
+    return [float(100 * m / n) for m in more_normal]
+
+
+def robust_z(value: float, baseline_values: np.ndarray) -> float:
+    """(value - median) / (1.4826 * MAD), with the scale floored at tracking noise."""
+    med = float(np.median(baseline_values))
+    mad = float(np.median(np.abs(baseline_values - med)))
+    scale = max(1.4826 * mad, Z_SCALE_FLOOR)
+    return (value - med) / scale
+
+
+# Isolation Forest isolates points by random splits *inside* the training range, so a
+# point far BEYOND that range is not reliably scored as more anomalous than one at its
+# edge. A robust per-feature z-score has no such blind spot, so the two are blended:
+# a video is as deviant as the worse of (multivariate pattern, single-feature extremity).
+# 3 robust-sigma is the classical outlier cut; 5 maps to the maximum.
+Z_TAIL_START, Z_TAIL_FULL = 3.0, 5.0
+
+
+def z_tail_score(max_abs_z: float, n_baseline: int) -> float:
+    """Extremity tail score. Thresholds widen by (1 + 4/n): a robust z built from a handful
+    of baseline videos is noisy, and across ~10 features some will exceed 3 sigma by chance.
+    Simulated (10 features, Gaussian): at n=10 this cuts normal-video false positives
+    (score>50) from 16% to 4% while still catching 83% of 4-sigma deviations; at n=30,
+    1% false positives vs 91% detection."""
+    infl = 1.0 + 4.0 / max(n_baseline, 1)
+    start, full = Z_TAIL_START * infl, Z_TAIL_FULL * infl
+    return float(np.clip((max_abs_z - start) / (full - start), 0.0, 1.0) * 100.0)
+
+
+def tail_score(percentile: float) -> float:
+    """Map percentile rank -> 0-100 risk contribution, counting only the tail."""
+    span = 100.0 - ANOMALY_FLOOR_PCT
+    return float(np.clip((percentile - ANOMALY_FLOOR_PCT) / span, 0.0, 1.0) * 100.0)
+
+
+def assess_video_anomaly(
+    sample: dict[str, float],
+    baseline: list[dict[str, float]],
+    min_videos: int,
+) -> dict:
+    """Multivariate Isolation Forest on video-level features + per-feature explanation.
+
+    `sample`   {feature_key: value} for the video being scored.
+    `baseline` one {feature_key: value} per OTHER completed video (same keys as sample).
     """
-    if len(baseline_vectors) < min_baseline_frames:
-        raise InsufficientBaselineError(metric_name, len(baseline_vectors), min_baseline_frames, unit="frames")
-    if not (np.isfinite(baseline_vectors).all() and np.isfinite(sample_vectors).all()):
-        raise ValueError("compute_anomaly_scores requires finite inputs; filter NaN/inf upstream")
-    if len(sample_vectors) == 0:
-        return []
+    features = sorted(sample.keys())
+    if len(baseline) < min_videos:
+        raise InsufficientBaselineError("video-level features", len(baseline), min_videos)
 
-    fitted = _get_or_fit(cache_key, baseline_vectors) if cache_key else _fit_baseline(baseline_vectors)
+    base = np.array([[b[f] for f in features] for b in baseline], dtype=float)
+    # CANONICAL ROW ORDER. The baseline arrives from a GROUP BY with no ORDER BY, so its order follows the
+    # query plan. The forest and its cross-fit folds depend on row order, so the same data could score 0 or 100
+    # for a perfectly normal video depending only on how Postgres happened to return the rows (measured: 2 of 8
+    # simulated populations flipped; it also made a test pass alone and fail in a full run). Sorting makes the
+    # score a pure function of the data.
+    base = base[np.lexsort(base.T[::-1])]
+    x = np.array([[sample[f] for f in features]], dtype=float)
 
-    sample_scores = fitted.model.decision_function(sample_vectors)
-    distance = np.zeros(len(sample_vectors))
-    outside = sample_scores < fitted.knee
-    if outside.any():
-        dist, _ = fitted.core_tree.query(sample_vectors[outside] / fitted.scale, k=1)
-        distance[outside] = dist[:, 0]
-    return [float(v) for v in severity_from_distance(distance)]
+    percentile = compute_anomaly_scores(x, base, min_samples=min_videos)[0]
+
+    explained = []
+    for i, f in enumerate(features):
+        z = robust_z(sample[f], base[:, i])
+        metric, stat = split_feature_key(f)
+        explained.append({
+            "feature": f,
+            "metric": metric,
+            "stat": stat,
+            "value": round(float(sample[f]), 1),
+            "baseline_median": round(float(np.median(base[:, i])), 1),
+            "z": round(float(z), 2),
+            "direction": "above" if z > 0 else "below",
+            "flagged": abs(z) >= FEATURE_Z_FLAG,
+        })
+    explained.sort(key=lambda e: abs(e["z"]), reverse=True)
+
+    max_abs_z = max(abs(e["z"]) for e in explained)
+    if_score = tail_score(percentile)
+    z_score = z_tail_score(max_abs_z, len(baseline))
+    return {
+        "percentile": round(percentile, 1),
+        "isolation_forest_score": round(if_score, 1),
+        "extremity_score": round(z_score, 1),
+        "deviation_score": round(max(if_score, z_score), 1),
+        "flagged": percentile >= ANOMALY_FLAG_PCT or z_score >= 100.0,
+        "n_baseline": len(baseline),
+        "features": explained,
+    }

@@ -7,6 +7,7 @@ from sqlalchemy import Column, String, Float, Integer, ForeignKey, DateTime, Boo
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 
 from app.database import Base
+from app.modules.risk_scoring.scoring import METHODOLOGY_NOTE
 
 def now():
     return datetime.now(tz=ZoneInfo("UTC"))
@@ -22,7 +23,7 @@ class MovementBaseline(Base):
     # NULL = insufficient baseline ("we don't know"). Never store a fabricated 0.0 +/- 0.0.
     mean_value = Column(Float, nullable=True)
     std_dev = Column(Float, nullable=True)
-    sample_size = Column(Integer, nullable=False)  # unit: per-metric validated FRAME rows
+    sample_size = Column(Integer, nullable=False)  # unit: VIDEOS (one video-level feature value per video; == video_count)
     video_count = Column(Integer, nullable=False, default=0, server_default="0")    # distinct completed videos
     athlete_count = Column(Integer, nullable=False, default=0, server_default="0")  # distinct athletes
     computed_at = Column(DateTime(timezone=True), default=now, nullable=False)
@@ -50,5 +51,7 @@ class RiskScore(Base):
     overall_score = Column(Float, nullable=False)
     risk_category = Column(String(20), nullable=False)
     score_breakdown = Column(JSONB, nullable=False)
-    methodology_note = Column(Text, nullable=False, default="Composite of movement-pattern anomaly vs. population baseline, a bounded symmetry flag, and a bounded prior-injury flag. Not a trained injury-prediction model. See docs/SCIENCE_CONSTRAINTS.md.")
+    methodology_note = Column(Text, nullable=False, default=METHODOLOGY_NOTE)
+    # Full AI-engine assessment (sub-scores, injury categories, baseline info, quality, engine version).
+    assessment = Column(JSONB, nullable=True)
     created_at = Column(DateTime(timezone=True), default=now, nullable=False)

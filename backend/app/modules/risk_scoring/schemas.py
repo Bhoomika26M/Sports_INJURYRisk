@@ -1,7 +1,7 @@
 """Risk scoring Pydantic schemas."""
 
-from typing import Literal
-from pydantic import BaseModel, Field
+from typing import Any, Literal, Optional
+from pydantic import BaseModel
 
 
 SupportedMovementType = Literal[
@@ -15,37 +15,37 @@ class BaselineRecomputeRequest(BaseModel):
 
 
 class ScoreComponent(BaseModel):
+    """One weighted component. `points`/`max` are its contribution to / share of the 0-100 total."""
     points: float
     max: float
-    detail: str | None = None
-    flagged: bool | None = None
-    lsi: float | None = None
-    caveat: str | None = None
-    acwr: float | None = None
-    rpe_trend: float | None = None
+    score: Optional[float] = None
+    weight: float
+    effective_weight: float
+    available: bool
+    detail: dict[str, Any] = {}
 
 
 class ScoreBreakdown(BaseModel):
-    movement_anomaly: ScoreComponent
-    asymmetry_flag: ScoreComponent
-    prior_injury_flag: ScoreComponent
-    acwr_flag: ScoreComponent | None = None
-    fatigue_flag: ScoreComponent | None = None
+    biomechanical_deviations: ScoreComponent
+    historical_injury_factors: ScoreComponent
+    movement_asymmetry: ScoreComponent
+    training_load_indicators: ScoreComponent
+    fatigue_indicators: ScoreComponent
 
 
-class BaselineUnitCoverage(BaseModel):
-    have: int
-    need: int
-
-
-class InsufficientBaselineResponse(BaseModel):
-    """HTTP 202 body. ``unit`` says what ``have``/``need`` count: distinct videos or athletes,
-    or per-metric frames -- never an unlabelled "samples"."""
-
-    status: Literal["insufficient_baseline_data"] = "insufficient_baseline_data"
-    metric_name: str
-    unit: Literal["videos", "athletes", "frames"]
-    have: int
-    need: int
-    coverage: dict[Literal["videos", "athletes", "frames"], BaselineUnitCoverage]
-    message: str
+class RiskScoreResponse(BaseModel):
+    overall_score: float
+    risk_category: str
+    score_breakdown: ScoreBreakdown
+    methodology_note: str
+    engine_version: str
+    data_completeness: float
+    missing_components: list[str]
+    sub_scores: dict[str, Any]
+    injury_categories: dict[str, Any]
+    baseline: dict[str, Any]
+    quality: Optional[dict[str, Any]] = None
+    movement: Optional[dict[str, Any]] = None
+    reliability: str
+    anomaly_features: list[dict[str, Any]] = []
+    data_quality: Optional[dict[str, Any]] = None  # pose-pipeline coverage: detection_rate, person count, caveat
