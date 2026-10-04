@@ -42,6 +42,7 @@ class VideoResponse(BaseModel):
     progress_pct: int
     annotated_video_key: Optional[str] = None
     thumbnail_key: Optional[str] = None
+    analysis: Optional[dict] = None
     processing_started_at: Optional[datetime] = None
     processing_completed_at: Optional[datetime] = None
     created_at: datetime

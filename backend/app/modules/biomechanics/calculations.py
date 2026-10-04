@@ -42,11 +42,25 @@ def knee_flexion_angle(world_landmarks: dict, side: str) -> float:
 
 
 def hip_flexion_angle(world_landmarks: dict, side: str) -> float:
-    """Hip flexion: 0° = leg extended back, larger = more flexed forward."""
-    shoulder = np.array(world_landmarks[str(LANDMARK[f"{side}_shoulder"])])
-    hip = np.array(world_landmarks[str(LANDMARK[f"{side}_hip"])])
-    knee = np.array(world_landmarks[str(LANDMARK[f"{side}_knee"])])
-    return round(joint_angle(shoulder, hip, knee), 1)
+    """Hip flexion, flexion-from-extension convention (same as knee_flexion_angle).
+
+    0° = trunk and thigh in line (standing upright), larger = more flexed.
+
+    Two corrections (2026-10-02):
+    * Convention: the raw shoulder-hip-knee interior angle is ~180° when standing, so flexion =
+      180° - interior. It used to return the interior angle, so a standing athlete read ~170°.
+    * Lateral offset: the trunk axis is the shoulder-MIDPOINT minus hip-MIDPOINT (as in
+      trunk_lean_angle), not the same-side shoulder. Shoulders sit ~9 cm further out laterally
+      than hips, so using one shoulder leaked ~10° of frontal-plane offset into a sagittal angle
+      (a perfectly upright standing pose read ~10° of hip flexion).
+    """
+    def pt(name):
+        return np.array(world_landmarks[str(LANDMARK[name])])
+
+    trunk_axis = (pt("left_shoulder") + pt("right_shoulder")) / 2 - (pt("left_hip") + pt("right_hip")) / 2
+    hip = pt(f"{side}_hip")
+    knee = pt(f"{side}_knee")
+    return round(180.0 - joint_angle(hip + trunk_axis, hip, knee), 1)
 
 
 def trunk_lean_angle(world_landmarks: dict) -> float | None:

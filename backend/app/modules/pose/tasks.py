@@ -12,8 +12,11 @@ from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntr
 from app.modules.video.models import Video, VideoProcessingStatus, PoseFrame, BiomechanicalMetric
 from app.modules.risk_scoring.models import MovementBaseline, RiskScore
 from app.modules.recommendations.models import Recommendation
-from app.modules.pose.pipeline import track_persons, run_mediapipe_full_pass, extract_thumbnail
+from app.modules.pose.pipeline import (
+    track_persons, run_mediapipe_full_pass, extract_thumbnail, compute_stride, probe_video,
+)
 from app.modules.pose.coverage import assess_coverage, summarize_tracking
+from app.modules.pose.processing import analyze_frames, compute_biomechanics  # noqa: F401  (compute_biomechanics re-exported)
 from app.modules.biomechanics.calculations import (
     knee_flexion_angle, trunk_lean_angle, knee_valgus_flag, limb_symmetry_index, METRIC_CONFIDENCE
 )
@@ -69,46 +72,31 @@ async def update_video_progress(db, video_id: str, progress_pct: int):
     await db.commit()
 
 
+def _keypoints_payload(fr: dict) -> dict:
+    """Raw world landmarks {"0": [x,y,z], ...} plus "_vis": per-landmark visibility list.
+
+    Stored RAW (no smoothing/cleaning) so analysis is reproducible from the database.
+    The "_vis" key is additive: readers that index landmarks by "0".."32" are unaffected.
+    """
+    payload = dict(fr["world_landmarks"])
+    if fr.get("visibility") is not None:
+        payload["_vis"] = [round(float(v), 3) for v in fr["visibility"]]
+    return payload
+
+
 async def store_pose_frames(db, video_id: str, frame_results: list[dict]):
     frames = [
         PoseFrame(
             video_id=video_id,
             frame_number=fr["frame_number"],
             timestamp_ms=fr["timestamp_ms"],
-            keypoints=fr["world_landmarks"],
+            keypoints=_keypoints_payload(fr),
             model_used="mediapipe"
         )
         for fr in frame_results
     ]
     db.add_all(frames)
     await db.commit()
-
-
-def compute_biomechanics(frame_results: list[dict], calculator, camera_view: str) -> list[dict]:
-    """Compute biomechanics using the movement-type-specific calculator."""
-    metrics = []
-    failed_frames = 0
-
-    for fr in frame_results:
-        landmarks = fr["world_landmarks"]
-        f_num = fr["frame_number"]
-
-        try:
-            frame_metrics = calculator.compute_all(landmarks, camera_view)
-            for m in frame_metrics:
-                m["frame_number"] = f_num
-                metrics.append(m)
-        except KeyError as e:
-            failed_frames += 1
-            logger.warning(f"Frame {f_num}: missing landmark {e}, skipping this frame's biomechanics")
-            continue
-
-    if failed_frames:
-        logger.info(f"compute_biomechanics: {failed_frames}/{len(frame_results)} frames had missing landmarks")
-    if not metrics and frame_results:
-        logger.error(f"compute_biomechanics produced ZERO metrics from {len(frame_results)} frames — investigate immediately")
-
-    return metrics
 
 
 async def store_biomechanical_metrics(db, video_id: str, metrics: list[dict]):
@@ -146,7 +134,11 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             # onto the main athlete (most frames present, largest box on ties) so
             # multi-person videos analyze one consistent person instead of
             # failing. See docs/DECISIONS.md (multi-person tracking).
-            tracking = track_persons(local_path, ctx.get("yolo_model"), stride=1)
+            fps = float(video.fps) if video.fps else probe_video(local_path)["fps"]
+            # Slow-motion clips (>60 fps) are processed every Nth frame; tracking and pose
+            # must use the same stride so subject boxes line up with processed frames.
+            stride = compute_stride(fps)
+            tracking = track_persons(local_path, ctx.get("yolo_model"), stride=stride)
             person_counts = tracking["person_counts"]
             if tracking["max_persons"] == 0:
                 raise VideoProcessingError(
@@ -195,6 +187,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
 
             # Step 2 — full MediaPipe pass, every frame, world landmarks only.
             # Frames with a tracked-subject box are cropped to the main athlete.
+            diagnostics: dict = {}
             frame_results, detection_rate = await loop.run_in_executor(
                 None,
                 lambda: run_mediapipe_full_pass(
@@ -202,6 +195,8 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                     annotate_output_path=annotated_path,
                     progress_callback=sync_progress,
                     subject_boxes=subject_boxes,
+                    diagnostics=diagnostics,
+                    stride=stride,
                     # Several people: never fall back to full-frame pose on frames where the athlete is
                     # untracked, or another person gets measured as the athlete.
                     full_frame_fallback=not summary.multi_person,
@@ -218,9 +213,11 @@ async def process_video(ctx: dict, video_id: str) -> dict:
 
             await store_pose_frames(db, video_id, frame_results)
 
-            # Step 3 — biomechanics from world landmarks using movement-type calculator
-            calculator = get_calculator(video.movement_type)
-            metrics = compute_biomechanics(frame_results, calculator, camera_view=video.camera_view)
+            # Step 3 — clean landmarks (visibility gating, gap-fill, despike, smoothing), compute
+            # movement-type metrics, movement-specific analysis and the quality report.
+            metrics, analysis = analyze_frames(
+                frame_results, video.movement_type, video.camera_view, fps, diagnostics
+            )
             await store_biomechanical_metrics(db, video_id, metrics)
 
             await update_video_status(
@@ -230,6 +227,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 detection_rate=detection_rate,
                 coverage_caveat=assessment.caveat,
                 annotated_video_key=annotated_path,
+                analysis=analysis,
                 progress_pct=100
             )
             return {

@@ -61,7 +61,11 @@ class CoverageAssessment:
 
 def summarize_tracking(tracking: dict) -> TrackingSummary:
     tracks: dict[int, dict] = tracking.get("tracks") or {}
-    frames = int(tracking.get("frames_processed") or 0)
+    # Denominator = frames the tracker actually ANALYSED. `frames_processed` counts frames READ, but with
+    # stride > 1 (120/240 fps slow-motion clips) tracks only hold every stride-th frame, so dividing by it
+    # understated coverage by a factor of `stride` and wrongly rejected perfectly tracked clips.
+    person_counts = tracking.get("person_counts")
+    frames = len(person_counts) if person_counts else int(tracking.get("frames_processed") or 0)
     main_id = tracking.get("main_track_id")
     main_frames = tracks.get(main_id, {}) if main_id is not None else {}
 

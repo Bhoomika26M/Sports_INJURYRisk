@@ -72,6 +72,8 @@ class Video(Base):
     job_id: Mapped[str | None] = mapped_column(String(255))
     progress_pct: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     annotated_video_key: Mapped[str | None] = mapped_column(String(500))
+    # Pose-analysis report: quality grade + warnings, rep/gait analysis (see pose/processing.py).
+    analysis: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     thumbnail_key: Mapped[str | None] = mapped_column(String(500))
 
     processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -125,6 +127,8 @@ class BiomechanicalMetric(Base):
         String(20), nullable=False,
         # CHECK constraint added by migration
     )
+    # VARCHAR(20): 'qualitative' is 11 chars. The column was String(10) (migration 0002 widened the
+    # wrong table, movement_metrics), so every frontal/"other"-view video failed at INSERT.
     confidence: Mapped[str] = mapped_column(
         String(20), nullable=False,  # 'qualitative' is 11 chars; widened from 10 in migration 0003
         # CHECK constraint added by migration

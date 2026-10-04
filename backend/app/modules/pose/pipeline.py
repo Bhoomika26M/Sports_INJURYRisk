@@ -6,6 +6,7 @@ Supports both MediaPipe APIs:
   `solutions` was removed). Output format is identical either way.
 """
 
+import contextlib
 import logging
 import os
 import urllib.request
@@ -25,24 +26,48 @@ else:
     mp_pose = None
     mp_drawing = None
 
-POSE_LANDMARKER_MODEL_URL = (
-    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
-    "pose_landmarker_lite/float16/1/pose_landmarker_lite.task"
-)
-POSE_LANDMARKER_MODEL_PATH = os.environ.get(
-    "POSE_LANDMARKER_MODEL_PATH",
-    os.path.join(os.path.dirname(__file__), "..", "..", "..", "pose_landmarker_lite.task"),
-)
+# Tasks-API model variant: lite < full < heavy (accuracy, and cost). The old hard-coded
+# default was `lite`, the least accurate; `full` is the default now. Override with
+# POSE_LANDMARKER_VARIANT=lite|full|heavy. Legacy API: POSE_MODEL_COMPLEXITY=0|1|2.
+POSE_LANDMARKER_VARIANT = os.environ.get("POSE_LANDMARKER_VARIANT", "full")
+POSE_MODEL_COMPLEXITY = int(os.environ.get("POSE_MODEL_COMPLEXITY", "1"))
+_BACKEND_ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "..")
+
+
+def _model_url(variant: str) -> str:
+    return (
+        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
+        f"pose_landmarker_{variant}/float16/1/pose_landmarker_{variant}.task"
+    )
+
+
+def _model_path(variant: str) -> str:
+    return os.path.abspath(os.environ.get(
+        "POSE_LANDMARKER_MODEL_PATH", os.path.join(_BACKEND_ROOT, f"pose_landmarker_{variant}.task")
+    ))
 
 
 def _ensure_landmarker_model() -> str:
-    path = os.path.abspath(POSE_LANDMARKER_MODEL_PATH)
+    """Path to the requested landmarker bundle, downloading it if needed.
+
+    If the download fails (offline host) fall back to any bundle already on disk rather
+    than failing every video.
+    """
+    path = _model_path(POSE_LANDMARKER_VARIANT)
     if os.path.exists(path):
         return path
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    logger.info(f"Downloading PoseLandmarker bundle to {path}")
-    urllib.request.urlretrieve(POSE_LANDMARKER_MODEL_URL, path)
-    return path
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        logger.info(f"Downloading PoseLandmarker '{POSE_LANDMARKER_VARIANT}' bundle to {path}")
+        urllib.request.urlretrieve(_model_url(POSE_LANDMARKER_VARIANT), path)
+        return path
+    except Exception as e:
+        for variant in ("heavy", "full", "lite"):
+            fallback = _model_path(variant)
+            if os.path.exists(fallback):
+                logger.warning(f"Could not download '{POSE_LANDMARKER_VARIANT}' model ({e}); using existing '{variant}' bundle")
+                return fallback
+        raise
 
 
 def extract_world_landmarks(pose_world_landmarks) -> dict:
@@ -59,6 +84,21 @@ def extract_world_landmarks(pose_world_landmarks) -> dict:
         landmarks = landmarks[0]
     for i, lm in enumerate(landmarks):
         out[str(i)] = [float(lm.x), float(lm.y), float(lm.z)]
+    return out
+
+
+def extract_visibility(pose_world_landmarks) -> list[float] | None:
+    """Per-landmark visibility in [0, 1] (the model's confidence the joint is actually seen),
+    or None when the model exposes none. Same accepted shapes as extract_world_landmarks."""
+    landmarks = getattr(pose_world_landmarks, "landmark", pose_world_landmarks)
+    if isinstance(landmarks, list) and landmarks and hasattr(landmarks[0], "x") is False:
+        landmarks = landmarks[0]
+    out = []
+    for lm in landmarks:
+        v = getattr(lm, "visibility", None)
+        if v is None:
+            return None
+        out.append(float(v))
     return out
 
 
@@ -253,58 +293,116 @@ def _draw_mapped_landmarks(frame, norm_landmarks, origin_x, origin_y, crop_w, cr
         cv2.circle(frame, (int(fx * full_w), int(fy * full_h)), 3, (0, 255, 0), -1)
 
 
-def _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes=None, full_frame_fallback=True):
-    writer = None
-    if annotate_output_path:
-        writer = cv2.VideoWriter(annotate_output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
-    frame_results = []
-    with mp_pose.Pose(static_image_mode=False, model_complexity=1) as pose:
-        frame_idx = 0
-        while True:
+# --------------------------------------------------------------------------- #
+# Video probing, stride, lighting
+# --------------------------------------------------------------------------- #
+
+MAX_ANALYSIS_FPS = 60.0
+
+
+def compute_stride(fps: float) -> int:
+    """Process every Nth frame so slow-motion footage (120/240 fps) stays within the
+    worker's time budget. <= 60 fps is always processed frame-for-frame."""
+    if not fps or fps <= MAX_ANALYSIS_FPS:
+        return 1
+    return int(np.ceil(fps / MAX_ANALYSIS_FPS))
+
+
+def probe_video(video_path: str) -> dict:
+    cap = cv2.VideoCapture(video_path)
+    try:
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        fps = float(fps) if fps and np.isfinite(fps) and fps > 0 else 30.0
+        return {
+            "fps": fps,
+            "frames": int(cap.get(cv2.CAP_PROP_FRAME_COUNT)),
+            "width": int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            "height": int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        }
+    finally:
+        cap.release()
+
+
+def _luma_stats(frame_bgr) -> tuple[float, float]:
+    gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+    p5, p95 = np.percentile(gray, [5, 95])
+    return float(gray.mean()), float(p95 - p5)
+
+
+def scan_lighting(video_path: str, n_samples: int = 12) -> dict:
+    """Sample frames across the clip and report brightness/contrast (+ whether to enhance)."""
+    from app.modules.pose.analysis import assess_lighting
+
+    cap = cv2.VideoCapture(video_path)
+    samples = []
+    try:
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        if total <= 0:
+            return assess_lighting([])
+        for pos in np.linspace(0, max(total - 1, 0), num=min(n_samples, total), dtype=int):
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(pos))
             ok, frame = cap.read()
-            if not ok:
-                break
-            timestamp_ms = int(cap.get(cv2.CAP_PROP_POS_MSEC))
-            box = subject_boxes.get(frame_idx) if subject_boxes else None
-            if box is not None:
-                crop, ox, oy = crop_to_box(frame, box)
-                ch, cw = crop.shape[:2]
-                rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
-            else:
-                crop, ox, oy, ch, cw = None, 0, 0, height, width
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            skip = should_skip_frame(box, subject_boxes, full_frame_fallback)
-            result = None if skip else pose.process(rgb)
-            if result is not None and result.pose_world_landmarks:
-                frame_results.append({
-                    "frame_number": frame_idx,
-                    "timestamp_ms": timestamp_ms,
-                    "world_landmarks": extract_world_landmarks(result.pose_world_landmarks),
-                })
-                if writer is not None and result.pose_landmarks:
-                    if box is not None:
-                        _draw_mapped_landmarks(frame, result.pose_landmarks.landmark, ox, oy, cw, ch)
-                    else:
-                        mp_drawing.draw_landmarks(
-                            frame, result.pose_landmarks, mp_pose.POSE_CONNECTIONS,
-                            mp_drawing.DrawingSpec(color=(0, 255, 0), thickness=2, circle_radius=2),
-                        )
-            if box is not None:
-                x1, y1, x2, y2 = (int(v) for v in box)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            if writer is not None:
-                writer.write(frame)
-            if progress_callback and total_frames > 0:
-                if frame_idx % max(1, total_frames // 10) == 0:
-                    progress_callback(int(100 * frame_idx / total_frames))
-            frame_idx += 1
-    if writer is not None:
-        writer.release()
-    detection_rate = len(frame_results) / frame_idx if frame_idx > 0 else 0.0
-    return frame_results, detection_rate
+            if ok:
+                samples.append(_luma_stats(frame))
+    finally:
+        cap.release()
+    return assess_lighting(samples)
 
 
-def _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes=None, full_frame_fallback=True):
+GAMMA_TARGET_LUMA = 110.0
+GAMMA_MIN = 0.45  # never lift harder than this: beyond it noise is amplified more than signal
+
+
+def enhance_low_light(rgb):
+    """Brighten and flatten dim footage so the pose model sees what it was trained on.
+
+    1. Adaptive gamma on the lightness channel, ONLY when the frame is genuinely dark
+       (mean L < 70), steering its mean toward ~110 (gamma floored at 0.45).
+    2. CLAHE on lightness to restore local contrast without shifting colour.
+
+    Applied only when scan_lighting() flags the clip as low-light, so well-lit footage is
+    processed exactly as before.
+    """
+    lab = cv2.cvtColor(rgb, cv2.COLOR_RGB2LAB)
+    l, a, b = cv2.split(lab)
+    mean_l = float(l.mean())
+    if 1.0 < mean_l < 70.0:
+        gamma = float(np.clip(np.log(GAMMA_TARGET_LUMA / 255.0) / np.log(mean_l / 255.0), GAMMA_MIN, 1.0))
+        lut = (255.0 * (np.arange(256) / 255.0) ** gamma).astype(np.uint8)
+        l = cv2.LUT(l, lut)
+    l = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8)).apply(l)
+    return cv2.cvtColor(cv2.merge((l, a, b)), cv2.COLOR_LAB2RGB)
+
+
+# --------------------------------------------------------------------------- #
+# Detectors (legacy solutions API / Tasks API) behind one interface
+# --------------------------------------------------------------------------- #
+
+class _Detection:
+    __slots__ = ("world", "visibility", "norm")
+
+    def __init__(self, world, visibility, norm):
+        self.world, self.visibility, self.norm = world, visibility, norm
+
+
+@contextlib.contextmanager
+def _legacy_detector():
+    with mp_pose.Pose(static_image_mode=False, model_complexity=POSE_MODEL_COMPLEXITY) as pose:
+        def detect(rgb, _timestamp_ms):
+            result = pose.process(rgb)
+            if not result.pose_world_landmarks:
+                return None
+            norm = result.pose_landmarks.landmark if result.pose_landmarks else None
+            return _Detection(
+                extract_world_landmarks(result.pose_world_landmarks),
+                extract_visibility(result.pose_world_landmarks),
+                norm,
+            )
+        yield detect, f"mediapipe-legacy-complexity{POSE_MODEL_COMPLEXITY}"
+
+
+@contextlib.contextmanager
+def _tasks_detector():
     from mediapipe.tasks.python import vision
     from mediapipe.tasks.python.core.base_options import BaseOptions
     from mediapipe.tasks.python.vision.core.vision_task_running_mode import VisionTaskRunningMode
@@ -317,85 +415,149 @@ def _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_
         min_pose_detection_confidence=0.5,
         min_tracking_confidence=0.5,
     )
-    writer = None
-    if annotate_output_path:
-        writer = cv2.VideoWriter(annotate_output_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
-    frame_results = []
     with vision.PoseLandmarker.create_from_options(options) as landmarker:
-        frame_idx = 0
+        def detect(rgb, timestamp_ms):
+            mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
+            result = landmarker.detect_for_video(mp_image, timestamp_ms)
+            if not result.pose_world_landmarks:
+                return None
+            norm = result.pose_landmarks[0] if result.pose_landmarks else None
+            return _Detection(
+                extract_world_landmarks(result.pose_world_landmarks),
+                extract_visibility(result.pose_world_landmarks),
+                norm,
+            )
+        yield detect, f"mediapipe-tasks-{os.path.basename(model_path)}"
+
+
+# --------------------------------------------------------------------------- #
+# The single frame loop
+# --------------------------------------------------------------------------- #
+
+def _run_pass(cap, detect, fps, total_frames, annotate_output_path, progress_callback,
+              subject_boxes, stride, enhance, diagnostics, full_frame_fallback=True):
+    """Read every frame, run `detect` on every `stride`-th one.
+
+    Robustness rules (each one was a real way to lose a whole video before):
+    * timestamps are derived from frame index and fps and forced strictly increasing —
+      cap.get(POS_MSEC) can be 0/duplicated on phone or variable-frame-rate clips, and the
+      Tasks VIDEO mode raises on non-increasing timestamps;
+    * a detector exception on one frame costs that frame, not the video;
+    * with several people in frame and the athlete untracked on a frame, that frame is SKIPPED
+      (``full_frame_fallback=False``) rather than measuring whichever other person pose finds —
+      so the detection rate means "frames where the selected athlete was measured";
+    * the annotated-video writer is sized from the first decoded frame — for portrait phone
+      clips CAP_PROP_FRAME_WIDTH/HEIGHT can disagree with the auto-rotated frames.
+    """
+    writer = None
+    frame_results = []
+    last_ts = -1
+    processed = errors = 0
+    frame_idx = -1
+    try:
         while True:
             ok, frame = cap.read()
             if not ok:
                 break
-            timestamp_ms = int(cap.get(cv2.CAP_PROP_POS_MSEC))
+            frame_idx += 1
+            if frame_idx % stride:
+                continue
+            processed += 1
+            full_h, full_w = frame.shape[:2]
+            if annotate_output_path and writer is None:
+                writer = cv2.VideoWriter(
+                    annotate_output_path, cv2.VideoWriter_fourcc(*"mp4v"), max(fps / stride, 1.0), (full_w, full_h)
+                )
+
+            timestamp_ms = max(last_ts + 1, int(round(frame_idx * 1000.0 / fps)))
+            last_ts = timestamp_ms
+
             box = subject_boxes.get(frame_idx) if subject_boxes else None
             if box is not None:
                 crop, ox, oy = crop_to_box(frame, box)
-                ch, cw = crop.shape[:2]
-                rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
             else:
-                crop, ox, oy, ch, cw = None, 0, 0, height, width
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            skip = should_skip_frame(box, subject_boxes, full_frame_fallback)
-            result = None
-            if not skip:
-                mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
-                result = landmarker.detect_for_video(mp_image, timestamp_ms)
-            if result is not None and result.pose_world_landmarks:
+                crop, ox, oy = frame, 0, 0
+            ch, cw = crop.shape[:2]
+            rgb = cv2.cvtColor(crop, cv2.COLOR_BGR2RGB)
+            if enhance:
+                rgb = enhance_low_light(rgb)
+
+            try:
+                det = None if should_skip_frame(box, subject_boxes, full_frame_fallback) else detect(rgb, timestamp_ms)
+            except Exception as e:  # noqa: BLE001 — isolate per-frame failures
+                errors += 1
+                if errors <= 3:
+                    logger.warning(f"Pose detection failed on frame {frame_idx}: {e}")
+                det = None
+
+            if det is not None:
                 frame_results.append({
                     "frame_number": frame_idx,
                     "timestamp_ms": timestamp_ms,
-                    "world_landmarks": extract_world_landmarks(result.pose_world_landmarks),
+                    "world_landmarks": det.world,
+                    "visibility": det.visibility,
                 })
-                if writer is not None and result.pose_landmarks:
-                    if box is not None:
-                        _draw_mapped_landmarks(frame, result.pose_landmarks[0], ox, oy, cw, ch)
-                    else:
-                        for lm in result.pose_landmarks[0]:
-                            x = int(lm.x * width)
-                            y = int(lm.y * height)
-                            cv2.circle(frame, (x, y), 3, (0, 255, 0), -1)
-            if box is not None:
-                x1, y1, x2, y2 = (int(v) for v in box)
-                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                if writer is not None and det.norm is not None:
+                    _draw_mapped_landmarks(frame, det.norm, ox, oy, cw, ch)
             if writer is not None:
+                if box is not None:
+                    x1, y1, x2, y2 = (int(v) for v in box)
+                    cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 writer.write(frame)
-            if progress_callback and total_frames > 0:
-                if frame_idx % max(1, total_frames // 10) == 0:
-                    progress_callback(int(100 * frame_idx / total_frames))
-            frame_idx += 1
-    if writer is not None:
-        writer.release()
-    detection_rate = len(frame_results) / frame_idx if frame_idx > 0 else 0.0
+
+            if progress_callback and total_frames > 0 and frame_idx % max(1, total_frames // 10) == 0:
+                progress_callback(int(100 * frame_idx / total_frames))
+    finally:
+        if writer is not None:
+            writer.release()
+
+    diagnostics.update({
+        "frames_read": frame_idx + 1,
+        "frames_processed": processed,
+        "frame_errors": errors,
+        "stride": stride,
+    })
+    detection_rate = len(frame_results) / processed if processed else 0.0
     return frame_results, detection_rate
 
 
 def run_mediapipe_full_pass(video_path: str, annotate_output_path: str | None = None, progress_callback=None,
                             subject_boxes: dict[int, tuple | None] | None = None,
+                            diagnostics: dict | None = None, stride: int | None = None,
                             full_frame_fallback: bool = True):
+    """Run MediaPipe pose over the video; returns (frame_results, detection_rate).
+
+    Each frame result: {frame_number, timestamp_ms, world_landmarks, visibility}.
+    `subject_boxes`: optional {frame_idx: box | None} for the tracked main athlete — frames
+    with a box are cropped to the subject before pose, so multi-person videos analyze one
+    consistent person. `stride` must match the stride used for tracking (default: derived
+    from the clip's fps). `diagnostics` (optional dict) is filled with frame counts, stride,
+    lighting and model info for the quality report.
+    `full_frame_fallback`: when tracking is active and the athlete's box is missing on a frame, run
+    full-frame pose anyway (True, safe for single-person clips) or skip the frame (False, required for
+    multi-person clips so another person is never measured as the athlete).
     """
-    Run MediaPipe pose over all frames.
-    Extract world landmarks, and optionally burn the skeleton into an output video.
-    Calls progress_callback(pct) periodically if provided.
-    `subject_boxes`: optional {frame_idx: box | None} for the tracked main
-    athlete — frames with a box are cropped to the subject before pose, so
-    multi-person videos analyze one consistent person. None = full-frame
-    behavior (legacy, single-person clips).
-    `full_frame_fallback`: when tracking is active and the athlete's box is missing on a frame, run full-frame
-    pose anyway (True, safe for single-person clips) or skip the frame (False, required for multi-person clips
-    so another person is never measured as the athlete). The detection rate then means "frames where the
-    selected athlete was measured".
-    """
+    diagnostics = diagnostics if diagnostics is not None else {}
+    info = probe_video(video_path)
+    fps = info["fps"]
+    stride = stride or compute_stride(fps)
+
+    lighting = scan_lighting(video_path)
+    enhance = bool(lighting.get("low_light"))
+    diagnostics.update({"lighting": lighting, "contrast_enhanced": enhance, "fps": fps})
+
     cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 640
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 480
     try:
         if _HAS_LEGACY_POSE:
-            return _run_mediapipe_legacy(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes, full_frame_fallback)
-        logger.info("mp.solutions.pose unavailable, using Tasks PoseLandmarker")
-        return _run_mediapipe_tasks(cap, fps, total_frames, width, height, annotate_output_path, progress_callback, subject_boxes, full_frame_fallback)
+            ctx = _legacy_detector()
+        else:
+            logger.info("mp.solutions.pose unavailable, using Tasks PoseLandmarker")
+            ctx = _tasks_detector()
+        with ctx as (detect, model_name):
+            diagnostics["model"] = model_name
+            return _run_pass(cap, detect, fps, info["frames"], annotate_output_path,
+                             progress_callback, subject_boxes, stride, enhance, diagnostics,
+                             full_frame_fallback)
     finally:
         cap.release()
 
