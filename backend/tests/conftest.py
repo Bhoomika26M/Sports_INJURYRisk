@@ -49,11 +49,28 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     async def override_get_db():
         yield db_session
 
+    # Redis holds state the database reset does not touch (e.g. the baseline-recompute debounce key), so a
+    # previous test's key made later tests answer 429 depending on test ORDER and timing. Start each test clean.
+    import redis.asyncio as _aioredis
+    _r = _aioredis.from_url(os.environ["REDIS_URL"])
+    await _r.flushdb()
+    await (getattr(_r, "aclose", None) or _r.close)()      # aclose() only exists in redis-py >= 5.0.1
+
     fastapi_app.dependency_overrides[get_db] = override_get_db
     transport = ASGITransport(app=fastapi_app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     fastapi_app.dependency_overrides.clear()
+    # `get_redis()` caches one client in a module global. pytest gives every test its own event loop, so a
+    # client created by an earlier test is bound to a CLOSED loop ("Event loop is closed") the next time an
+    # endpoint touches Redis. Production has one loop and is unaffected; drop the cached client per test.
+    import app.core.deps as _deps
+    pool, _deps._redis_pool = getattr(_deps, "_redis_pool", None), None
+    if pool is not None:
+        try:
+            await (getattr(pool, "aclose", None) or pool.close)()
+        except Exception:
+            pass
 
 
 async def register_and_login(client: AsyncClient, email: str, role: str) -> str:

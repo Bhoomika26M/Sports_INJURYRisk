@@ -117,3 +117,23 @@ def test_failure_codes_fit_the_error_code_column():
 ])
 def test_should_skip_frame(box_, subject_boxes, fallback, skip):
     assert should_skip_frame(box_, subject_boxes, fallback) is skip
+
+
+# ---- stride (slow-motion clips) x coverage gate ----------------------------------------------
+
+def test_slow_motion_stride_does_not_deflate_main_track_coverage():
+    """REGRESSION (found while merging the stride logic into the coverage gate). `frames_processed` counts
+    frames READ, but at stride 4 (240 fps) the tracker only analyses every 4th frame. Dividing the athlete's
+    track by frames READ made a perfectly tracked clip look 25% covered — under the 70% floor, so it was
+    REJECTED as unreliable."""
+    stride, read = 4, 800
+    analysed = read // stride                                    # 200 frames actually analysed
+    t = {
+        "person_counts": [1] * analysed,
+        "tracks": {1: {i: box(400.0) for i in range(analysed)}},  # athlete present in EVERY analysed frame
+        "main_track_id": 1, "max_persons": 1, "tracked": True,
+        "frames_processed": read, "frame_width": 1080, "frame_height": H,
+    }
+    s = summarize_tracking(t)
+    assert s.main_track_coverage == pytest.approx(1.0)
+    assert assess_coverage(s, detection_rate=0.95).outcome == "ok"

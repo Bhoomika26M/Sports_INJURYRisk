@@ -12,7 +12,7 @@ from app.modules.pose import tasks
 from app.modules.video.models import BiomechanicalMetric, PoseFrame, Video, VideoProcessingStatus
 from tests.conftest import TestSessionLocal
 from tests.factories import make_athlete, make_user, make_video
-from app.modules.risk_scoring.baselines import fetch_baseline
+from app.modules.risk_scoring.features import fetch_baseline_set
 
 H = 1080
 
@@ -59,7 +59,8 @@ def pipeline(monkeypatch):
     monkeypatch.setattr(tasks, "extract_thumbnail", lambda src, dst: None)
     monkeypatch.setattr(tasks, "track_persons", lambda path, model, stride=1: rec["tracking"])
 
-    def fake_pass(path, annotate_output_path=None, progress_callback=None, subject_boxes=None, full_frame_fallback=True):
+    def fake_pass(path, annotate_output_path=None, progress_callback=None, subject_boxes=None, diagnostics=None, stride=None,
+                  full_frame_fallback=True):
         rec["passed_kwargs"] = {"subject_boxes": subject_boxes, "full_frame_fallback": full_frame_fallback}
         return rec["frames"], rec["rate"]
 
@@ -164,6 +165,7 @@ async def test_caveated_videos_never_feed_the_population_baseline(db_session):
     caveated.coverage_caveat = "Partial coverage: ..."
     await db_session.commit()
 
-    sample = await fetch_baseline(db_session, "squatting", "knee_flexion_angle_left", exclude_video_id=None)
-    assert sample.coverage.videos == 1 and sample.coverage.frames == 50
+    required = ["knee_flexion_angle_left.p95"]
+    baseline = await fetch_baseline_set(db_session, "squatting", "00000000-0000-0000-0000-000000000000", required)
+    assert baseline.videos == 1 and baseline.athletes == 1   # only the clean video is in the population
     assert clean.id != caveated.id

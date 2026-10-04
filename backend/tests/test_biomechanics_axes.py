@@ -73,9 +73,11 @@ def test_knee_valgus_is_only_ever_a_qualitative_flag_never_a_precise_angle():
                 assert m["confidence"] == "qualitative" and m["plane"] == "frontal"
 
 
-def test_hip_flexion_documented_convention_mismatch_is_pinned_not_hidden():
-    """OPEN QUESTION (docs/DECISIONS.md 2026-09-30): this returns the interior shoulder-hip-knee angle
-    (~169 standing, falling with flexion) although the docstring says 0 = extended, larger = more flexed.
-    Pinned so a change is deliberate, not accidental."""
-    assert hip_flexion_angle(STANDING, "left") > 150.0
-    assert hip_flexion_angle(SQUAT, "left") < hip_flexion_angle(STANDING, "left")
+def test_hip_flexion_uses_the_flexion_from_extension_convention():
+    """RESOLVED (docs/DECISIONS.md 2026-10-02). This used to return the interior shoulder-hip-knee
+    angle (~169 standing, falling with flexion) although the docstring says 0 = extended, larger = more
+    flexed. It now matches the docstring and knee_flexion_angle: ~0 standing, rising with flexion, using
+    the shoulder MIDPOINT as the trunk axis so lateral shoulder offset does not leak into a sagittal angle."""
+    assert hip_flexion_angle(STANDING, "left") < 5.0 and hip_flexion_angle(STANDING, "right") < 5.0
+    assert hip_flexion_angle(SQUAT, "left") > 60.0
+    assert hip_flexion_angle(SQUAT, "left") > hip_flexion_angle(STANDING, "left")

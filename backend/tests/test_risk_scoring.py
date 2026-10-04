@@ -6,19 +6,17 @@ from httpx import AsyncClient
 from tests.conftest import auth_header, register_and_login
 
 
-@pytest.mark.asyncio
-async def test_compute_risk_score_breakdown_is_transparent():
-    from app.modules.risk_scoring.scoring import compute_risk_score
+def test_risk_score_breakdown_is_transparent_and_weighted_per_spec():
+    from app.modules.risk_scoring.scoring import Component, WEIGHTS, combine
 
-    result = compute_risk_score([80.0, 85.0, 90.0], 85.0, True, acwr=1.8, rpe_trend=0.2)
-    breakdown = result["score_breakdown"]
-    expected_base = min(70.0, sum([80.0, 85.0, 90.0]) / 3 * 0.7)
-    assert breakdown.movement_anomaly.points == round(expected_base, 1)
-    assert breakdown.asymmetry_flag.points == 15.0
-    assert breakdown.prior_injury_flag.points == 10.0
-    assert breakdown.acwr_flag.points == 10.0
-    assert breakdown.fatigue_flag.points == 0.0
-    assert result["overall_score"] == round(min(100.0, expected_base + 35.0), 1)
+    comps = [Component(k, v, {"why": k}) for k, v in zip(WEIGHTS, [80.0, 100.0, 50.0, 70.0, 30.0])]
+    result = combine(comps)
+    bd = result["score_breakdown"]
+    expected = 0.35 * 80 + 0.20 * 100 + 0.20 * 50 + 0.15 * 70 + 0.10 * 30
+    assert result["overall_score"] == round(expected, 1)
+    assert bd["biomechanical_deviations"]["points"] == round(0.35 * 80, 1)
+    assert bd["movement_asymmetry"]["max"] == 20.0
+    assert all(c["detail"] for c in bd.values())
     assert result["risk_category"] in ("low", "moderate", "high", "critical")
 
 
@@ -46,26 +44,30 @@ async def test_risk_score_requires_auth(client: AsyncClient):
     assert resp.status_code == 401
 
 
-@pytest.mark.asyncio
-async def test_recommendations_trace_to_breakdown():
+def test_recommendations_trace_to_breakdown():
     from app.modules.recommendations.rules import generate_recommendations
-    from app.modules.risk_scoring.scoring import compute_risk_score
+    from app.modules.risk_scoring.scoring import WEIGHTS
 
-    result = compute_risk_score([90.0], 80.0, True)
-    recs = generate_recommendations(result["score_breakdown"])
+    bd = {k: {"available": False, "score": None, "detail": {}} for k in WEIGHTS}
+    bd["movement_asymmetry"] = {"available": True, "score": 90.0, "detail": {"left_peak_deg": 100, "right_peak_deg": 65, "lsi_pct": 65}}
+    bd["historical_injury_factors"] = {"available": True, "score": 100.0, "detail": {"injuries": [{"body_part": "knee", "status": "unresolved"}]}}
+    recs = generate_recommendations({"overall_score": 60, "score_breakdown": bd, "anomaly_features": [], "injury_categories": {}}, "squatting")
     titles = {r["title"] for r in recs}
-    assert "Address limb asymmetry" in titles
-    assert "Prior injury monitoring" in titles
+    assert "Address left/right asymmetry" in titles
+    assert any("physiotherapist" in t.lower() for t in titles)
     assert all(1 <= r["priority"] <= 5 for r in recs)
 
 
-# ---- Defects 2 + 3 at the API: the 202 gate counts VIDEOS and ATHLETES, never frame rows -------
+# ---- The 202 gate counts VIDEOS and ATHLETES, never frame rows ---------------------------------
 
 import numpy as np  # noqa: E402
+from sqlalchemy import select  # noqa: E402
 
-from app.modules.risk_scoring.constants import MIN_BASELINE_ATHLETES, MIN_BASELINE_VIDEOS  # noqa: E402
+from app.config import settings  # noqa: E402
+from app.modules.risk_scoring.models import MovementBaseline  # noqa: E402
 from tests.factories import make_athlete, make_population, make_user, make_video, normal_frames  # noqa: E402
 
+MIN_V, MIN_A = settings.min_baseline_videos, settings.min_baseline_athletes
 METRICS = ("knee_flexion_angle_left", "knee_flexion_angle_right")
 
 
@@ -88,78 +90,98 @@ async def test_single_video_of_one_athlete_is_202_regardless_of_frame_count(clie
     assert body["status"] == "insufficient_baseline_data"
     assert body["unit"] == "videos"
     assert body["have"] == 0            # the video is never counted in its own baseline
-    assert body["need"] == MIN_BASELINE_VIDEOS
-    assert body["coverage"]["frames"]["have"] == 0
+    assert body["need"] == MIN_V
+    assert body["coverage"] == {"videos": {"have": 0, "need": MIN_V}, "athletes": {"have": 0, "need": MIN_A}}
     assert "never counted in its own baseline" in body["message"]
 
 
 @pytest.mark.asyncio
 async def test_one_video_short_of_the_floor_is_still_202_because_the_video_does_not_count_itself(client, db_session):
     token = await register_and_login(client, "admin@gate2.example.com", "admin")
-    _, _, videos = await make_population(db_session, videos=MIN_BASELINE_VIDEOS, athletes=MIN_BASELINE_ATHLETES, seed=5)
-    resp = await _score(client, videos[0].id, token)   # 5 videos exist, but only 4 OTHER ones
+    _, _, videos = await make_population(db_session, videos=MIN_V, athletes=MIN_A, seed=5)
+    resp = await _score(client, videos[0].id, token)   # MIN_V videos exist, but only MIN_V-1 OTHER ones
     assert resp.status_code == 202
-    assert (resp.json()["unit"], resp.json()["have"], resp.json()["need"]) == ("videos", MIN_BASELINE_VIDEOS - 1, MIN_BASELINE_VIDEOS)
+    assert (resp.json()["unit"], resp.json()["have"], resp.json()["need"]) == ("videos", MIN_V - 1, MIN_V)
 
 
 @pytest.mark.asyncio
 async def test_many_videos_from_too_few_athletes_is_202_on_athletes(client, db_session):
+    """Ten clips of one or two athletes are a personal envelope, not a population."""
     token = await register_and_login(client, "admin@gate3.example.com", "admin")
-    _, _, videos = await make_population(db_session, videos=MIN_BASELINE_VIDEOS + 3, athletes=MIN_BASELINE_ATHLETES - 1, seed=6)
+    _, _, videos = await make_population(db_session, videos=MIN_V + 3, athletes=MIN_A - 1, seed=6)
     resp = await _score(client, videos[0].id, token)
     body = resp.json()
     assert resp.status_code == 202 and body["unit"] == "athletes"
-    assert (body["have"], body["need"]) == (MIN_BASELINE_ATHLETES - 1, MIN_BASELINE_ATHLETES)
-    assert body["coverage"]["videos"]["have"] >= MIN_BASELINE_VIDEOS   # videos were fine; athletes were not
+    assert (body["have"], body["need"]) == (MIN_A - 1, MIN_A)
+    assert body["coverage"]["videos"]["have"] >= MIN_V   # videos were fine; athletes were not
+
+
+@pytest.mark.asyncio
+async def test_caveated_videos_do_not_count_toward_the_athlete_or_video_floor(client, db_session):
+    """A multi-person / partial-coverage clip must not help a baseline reach its floor."""
+    token = await register_and_login(client, "admin@gate9.example.com", "admin")
+    _, _, videos = await make_population(db_session, videos=MIN_V + 2, athletes=MIN_A, seed=11)
+    for v in videos[1:4]:
+        v.coverage_caveat = "Partial coverage: ..."
+    await db_session.commit()
+    resp = await _score(client, videos[0].id, token)
+    body = resp.json()
+    assert resp.status_code == 202 and body["unit"] == "videos"
+    assert body["have"] == MIN_V + 1 - 3        # everything but itself, minus the three caveated clips
 
 
 @pytest.mark.asyncio
 async def test_real_population_scores_and_a_normal_athlete_is_low_not_moderate(client, db_session):
     token = await register_and_login(client, "admin@gate4.example.com", "admin")
-    coach, people, _ = await make_population(db_session, videos=MIN_BASELINE_VIDEOS, athletes=MIN_BASELINE_ATHLETES, frames=200, seed=7)
+    coach, people, _ = await make_population(db_session, videos=MIN_V, athletes=MIN_A, frames=200, seed=7)
     rng = np.random.default_rng(70)
     subject = await make_video(db_session, people[0].id, coach.id, metrics={m: normal_frames(rng, 200) for m in METRICS})
 
     resp = await _score(client, subject.id, token)
     assert resp.status_code == 200, resp.text
     body = resp.json()
-    anomaly = body["score_breakdown"]["movement_anomaly"]
-    assert anomaly["points"] < 5.0          # was ~37 of 70 for a perfectly normal athlete
-    assert body["risk_category"] == "low"
-    assert f"{MIN_BASELINE_VIDEOS} other videos" in anomaly["detail"] and "excluded" in anomaly["detail"]
+    dev = body["score_breakdown"]["biomechanical_deviations"]
+    assert dev["score"] < 5.0          # was ~37 of 70 for a perfectly normal athlete
+    assert body["risk_category"] == "low" and body["overall_score"] < 10
+    assert body["baseline"]["videos"] == MIN_V and body["baseline"]["athletes"] >= MIN_A
+    assert body["baseline"]["provisional"] is True   # 10 baseline videos is under the 30-video "established" mark
+    assert body["data_quality"] == {"detection_rate": None, "person_count_detected": None, "caveat": None}
 
 
 @pytest.mark.asyncio
-async def test_clearly_deviant_athlete_scores_high_against_the_same_population(client, db_session):
+async def test_clearly_deviant_athlete_scores_far_above_a_normal_one_against_the_same_population(client, db_session):
     token = await register_and_login(client, "admin@gate5.example.com", "admin")
-    coach, people, _ = await make_population(db_session, videos=MIN_BASELINE_VIDEOS, athletes=MIN_BASELINE_ATHLETES, frames=200, seed=8)
+    coach, people, _ = await make_population(db_session, videos=MIN_V, athletes=MIN_A, frames=200, seed=8)
     rng = np.random.default_rng(80)
+    normal = await make_video(db_session, people[0].id, coach.id, metrics={m: normal_frames(rng, 200) for m in METRICS})
     deviant = await make_video(db_session, people[0].id, coach.id,
                                metrics={m: normal_frames(rng, 200, mu=90 + 8 * 8) for m in METRICS})
-    resp = await _score(client, deviant.id, token)
-    body = resp.json()
-    assert resp.status_code == 200
-    assert body["score_breakdown"]["movement_anomaly"]["points"] > 50.0
-    assert body["risk_category"] == "high"
+    n = (await _score(client, normal.id, token)).json()
+    d_resp = await _score(client, deviant.id, token)
+    d = d_resp.json()
+    assert d_resp.status_code == 200
+    assert d["score_breakdown"]["biomechanical_deviations"]["score"] == 100.0
+    # one maxed component alongside clean asymmetry/history is a "moderate" composite, never "low"
+    assert d["risk_category"] in ("moderate", "high") and d["overall_score"] >= 40
+    assert d["overall_score"] - n["overall_score"] >= 35
 
 
 @pytest.mark.asyncio
 async def test_score_is_unchanged_by_the_subject_own_rows_being_in_the_table(client, db_session):
-    """Endpoint-level leakage check: adding a clone of the subject to the DB changes the baseline
-    (it is another video) but the subject's own rows never do."""
+    """Endpoint-level leakage check: the subject's own rows never feed its own baseline."""
     token = await register_and_login(client, "admin@gate6.example.com", "admin")
-    coach, people, _ = await make_population(db_session, videos=MIN_BASELINE_VIDEOS, athletes=MIN_BASELINE_ATHLETES, frames=200, seed=9)
+    coach, people, _ = await make_population(db_session, videos=MIN_V, athletes=MIN_A, frames=200, seed=9)
     rng = np.random.default_rng(90)
     subject = await make_video(db_session, people[0].id, coach.id,
                                metrics={m: normal_frames(rng, 200, mu=90 + 6 * 8) for m in METRICS})
-    first = (await _score(client, subject.id, token)).json()["score_breakdown"]["movement_anomaly"]["points"]
-    second = (await _score(client, subject.id, token, recompute=True)).json()["score_breakdown"]["movement_anomaly"]["points"]
+    first = (await _score(client, subject.id, token)).json()["score_breakdown"]["biomechanical_deviations"]["score"]
+    second = (await _score(client, subject.id, token, recompute=True)).json()["score_breakdown"]["biomechanical_deviations"]["score"]
     assert first == second and first > 30.0
 
 
 @pytest.mark.asyncio
 async def test_risk_score_forbidden_for_unrelated_athlete_user(client, db_session):
-    _, _, videos = await make_population(db_session, videos=MIN_BASELINE_VIDEOS, athletes=MIN_BASELINE_ATHLETES, seed=10)
+    _, _, videos = await make_population(db_session, videos=MIN_V, athletes=MIN_A, seed=10)
     token = await register_and_login(client, "someone@else.example.com", "athlete")
     resp = await _score(client, videos[0].id, token)
     assert resp.status_code == 403
@@ -180,6 +202,10 @@ async def test_baseline_recompute_reports_units_and_nulls_when_insufficient(clie
     await make_video(db_session, athlete.id, coach.id, metrics={METRICS[0]: normal_frames(np.random.default_rng(0), 426)})
     resp = await client.post("/api/v1/baselines/recompute", json={"movement_type": "squatting"}, headers=auth_header(token))
     assert resp.status_code == 200, resp.text
-    detail = resp.json()["details"][0]
-    assert detail["sufficient"] is False and detail["sample_size_unit"] == "frames"
-    assert (detail["video_count"], detail["athlete_count"]) == (1, 1)
+    detail = resp.json()["details"]
+    assert (detail["videos"], detail["need"], detail["need_athletes"]) == (1, MIN_V, MIN_A)
+    f = detail["features"][0]
+    assert f["sufficient"] is False and f["mean"] is None and f["sample_size"] == 1 and f["athletes"] == 1
+    rows = (await db_session.scalars(select(MovementBaseline))).all()
+    assert rows and all(r.mean_value is None and r.std_dev is None for r in rows)   # unknown, not 0.0
+    assert all((r.video_count, r.athlete_count) == (1, 1) for r in rows)
