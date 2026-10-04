@@ -2,6 +2,8 @@
 
 from pydantic import BaseModel
 
+from app.modules.risk_scoring.scoring import METHODOLOGY_NOTE
+
 
 class TeamOverviewResponse(BaseModel):
     total_athletes: int
@@ -28,11 +30,8 @@ class AthleteTrendResponse(BaseModel):
     athlete_id: str
     points: list[RiskTrendPoint]
     total: int
-    methodology_note: str = (
-        "Composite of movement-pattern anomaly vs. population baseline, "
-        "a bounded symmetry flag, and a bounded prior-injury flag. "
-        "Not a trained injury-prediction model. See docs/SCIENCE_CONSTRAINTS.md."
-    )
+    trend: dict | None = None
+    methodology_note: str = METHODOLOGY_NOTE
 
 
 class MovementAnalyticsResponse(BaseModel):

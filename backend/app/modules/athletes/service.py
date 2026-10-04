@@ -211,51 +211,131 @@ async def delete_training_load(db: AsyncSession, athlete_id: str, entry_id: str)
     return True
 
 
-# ACWR Calculation
-async def compute_acwr(db: AsyncSession, athlete_id: str) -> dict:
-    """Compute Acute:Chronic Workload Ratio for an athlete."""
-    # Get last 28 days of training loads
-    cutoff = date.today() - timedelta(days=28)
-    stmt = select(TrainingLoadEntry).where(
-        TrainingLoadEntry.athlete_id == athlete_id,
-        TrainingLoadEntry.entry_date >= cutoff,
-        TrainingLoadEntry.session_load.is_not(None),
-    ).order_by(TrainingLoadEntry.entry_date)
-    entries = list((await db.scalars(stmt)).all())
+# ---------------------------------------------------------------------------
+# Training-load indicators (ACWR + RPE trend)
+#
+# ACWR follows the standard rolling-average formulation: daily loads are summed
+# per calendar day, days with no session count as ZERO load, the acute load is the
+# 7-day mean and the chronic load the 28-day mean, ACWR = acute / chronic
+# (Gabbett 2016; zone conventions: 0.8-1.3 "sweet spot", >=1.5 elevated).
+# Known limitation, kept visible on purpose: ACWR is criticised as a statistical
+# artefact-prone metric (Impellizzeri et al. 2020, Sports Med 51:581) and is very
+# sensitive to missing data, so we refuse to compute it until a full chronic
+# window of monitoring history exists. It is a bounded input, never a verdict.
+# ---------------------------------------------------------------------------
 
-    if len(entries) < 7:
+ACWR_ACUTE_DAYS = 7
+ACWR_CHRONIC_DAYS = 28
+ACWR_ELEVATED_THRESHOLD = 1.5
+
+
+def compute_acwr_from_loads(
+    daily_loads: dict[date, float],
+    today: date,
+    first_entry_date: Optional[date],
+) -> dict:
+    """Pure ACWR calculation. `daily_loads` = {date: summed session_load}."""
+    if first_entry_date is None or (today - first_entry_date).days < ACWR_CHRONIC_DAYS - 1:
         return {
-            "acwr": None,
-            "acute_load": None,
-            "chronic_load": None,
-            "flagged": False,
-            "message": "Insufficient data (need at least 7 days with session_load)",
+            "acwr": None, "acute_load": None, "chronic_load": None, "flagged": False,
+            "message": (
+                f"Insufficient history: ACWR needs a full {ACWR_CHRONIC_DAYS}-day chronic window "
+                "of logged training (rest days are counted as zero load)."
+            ),
         }
 
-    # Group by date
-    daily_loads = {}
-    for e in entries:
-        d = e.entry_date
-        daily_loads[d] = daily_loads.get(d, 0) + float(e.session_load or 0)
+    acute_start = today - timedelta(days=ACWR_ACUTE_DAYS - 1)
+    chronic_start = today - timedelta(days=ACWR_CHRONIC_DAYS - 1)
 
-    # Sort dates
-    sorted_dates = sorted(daily_loads.keys())
+    acute_sum = sum(v for d, v in daily_loads.items() if acute_start <= d <= today)
+    chronic_sum = sum(v for d, v in daily_loads.items() if chronic_start <= d <= today)
 
-    # Acute: last 7 days
-    acute_dates = [d for d in sorted_dates if d >= date.today() - timedelta(days=7)]
-    acute_load = sum(daily_loads[d] for d in acute_dates) if acute_dates else 0
+    acute_mean = acute_sum / ACWR_ACUTE_DAYS
+    chronic_mean = chronic_sum / ACWR_CHRONIC_DAYS
 
-    # Chronic: 28-day average * 7
-    chronic_avg = sum(daily_loads.values()) / max(1, len(sorted_dates))
-    chronic_load = chronic_avg * 7
+    if chronic_mean <= 0:
+        return {
+            "acwr": None, "acute_load": round(acute_sum, 1), "chronic_load": 0.0, "flagged": False,
+            "message": "No load logged in the chronic window; ratio undefined.",
+        }
 
-    acwr = acute_load / chronic_load if chronic_load > 0 else None
-    flagged = acwr is not None and acwr > 1.5
-
+    acwr = acute_mean / chronic_mean
     return {
-        "acwr": round(acwr, 2) if acwr else None,
-        "acute_load": round(acute_load, 1),
-        "chronic_load": round(chronic_load, 1),
-        "flagged": flagged,
-        "message": "ACWR computed" if acwr else "Insufficient data",
+        "acwr": round(acwr, 2),
+        # weekly-equivalent loads (chronic mean x 7) so the two numbers are comparable
+        "acute_load": round(acute_sum, 1),
+        "chronic_load": round(chronic_mean * ACWR_ACUTE_DAYS, 1),
+        "flagged": acwr > ACWR_ELEVATED_THRESHOLD,
+        "message": "ACWR computed (7-day mean / 28-day mean, rest days = 0)",
     }
+
+
+async def compute_acwr(db: AsyncSession, athlete_id: str, today: Optional[date] = None) -> dict:
+    """Compute Acute:Chronic Workload Ratio for an athlete."""
+    today = today or date.today()
+    chronic_start = today - timedelta(days=ACWR_CHRONIC_DAYS - 1)
+
+    first_entry = await db.scalar(
+        select(func.min(TrainingLoadEntry.entry_date)).where(
+            TrainingLoadEntry.athlete_id == athlete_id,
+            TrainingLoadEntry.session_load.is_not(None),
+        )
+    )
+    rows = (await db.execute(
+        select(TrainingLoadEntry.entry_date, TrainingLoadEntry.session_load).where(
+            TrainingLoadEntry.athlete_id == athlete_id,
+            TrainingLoadEntry.entry_date >= chronic_start,
+            TrainingLoadEntry.entry_date <= today,
+            TrainingLoadEntry.session_load.is_not(None),
+        )
+    )).all()
+
+    daily_loads: dict[date, float] = {}
+    for entry_date, session_load in rows:
+        daily_loads[entry_date] = daily_loads.get(entry_date, 0.0) + float(session_load)
+
+    return compute_acwr_from_loads(daily_loads, today, first_entry)
+
+
+RPE_RECENT_DAYS = 7
+RPE_BASELINE_DAYS = 21
+RPE_MIN_ENTRIES_PER_WINDOW = 3
+
+
+def compute_rpe_trend_from_entries(entries: list[tuple[date, int]], today: date) -> Optional[dict]:
+    """Recent-week mean RPE minus the mean RPE of the preceding three weeks.
+
+    Positive = sessions are feeling harder than the athlete's own recent norm
+    (a fatigue-accumulation indicator). Returns None when either window has fewer
+    than RPE_MIN_ENTRIES_PER_WINDOW rated sessions — a trend from one or two points
+    is noise.
+    """
+    recent_start = today - timedelta(days=RPE_RECENT_DAYS - 1)
+    base_start = recent_start - timedelta(days=RPE_BASELINE_DAYS)
+    recent = [r for d, r in entries if recent_start <= d <= today]
+    baseline = [r for d, r in entries if base_start <= d < recent_start]
+    if len(recent) < RPE_MIN_ENTRIES_PER_WINDOW or len(baseline) < RPE_MIN_ENTRIES_PER_WINDOW:
+        return None
+    recent_mean = sum(recent) / len(recent)
+    baseline_mean = sum(baseline) / len(baseline)
+    return {
+        "rpe_trend": round(recent_mean - baseline_mean, 2),
+        "recent_mean_rpe": round(recent_mean, 2),
+        "baseline_mean_rpe": round(baseline_mean, 2),
+        "n_recent": len(recent),
+        "n_baseline": len(baseline),
+    }
+
+
+async def compute_rpe_trend(db: AsyncSession, athlete_id: str, today: Optional[date] = None) -> Optional[dict]:
+    today = today or date.today()
+    start = today - timedelta(days=RPE_RECENT_DAYS + RPE_BASELINE_DAYS)
+    rows = (await db.execute(
+        select(TrainingLoadEntry.entry_date, TrainingLoadEntry.rpe).where(
+            TrainingLoadEntry.athlete_id == athlete_id,
+            TrainingLoadEntry.entry_date >= start,
+            TrainingLoadEntry.entry_date <= today,
+            TrainingLoadEntry.rpe.is_not(None),
+        )
+    )).all()
+    return compute_rpe_trend_from_entries([(d, int(r)) for d, r in rows], today)

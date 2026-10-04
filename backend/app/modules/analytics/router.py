@@ -15,9 +15,12 @@ from app.modules.analytics.schemas import AthleteTrendResponse, MovementAnalytic
 from app.modules.analytics.service import athlete_trends, coach_dashboard_data, movement_type_analytics, team_overview
 from app.modules.athletes.models import Athlete
 from app.modules.risk_scoring.models import RiskScore
+from app.modules.risk_scoring.scoring import METHODOLOGY_NOTE, WEIGHTS
 from app.modules.recommendations.models import Recommendation
 from app.modules.users.models import User, UserRole
 from app.modules.video.models import BiomechanicalMetric, Video
+
+COMPONENT_KEYS = tuple(WEIGHTS)  # the five spec components, in spec order
 
 router = APIRouter(prefix="/api/v1", tags=["analytics"])
 
@@ -72,13 +75,6 @@ async def get_coach_dashboard(
     return await coach_dashboard_data(db, current_user)
 
 
-METHODOLOGY_NOTE = (
-    "Composite of movement-pattern anomaly vs. population baseline, "
-    "a bounded symmetry flag, and a bounded prior-injury flag. "
-    "Not a trained injury-prediction model. See docs/SCIENCE_CONSTRAINTS.md."
-)
-
-
 async def _load_report_context(db: AsyncSession, video_id: str, user: User) -> dict:
     video = await db.scalar(select(Video).where(Video.id == video_id))
     if not video:
@@ -120,9 +116,9 @@ async def export_risk_pdf(
     ]
     breakdown = ctx["risk"].score_breakdown or {}
     rows = [["Component", "Points"]]
-    for key in ("movement_anomaly", "asymmetry_flag", "prior_injury_flag", "acwr_flag", "fatigue_flag"):
+    for key in COMPONENT_KEYS:
         comp = breakdown.get(key, {}) if isinstance(breakdown, dict) else {}
-        rows.append([key, str(comp.get("points", "-"))])
+        rows.append([key, "unavailable" if comp.get("available") is False else str(comp.get("points", "-"))])
     table = Table(rows, colWidths=[300, 150])
     table.setStyle(TableStyle([("BACKGROUND", (0, 0), (-1, 0), colors.lightgrey), ("GRID", (0, 0), (-1, -1), 1, colors.grey)]))
     story += [table, Spacer(1, 12), Paragraph("Recommendations", styles["Heading2"])]
@@ -158,7 +154,7 @@ async def export_risk_excel(
     ws.append(["methodology_note", METHODOLOGY_NOTE])
     ws.append([])
     ws.append(["metric", "points", "max"])
-    for key in ("movement_anomaly", "asymmetry_flag", "prior_injury_flag", "acwr_flag", "fatigue_flag"):
+    for key in COMPONENT_KEYS:
         comp = ctx["risk"].score_breakdown.get(key, {}) if isinstance(ctx["risk"].score_breakdown, dict) else {}
         ws.append([key, comp.get("points", "-"), comp.get("max", "-")])
     ws.append([])

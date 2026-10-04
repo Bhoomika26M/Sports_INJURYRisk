@@ -68,23 +68,46 @@ async def team_overview(db: AsyncSession, user: User) -> dict:
     }
 
 
+TREND_MIN_POINTS = 4
+TREND_CHANGE_POINTS = 5.0  # heuristic: mean change (0-100 scale) that counts as a real move
+
+
+def risk_trend(scores_newest_first: list[float]) -> dict | None:
+    """Direction of the athlete's risk over time: mean of the latest 3 scores vs. the 3 before.
+
+    Needs >= 4 scores. Reported as improving / stable / worsening with the size of the change;
+    the +/-5 point band is a heuristic noise margin, not a clinical threshold.
+    """
+    if len(scores_newest_first) < TREND_MIN_POINTS:
+        return None
+    recent = scores_newest_first[:3]
+    previous = scores_newest_first[3:6]
+    change = sum(recent) / len(recent) - sum(previous) / len(previous)
+    direction = "worsening" if change >= TREND_CHANGE_POINTS else "improving" if change <= -TREND_CHANGE_POINTS else "stable"
+    return {"direction": direction, "change": round(change, 1), "basis_points": len(recent) + len(previous)}
+
+
 async def athlete_trends(db: AsyncSession, athlete_id: str, user: User, limit: int = 50) -> dict:
     """Get risk score trend for a specific athlete."""
     rows = list(
         (await db.scalars(select(RiskScore).where(RiskScore.athlete_id == athlete_id).order_by(RiskScore.created_at.desc()).limit(limit))).all()
     )
-    videos = {v.id: v for v in (await db.scalars(select(Video).where(Video.athlete_id == athlete_id))).all()}
+    # risk_scores.video_id is a UUID object; videos are keyed by str — normalise or every lookup misses
+    videos = {str(v.id): v for v in (await db.scalars(select(Video).where(Video.athlete_id == athlete_id))).all()}
     points = [
         {
-            "video_id": r.video_id,
-            "movement_type": videos.get(r.video_id).movement_type if videos.get(r.video_id) else "unknown",
+            "video_id": str(r.video_id),
+            "movement_type": videos[str(r.video_id)].movement_type if str(r.video_id) in videos else "unknown",
             "overall_score": float(r.overall_score),
             "risk_category": r.risk_category,
             "created_at": r.created_at.isoformat() if r.created_at else "",
         }
         for r in rows
     ]
-    return {"athlete_id": athlete_id, "points": points, "total": len(points)}
+    return {
+        "athlete_id": athlete_id, "points": points, "total": len(points),
+        "trend": risk_trend([p["overall_score"] for p in points]),
+    }
 
 
 async def movement_type_analytics(db: AsyncSession, user: User, movement_type: str | None = None) -> dict:

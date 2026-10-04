@@ -13,6 +13,12 @@ ENV/
 
 # Pytest / Coverage
 .pytest_cache/
+.hypothesis/
+
+# Real-footage validation corpus: downloaded from public repos, unknown licences — not redistributed.
+data/real-corpus/*.mp4
+data/real-corpus/*.mov
+data/real-corpus/*.webm
 .coverage
 htmlcov/
 

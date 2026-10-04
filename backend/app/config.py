@@ -47,6 +47,15 @@ class Settings(BaseSettings):
     s3_access_key: Optional[str] = None
     s3_secret_key: Optional[str] = None
 
+    # AI engine: completed videos of a movement type required before a video can be scored.
+    # The unit is VIDEOS (not metric rows — one video yields hundreds of rows). Lower only for
+    # demos; the response always reports how many baseline videos were used.
+    min_baseline_videos: int = 10
+    # ...and they must come from at least this many DISTINCT athletes: ten clips of one athlete is that
+    # athlete's personal envelope, not a population baseline (a different athlete's normal technique
+    # would read as "anomalous"). Counted over the videos actually in the baseline.
+    min_baseline_athletes: int = 3
+
     # Email (SendGrid)
     sendgrid_api_key: Optional[str] = None
     sendgrid_from_email: str = "noreply@injury-detection.local"
