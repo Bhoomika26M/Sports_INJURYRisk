@@ -77,6 +77,10 @@ export interface Video {
   camera_view: string;
   processing_status: VideoStatus;
   detection_rate: number | null;
+  person_count_detected?: number | null;
+  /** Set when the clip was accepted with limits (several people, or the athlete measured on few frames). */
+  coverage_caveat?: string | null;
+  analysis?: { quality?: VideoQuality } | null;
   error_code: string | null;
   error_message: string | null;
   progress_pct: number;
@@ -134,18 +138,62 @@ export interface Biomechanics {
 
 export type RiskCategory = "low" | "moderate" | "high" | "critical";
 
+export interface QualityWarning { code: string; message: string }
+export interface VideoQuality { grade: "good" | "fair" | "poor" | "unknown"; warnings?: QualityWarning[] }
+
+/** One of the five weighted components. `available:false` means "no data", which is NOT a zero. */
+export interface RiskComponent {
+  weight: number;
+  available: boolean;
+  points: number;
+  max: number;
+  score: number | null;
+  detail?: { reason?: string } | string | null;
+}
+
+/** The five sub-scores the project brief asks for; `score: null` = not enough data to compute. */
+export interface RiskSubScore { score: number | null; higher_is: string; definition: string }
+
+export interface InjuryCategory {
+  label: string;
+  level: "low" | "moderate" | "high" | "critical" | "insufficient_data";
+  based_on?: string[];
+  video_kinematics_used?: boolean;
+  drivers?: { factor: string; score: number }[];
+}
+
+export interface RepAnalysis {
+  n_reps: number; mean_rep_s?: number; mean_cycle_s?: number; mean_descent_s?: number;
+  mean_ascent_s?: number; cv_pct?: number; drift_pct?: number;
+}
+export interface GaitAnalysis { n_steps: number; cadence_spm: number; step_time_asymmetry_pct?: number | null }
+
 export interface RiskScore {
   overall_score: number;
   risk_category: RiskCategory;
-  score_breakdown: Record<string, { points: number; max: number; detail?: string | null; caveat?: string | null }>;
+  data_completeness: number;
+  score_breakdown: Record<string, RiskComponent>;
+  sub_scores?: Record<string, RiskSubScore>;
+  injury_categories?: Record<string, InjuryCategory>;
+  baseline?: { videos: number; athletes?: number; movement_type: string; provisional?: boolean };
+  quality?: VideoQuality;
+  /** What the pose pipeline could actually measure on this clip (null fields = nothing to report). */
+  data_quality?: { detection_rate: number | null; person_count_detected: number | null; caveat: string | null };
+  movement?: { reps?: RepAnalysis | null; gait?: GaitAnalysis | null };
   methodology_note: string;
 }
 
+/** HTTP 202 body: the reference population is too small or too narrow. `unit` says what have/need count. */
 export interface InsufficientBaseline {
   status: "insufficient_baseline_data";
   metric_name: string;
+  unit: "videos" | "athletes";
+  movement_type: string;
   have: number;
   need: number;
+  coverage: { videos: { have: number; need: number }; athletes: { have: number; need: number } };
+  excluded_incomplete?: number;
+  message?: string;
 }
 
 export interface Recommendation {

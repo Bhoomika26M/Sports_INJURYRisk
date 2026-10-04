@@ -135,10 +135,22 @@ export function todayISO(): string {
 }
 
 const BREAKDOWN_LABELS: Record<string, string> = {
-  movement_anomaly: "Movement pattern",
-  asymmetry_flag: "Left–right balance",
-  prior_injury_flag: "Past injury",
-  acwr_flag: "Training load",
-  fatigue_flag: "Fatigue",
+  biomechanical_deviations: "Movement pattern",
+  movement_asymmetry: "Left–right balance",
+  historical_injury_factors: "Injury history",
+  training_load_indicators: "Training load",
+  fatigue_indicators: "Fatigue",
+};
+
+export const SUB_SCORE_LABELS: Record<string, string> = {
+  injury_risk: "Injury risk",
+  movement_quality: "Movement quality",
+  biomechanical_efficiency: "Efficiency*",
+  fatigue_risk: "Fatigue risk",
+  overall_health: "Overall health",
+};
+
+export const LEVEL_TONE: Record<string, "ok" | "info" | "warn" | "danger" | "muted"> = {
+  low: "ok", moderate: "info", high: "warn", critical: "danger", insufficient_data: "muted",
 };
 export const breakdownLabel = (key: string) => BREAKDOWN_LABELS[key] ?? humanize(key);

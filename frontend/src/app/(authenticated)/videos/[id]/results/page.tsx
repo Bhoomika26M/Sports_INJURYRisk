@@ -6,8 +6,8 @@ import { useQuery } from "@tanstack/react-query";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api, ApiError } from "@/lib/api-client";
 import { useVideo } from "@/lib/hooks";
-import { breakdownLabel, humanize, metricLabel, movementLabel, RISK, wholeDegrees } from "@/lib/format";
-import type { Biomechanics, InsufficientBaseline, Recommendation, RiskScore } from "@/lib/types";
+import { breakdownLabel, humanize, LEVEL_TONE, metricLabel, movementLabel, RISK, SUB_SCORE_LABELS, wholeDegrees } from "@/lib/format";
+import type { Biomechanics, InsufficientBaseline, Recommendation, RiskScore, Video, VideoQuality } from "@/lib/types";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { DownloadButton } from "@/components/download-button";
@@ -17,9 +17,112 @@ import { ErrorState, Notice, PageSkeleton } from "@/components/feedback";
 type RiskResult =
   | { kind: "scored"; risk: RiskScore }
   | { kind: "insufficient"; info: InsufficientBaseline }
-  | { kind: "unavailable" };
+  | { kind: "unavailable"; message?: string };
 
 const SERIES_COLORS = ["#163300", "#6bbf3a", "#2563eb", "#9333ea", "#ea580c", "#0891b2"];
+
+const GRADE_TONE: Record<string, "ok" | "warn" | "danger" | "info"> = { good: "ok", fair: "warn", poor: "danger", unknown: "info" };
+
+/** What the pipeline could actually measure on this clip. A score is never shown as more certain than that. */
+function QualityNotes({ video, quality, caveat, baseline }: { video: Video; quality?: VideoQuality; caveat?: string | null; baseline?: RiskScore["baseline"] }) {
+  const q = quality ?? video.analysis?.quality;
+  const cav = caveat ?? video.coverage_caveat;
+  const warns = q?.warnings ?? [];
+  if (!cav && !warns.length && !baseline?.provisional && (!q || q.grade === "good")) return null;
+  return (
+    <section className="card-soft flex flex-col gap-3 p-6">
+      <div className="flex flex-wrap items-center gap-2">
+        {q && q.grade !== "unknown" && <span className={`badge badge-${GRADE_TONE[q.grade]}`}>Video quality: {q.grade}</span>}
+        {video.detection_rate != null && <span className="badge badge-muted">Athlete tracked in {Math.round(video.detection_rate * 100)}% of frames</span>}
+        {(video.person_count_detected ?? 0) > 1 && <span className="badge badge-muted">{video.person_count_detected} people in frame</span>}
+      </div>
+      {baseline?.provisional && <p className="text-sm text-ink-2">Compared against {baseline.videos} other videos. That is a small comparison group, so treat this score as provisional: it gets steadier as more videos are added.</p>}
+      {cav && <p className="text-sm text-ink-2">{cav}</p>}
+      {warns.length > 0 && <ul className="space-y-1 text-sm text-ink-2">{warns.map((w) => <li key={w.code}>• {w.message}</li>)}</ul>}
+      {(q?.grade === "poor" || cav) && <p className="text-xs text-ink-3">Treat any score on this clip as provisional.</p>}
+    </section>
+  );
+}
+
+function SubScores({ risk }: { risk: RiskScore }) {
+  if (!risk.sub_scores) return null;
+  return (
+    <section className="flex flex-col gap-3">
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        {Object.entries(risk.sub_scores).map(([k, v]) => (
+          <li key={k} className="card-soft p-4" title={v.definition}>
+            <p className="text-xs font-medium text-ink-3">{SUB_SCORE_LABELS[k] ?? humanize(k)}</p>
+            <p className="mt-1 text-2xl font-bold text-ink">{v.score == null ? "—" : Math.round(v.score)}</p>
+            <p className="text-[11px] text-ink-3">{v.score == null ? "not enough data" : `higher is ${v.higher_is}`}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="text-[11px] text-ink-3">
+        *Efficiency is a proxy (asymmetry plus rep-to-rep consistency). True mechanical efficiency needs force or energy data a single camera cannot provide.
+      </p>
+    </section>
+  );
+}
+
+function InjuryTypes({ risk }: { risk: RiskScore }) {
+  if (!risk.injury_categories) return null;
+  return (
+    <section className="flex flex-col gap-4">
+      <div>
+        <h2 className="text-lg font-semibold text-ink">Where the pattern points</h2>
+        <p className="mt-0.5 text-sm text-ink-3">Movement patterns the research links to common injury types. A flag to look closer, not a diagnosis.</p>
+      </div>
+      <ul className="grid gap-3 md:grid-cols-3">
+        {Object.entries(risk.injury_categories).map(([k, c]) => (
+          <li key={k} className="card-soft p-5">
+            <div className="flex items-start justify-between gap-2">
+              <h3 className="font-semibold text-ink">{c.label}</h3>
+              <span className={`badge badge-${LEVEL_TONE[c.level] ?? "muted"}`}>{c.level === "insufficient_data" ? "no data" : c.level}</span>
+            </div>
+            {c.drivers && c.drivers.length > 0 ? (
+              <ul className="mt-3 space-y-1 text-sm text-ink-2">
+                {c.drivers.slice(0, 3).map((d) => <li key={d.factor}>• {humanize(d.factor)}</li>)}
+              </ul>
+            ) : (
+              <p className="mt-3 text-sm text-ink-3">{c.level === "insufficient_data" ? "Not enough measurable signal for this clip." : "Nothing notable."}</p>
+            )}
+            {c.video_kinematics_used === false && <p className="mt-2 text-[11px] text-ink-3">Based on history and load only: no usable video signal.</p>}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function MovementSummary({ risk }: { risk: RiskScore }) {
+  const reps = risk.movement?.reps, gait = risk.movement?.gait;
+  if (!reps && !gait) return null;
+  const items: [string, string][] = [];
+  if (reps) {
+    items.push(["Repetitions", String(reps.n_reps)]);
+    const t = reps.mean_rep_s ?? reps.mean_cycle_s;
+    if (t != null) items.push(["Time per rep", `${t.toFixed(1)} s`]);
+    if (reps.mean_descent_s != null && reps.mean_ascent_s != null) items.push(["Down / up", `${reps.mean_descent_s.toFixed(1)} s / ${reps.mean_ascent_s.toFixed(1)} s`]);
+    if (reps.cv_pct != null) items.push(["Rep-to-rep variation", `${Math.round(reps.cv_pct)}%`]);
+    if (reps.drift_pct != null) items.push(["Change over the set", `${reps.drift_pct > 0 ? "+" : ""}${Math.round(reps.drift_pct)}%`]);
+  }
+  if (gait) {
+    items.push(["Steps counted", String(gait.n_steps)], ["Cadence", `${Math.round(gait.cadence_spm)} steps/min`]);
+    if (gait.step_time_asymmetry_pct != null) items.push(["Step-time asymmetry", `${Math.round(gait.step_time_asymmetry_pct)}%`]);
+  }
+  return (
+    <section className="card-soft p-6 sm:p-8">
+      <h2 className="text-lg font-semibold text-ink">{gait ? "Gait" : "Repetitions"}</h2>
+      <dl className="mt-4 grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        {items.map(([k, v]) => (
+          <div key={k} className="rounded-[12px] bg-white px-4 py-3">
+            <dt className="text-xs text-ink-3">{k}</dt><dd className="font-semibold text-ink">{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  );
+}
 
 export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -41,8 +144,9 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         if ("status" in rs && rs.status === "insufficient_baseline_data") return { kind: "insufficient", info: rs };
         return { kind: "scored", risk: rs as RiskScore };
       } catch (e) {
-        // "no validated metrics" (400) or "not found" (404) just mean there's no score to show
-        if (e instanceof ApiError && (e.status === 400 || e.status === 404)) return { kind: "unavailable" };
+        // "no validated metrics" (400/422), "still processing" (409) or "not found" (404) just mean there's
+        // no score to show: say why instead of failing the page.
+        if (e instanceof ApiError && [400, 404, 409, 422].includes(e.status)) return { kind: "unavailable", message: e.status === 404 ? undefined : e.message };
         throw e;
       }
     },
@@ -160,9 +264,9 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
               {`${RISK[risk.risk.risk_category].label} risk pattern. This flags movement worth a closer look — it isn't a prediction of injury.`}
             </p>
           </div>
-          {Object.keys(risk.risk.score_breakdown).length > 0 && (
+          {Object.values(risk.risk.score_breakdown).some((b) => b.available) && (
             <ul className="w-full max-w-xs space-y-2.5 sm:w-72">
-              {Object.entries(risk.risk.score_breakdown).sort((a, b) => b[1].max - a[1].max).map(([k, b]) => (
+              {Object.entries(risk.risk.score_breakdown).filter(([, b]) => b.available).sort((a, b) => b[1].max - a[1].max).map(([k, b]) => (
                 <li key={k}>
                   <div className="flex justify-between text-sm"><span>{breakdownLabel(k)}</span><span className="font-semibold">{Math.round(b.points)}/{b.max}</span></div>
                   <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/10"><span className="block h-full rounded-full bg-current opacity-60" style={{ width: `${b.max ? (b.points / b.max) * 100 : 0}%` }} /></div>
@@ -173,11 +277,22 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         </section>
       ) : risk.kind === "insufficient" ? (
         <Notice tone="info">
-          {`A risk score needs enough similar videos to compare against (${risk.info.have} of ${risk.info.need} so far). Your measurements are below — the score will appear once there's a baseline.`}
+          {risk.info.unit === "athletes"
+            ? `A score needs a comparison group of at least ${risk.info.need} different athletes. So far there are ${risk.info.have}. `
+            : `A score needs enough similar videos to compare against (${risk.info.have} of ${risk.info.need} so far). `}
+          Your measurements are below, and the score will appear once there&apos;s a baseline.
         </Notice>
       ) : (
-        <Notice tone="info">There&apos;s no risk score for this video, but the measurements are below.</Notice>
+        <Notice tone="info">{risk.message ? `${risk.message} ` : "There's no risk score for this video. "}The measurements are below.</Notice>
       )}
+
+      <QualityNotes
+        video={video}
+        quality={risk.kind === "scored" ? risk.risk.quality : undefined}
+        caveat={risk.kind === "scored" ? risk.risk.data_quality?.caveat : undefined}
+        baseline={risk.kind === "scored" ? risk.risk.baseline : undefined}
+      />
+      {risk.kind === "scored" && <SubScores risk={risk.risk} />}
 
       {/* ---------- Key numbers ---------- */}
       {keyNumbers.length > 0 && (
@@ -256,6 +371,9 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
           <Link href={`/videos/${id}`} className="btn btn-outline btn-sm w-fit"><Icon name="play" className="h-4 w-4" /> Watch the tracked video</Link>
         </section>
       )}
+
+      {risk.kind === "scored" && <InjuryTypes risk={risk.risk} />}
+      {risk.kind === "scored" && <MovementSummary risk={risk.risk} />}
 
       {/* ---------- Recommendations ---------- */}
       {recsQ.data && recsQ.data.length > 0 && (
