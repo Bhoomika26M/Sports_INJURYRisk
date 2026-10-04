@@ -1,0 +1,1367 @@
+{
+ "settings": {
+  "min_baseline_videos": 8,
+  "min_baseline_athletes": 3
+ },
+ "items": [
+  {
+   "file": "squatting__thillai-c__squat.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "thillai-c",
+   "note": "side view, kettlebell goblet squat, clean single person",
+   "video_id": "75c9e95c-cf2c-4a80-85cc-0a1285b93283",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 2,
+   "caveat": null,
+   "pose_frames": 559,
+   "metric_rows": 2773,
+   "quality_grade": "good",
+   "quality_warnings": [],
+   "score": {
+    "overall": 0.2,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": 2.0,
+     "movement_asymmetry": 0.0,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.2,
+     "fatigue_risk": 2.0,
+     "overall_health": 99.3,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 100.0
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 2.3,
+      "n_reps": 5,
+      "signal": "knee_flexion",
+      "drift_pct": 5.5,
+      "rep_peaks": [
+       114.9,
+       119.8,
+       121.2,
+       117.3,
+       121.2
+      ],
+      "mean_rep_s": 2.46,
+      "mean_cycle_s": 3.55,
+      "mean_ascent_s": 1.17,
+      "mean_descent_s": 1.29,
+      "drift_direction": "increase"
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__rohanx01__squat.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "rohanx01",
+   "note": "side view, gym, single person",
+   "video_id": "46400cb0-76b6-43b6-b2f9-3cb2bc37d3c6",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 3,
+   "caveat": null,
+   "pose_frames": 614,
+   "metric_rows": 2554,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 58% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    },
+    {
+     "code": "camera_tilt_suspected",
+     "message": "The athlete's upright posture reads 11 deg off vertical, which suggests the camera was tilted. Trunk-lean values carry this offset. Film with the phone level."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": null,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": null
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 10,
+     "athletes": 10,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 1
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 0.7,
+      "n_reps": 2,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       96.9,
+       97.8
+      ],
+      "mean_rep_s": 2.82,
+      "mean_cycle_s": 6.81,
+      "mean_ascent_s": 0.73,
+      "mean_descent_s": 2.09
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__jordanmargolis__demo-squat.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "jordanmargolis",
+   "note": "side view, living room, 5 s only",
+   "video_id": "63e17891-1bc8-450f-880a-f10bbe3b5c59",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 304,
+   "metric_rows": 1005,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 14% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": null,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": null
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 10,
+     "athletes": 10,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 1
+    },
+    "movement": {
+     "reps": {
+      "n_reps": 1,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       139.6
+      ],
+      "mean_rep_s": 1.82,
+      "mean_ascent_s": 0.8,
+      "mean_descent_s": 1.02
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__guptabhishekumar__home_squat_realtime.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "gupta-home-woman",
+   "note": "studio, ~3/4 view",
+   "video_id": "370b33ed-5deb-410f-ad96-6134b98619d5",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 0.994,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 1072,
+   "metric_rows": 5360,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "low_light",
+     "message": "Low light / low contrast detected; contrast enhancement was applied but pose accuracy is still reduced."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": 0.0,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 100.0
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "n_reps": 1,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       129.0
+      ],
+      "mean_rep_s": 20.19,
+      "mean_ascent_s": 15.97,
+      "mean_descent_s": 4.21
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__guptabhishekumar__woman_bodyweight_squats.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "gupta-band-woman",
+   "note": "banded squat, ~3/4 view",
+   "video_id": "ae9b722c-6118-421a-94b1-02d5f7a19fed",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 304,
+   "metric_rows": 1520,
+   "quality_grade": "good",
+   "quality_warnings": [],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": 0.0,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 100.0
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 2.9,
+      "n_reps": 2,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       91.5,
+       95.4
+      ],
+      "mean_rep_s": 2.77,
+      "mean_cycle_s": 4.79,
+      "mean_ascent_s": 1.33,
+      "mean_descent_s": 1.44
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__guptabhishekumar__woman_squats_side_view.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "gupta-couch-woman",
+   "note": "tight crop, legs partly cut off",
+   "video_id": "e4ee2f0b-8b68-4e73-8434-6f8b6455eeb7",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 0.884,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 352,
+   "metric_rows": 976,
+   "quality_grade": "poor",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 3% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    },
+    {
+     "code": "right_leg_poorly_visible",
+     "message": "The right leg was fully visible in only 0% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    },
+    {
+     "code": "no_repetitions_detected",
+     "message": "No completed repetitions were found \u2014 the movement range was too small or the clip ends mid-repetition. Anomaly scoring uses the whole clip's extremes, so check the clip really shows this movement."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": null,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": null
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 11,
+     "athletes": 11,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 0
+    },
+    "movement": {
+     "reps": {
+      "n_reps": 0,
+      "signal": "knee_flexion",
+      "rep_peaks": []
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__Johannes0Horn__squats.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "johannes-couple",
+   "note": "TWO people squatting side-on",
+   "video_id": "c5343eba-a1d8-4bf6-96aa-325562c2124d",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 2,
+   "caveat": "Multiple people in frame: 2 tracked (2 track IDs). Analysis followed track 1 (the person present in the most frames, followed in 100%). Verify on the annotated video that this is the intended athlete.",
+   "pose_frames": 262,
+   "metric_rows": 1024,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 45% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": null,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 84.5
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 11,
+     "athletes": 11,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 1
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 8.1,
+      "n_reps": 3,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       105.8,
+       92.6,
+       91.8
+      ],
+      "mean_rep_s": 2.56,
+      "mean_cycle_s": 3.54,
+      "mean_ascent_s": 1.21,
+      "mean_descent_s": 1.35
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__itertius__squat_sample.mp4",
+   "movement": "squatting",
+   "view": "other",
+   "athlete": "itertius",
+   "note": "barbell squat in rack, rear 3/4",
+   "video_id": "b4311297-cb1c-4ec1-b4af-870021f197d0",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 2,
+   "caveat": null,
+   "pose_frames": 373,
+   "metric_rows": 2611,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "camera_tilt_suspected",
+     "message": "The athlete's upright posture reads 10 deg off vertical, which suggests the camera was tilted. Trunk-lean values carry this offset. Film with the phone level."
+    }
+   ],
+   "score": {
+    "overall": 49.1,
+    "category": "moderate",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": 9.0,
+     "biomechanical_deviations": 100.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 49.1,
+     "fatigue_risk": null,
+     "overall_health": 25.4,
+     "movement_quality": 0.0,
+     "biomechanical_efficiency": 89.5
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 7.4,
+      "n_reps": 3,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       86.3,
+       98.9,
+       88.4
+      ],
+      "mean_rep_s": 3.67,
+      "mean_cycle_s": 4.98,
+      "mean_ascent_s": 1.81,
+      "mean_descent_s": 1.86
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__imustitanveer__squats.mp4",
+   "movement": "squatting",
+   "view": "other",
+   "athlete": "imustitanveer",
+   "note": "barbell squat, rear, motion blur",
+   "video_id": "85c0ec05-9257-4299-a33e-e9d026940ae2",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 0.942,
+   "persons": 5,
+   "caveat": null,
+   "pose_frames": 745,
+   "metric_rows": 5206,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "camera_tilt_suspected",
+     "message": "The athlete's upright posture reads 16 deg off vertical, which suggests the camera was tilted. Trunk-lean values carry this offset. Film with the phone level."
+    }
+   ],
+   "score": {
+    "overall": 4.2,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": 0.0,
+     "movement_asymmetry": 17.8,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 4.2,
+     "fatigue_risk": 0.0,
+     "overall_health": 98.6,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 91.1
+    },
+    "injury_categories": {
+     "acl": "moderate",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 4.9,
+      "n_reps": 6,
+      "signal": "knee_flexion",
+      "drift_pct": 2.0,
+      "rep_peaks": [
+       90.6,
+       91.4,
+       95.9,
+       96.3,
+       99.0,
+       86.6
+      ],
+      "mean_rep_s": 2.14,
+      "mean_cycle_s": 4.04,
+      "mean_ascent_s": 0.98,
+      "mean_descent_s": 1.16,
+      "drift_direction": "increase"
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__RiccardoRiccio__squat_form.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "riccardo",
+   "note": "front view bodyweight squat",
+   "video_id": "160eb662-28d2-464f-af30-9c9acc0701a2",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 229,
+   "metric_rows": 458,
+   "quality_grade": "poor",
+   "quality_warnings": [
+    {
+     "code": "no_validated_metrics",
+     "message": "The 'frontal' camera view produced no validated joint-angle metrics for 'squatting'. Validated sagittal angles need a side-on (sagittal) camera; a frontal view gives only qualitative knee-valgus flags."
+    }
+   ],
+   "score": {
+    "error": "NoValidatedMetrics: no validated metrics (frontal view, squatting)"
+   }
+  },
+  {
+   "file": "squatting__guptabhishekumar__couple_squat_exercise.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "gupta-couple",
+   "note": "TWO people, front view",
+   "video_id": "be9adbdd-01a9-4b8f-8060-2343750acc0b",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 2,
+   "caveat": "Multiple people in frame: 2 tracked (2 track IDs). Analysis followed track 1 (the person present in the most frames, followed in 100%). Verify on the annotated video that this is the intended athlete.",
+   "pose_frames": 483,
+   "metric_rows": 966,
+   "quality_grade": "poor",
+   "quality_warnings": [
+    {
+     "code": "no_validated_metrics",
+     "message": "The 'frontal' camera view produced no validated joint-angle metrics for 'squatting'. Validated sagittal angles need a side-on (sagittal) camera; a frontal view gives only qualitative knee-valgus flags."
+    }
+   ],
+   "score": {
+    "error": "NoValidatedMetrics: no validated metrics (frontal view, squatting)"
+   }
+  },
+  {
+   "file": "squatting__guptabhishekumar__squat_proper_form.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "gupta-proper",
+   "note": "front view, demo/talking",
+   "video_id": "d162c0c3-935d-4b99-b314-6cc5ec8589d4",
+   "seconds": null,
+   "worker_result": null,
+   "status": "failed",
+   "error_code": "multiple_people_subject_unstable",
+   "error_message": "Several people are in the footage and the athlete could not be followed consistently. Pose was measured on the selected athlete in 66% of frames (full-confidence floor 70%). 3 people were tracked (6 track IDs in total); the athlete analysed was track 5, followed in 70% of frames. Frames without the selected athlete are not measured (we do not substitute another person). Re-record with the athlete clearly separated, or trim the clip to when only the athlete is in view.",
+   "detection_rate": 0.664,
+   "persons": 2,
+   "caveat": null,
+   "pose_frames": 0,
+   "metric_rows": 0,
+   "quality_grade": null,
+   "quality_warnings": null,
+   "score": null
+  },
+  {
+   "file": "squatting__guptabhishekumar__webcam_squat_front.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "gupta-dumbbell",
+   "note": "stock edit with cuts and close-ups",
+   "video_id": "421f7219-3d20-433b-a023-1ccd4cdab48b",
+   "seconds": null,
+   "worker_result": null,
+   "status": "failed",
+   "error_code": "multiple_people_subject_unstable",
+   "error_message": "Several people are in the footage and the athlete could not be followed consistently. Pose was measured on the selected athlete in 25% of frames (full-confidence floor 70%). 4 people were tracked (10 track IDs in total); the athlete analysed was track 2, followed in 25% of frames. Frames without the selected athlete are not measured (we do not substitute another person). Re-record with the athlete clearly separated, or trim the clip to when only the athlete is in view.",
+   "detection_rate": 0.248,
+   "persons": 4,
+   "caveat": null,
+   "pose_frames": 0,
+   "metric_rows": 0,
+   "quality_grade": null,
+   "quality_warnings": null,
+   "score": null
+  },
+  {
+   "file": "squatting__guptabhishekumar__bodyweight_squat.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "gupta-iuhealth",
+   "note": "JUNK: coaching intro, logo card, two people",
+   "video_id": "b798d40d-d5b4-4909-859c-d863e499c88f",
+   "seconds": null,
+   "worker_result": null,
+   "status": "failed",
+   "error_code": "multiple_people_subject_unstable",
+   "error_message": "Several people are in the footage and the athlete could not be followed consistently. Pose was measured on the selected athlete in 35% of frames (full-confidence floor 70%). 8 people were tracked (10 track IDs in total); the athlete analysed was track 4, followed in 35% of frames. Frames without the selected athlete are not measured (we do not substitute another person). Re-record with the athlete clearly separated, or trim the clip to when only the athlete is in view.",
+   "detection_rate": 0.353,
+   "persons": 7,
+   "caveat": null,
+   "pose_frames": 0,
+   "metric_rows": 0,
+   "quality_grade": null,
+   "quality_warnings": null,
+   "score": null
+  },
+  {
+   "file": "squatting__guptabhishekumar__laptop_squat_facing.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "gupta-slides",
+   "note": "JUNK: screen recording / slides",
+   "video_id": "5159d0a8-c2f0-433e-80c1-390e48cd8e52",
+   "seconds": null,
+   "worker_result": null,
+   "status": "failed",
+   "error_code": "subject_too_small",
+   "error_message": "The athlete is too small to measure reliably: the selected person is ~96 px tall (27% of frame height); at least 160 px is needed. Pose was measured on the selected athlete in 19% of frames (full-confidence floor 70%). 8 people were tracked (22 track IDs in total); the athlete analysed was track 4, followed in 30% of frames. Move the camera closer or zoom in on the athlete.",
+   "detection_rate": 0.189,
+   "persons": 6,
+   "caveat": null,
+   "pose_frames": 0,
+   "metric_rows": 0,
+   "quality_grade": null,
+   "quality_warnings": null,
+   "score": null
+  },
+  {
+   "file": "squatting__guptabhishekumar__squat_mistakes.mp4",
+   "movement": "squatting",
+   "view": "frontal",
+   "athlete": "gupta-lecture",
+   "note": "JUNK: talking-head lecture",
+   "video_id": "b0884711-94f5-4524-a6e8-d34201184199",
+   "seconds": null,
+   "worker_result": null,
+   "status": "failed",
+   "error_code": "multiple_people_subject_unstable",
+   "error_message": "Several people are in the footage and the athlete could not be followed consistently. Pose was measured on the selected athlete in 9% of frames (full-confidence floor 70%). 7 people were tracked (36 track IDs in total); the athlete analysed was track 31, followed in 16% of frames. Frames without the selected athlete are not measured (we do not substitute another person). Re-record with the athlete clearly separated, or trim the clip to when only the athlete is in view.",
+   "detection_rate": 0.094,
+   "persons": 5,
+   "caveat": null,
+   "pose_frames": 0,
+   "metric_rows": 0,
+   "quality_grade": null,
+   "quality_warnings": null,
+   "score": null
+  },
+  {
+   "file": "running__laura-szczerbowska__running_side.mp4",
+   "movement": "running",
+   "view": "sagittal",
+   "athlete": "laura-side",
+   "note": "treadmill, side view, clean",
+   "video_id": "0c84aaf0-7d2a-4473-9af4-343653b4bb52",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 0.893,
+   "persons": 3,
+   "caveat": "Multiple people in frame: 2 tracked (2 track IDs). Analysis followed track 1 (the person present in the most frames, followed in 89%). Verify on the annotated video that this is the intended athlete.",
+   "pose_frames": 526,
+   "metric_rows": 2630,
+   "quality_grade": "poor",
+   "quality_warnings": [
+    {
+     "code": "low_light",
+     "message": "Low light / low contrast detected; contrast enhancement was applied but pose accuracy is still reduced."
+    },
+    {
+     "code": "noisy_tracking",
+     "message": "Frame-to-frame joint-angle jitter is about 7.2 deg (typical pose-model noise is ~6.5 deg RMSE). Motion blur, loose clothing or poor lighting are common causes."
+    }
+   ],
+   "score": {
+    "insufficient_baseline": {
+     "unit": "videos",
+     "have": 0,
+     "need": 8,
+     "coverage": {
+      "videos": {
+       "have": 0,
+       "need": 8
+      },
+      "athletes": {
+       "have": 0,
+       "need": 3
+      }
+     }
+    }
+   }
+  },
+  {
+   "file": "running__laura-szczerbowska__running_rear.mp4",
+   "movement": "running",
+   "view": "frontal",
+   "athlete": "laura-rear",
+   "note": "treadmill, rear view",
+   "video_id": "96fc4541-ee5d-4d20-9b71-37c5e286bfe2",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 319,
+   "metric_rows": 638,
+   "quality_grade": "poor",
+   "quality_warnings": [
+    {
+     "code": "low_light",
+     "message": "Low light / low contrast detected; contrast enhancement was applied but pose accuracy is still reduced."
+    },
+    {
+     "code": "no_validated_metrics",
+     "message": "The 'frontal' camera view produced no validated joint-angle metrics for 'running'. Validated sagittal angles need a side-on (sagittal) camera; a frontal view gives only qualitative knee-valgus flags."
+    },
+    {
+     "code": "gait_timing_needs_side_view",
+     "message": "Step timing is not computed from a head-on/tail-on camera; film from the side."
+    }
+   ],
+   "score": {
+    "error": "NoValidatedMetrics: no validated metrics (frontal view, running)"
+   }
+  },
+  {
+   "file": "jumping__ZiyueWangUoB__isaiah_jump.mp4",
+   "movement": "jumping",
+   "view": "sagittal",
+   "athlete": "isaiah",
+   "note": "basketball dunk (not a clean vertical jump), small subject",
+   "video_id": "108dbcbf-f8a2-4d06-82fc-ed8afbd9df67",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 0.793,
+   "persons": 2,
+   "caveat": "Multiple people in frame: 3 tracked (4 track IDs). Analysis followed track 1 (the person present in the most frames, followed in 79%). Verify on the annotated video that this is the intended athlete.",
+   "pose_frames": 275,
+   "metric_rows": 1375,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "movement_type_mismatch_suspected",
+     "message": "A running-like stride pattern (10 steps, 69.2 steps/min) was detected in a clip labelled 'jumping'. A mislabelled clip corrupts that movement's baseline."
+    }
+   ],
+   "score": {
+    "insufficient_baseline": {
+     "unit": "videos",
+     "have": 0,
+     "need": 8,
+     "coverage": {
+      "videos": {
+       "have": 0,
+       "need": 8
+      },
+      "athletes": {
+       "have": 0,
+       "need": 3
+      }
+     }
+    }
+   }
+  },
+  {
+   "file": "squatting__ErayBD__squat_1.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "erayBD-woman-1",
+   "note": "side view, white studio, clean single person",
+   "video_id": "3a30614b-3b79-4e93-86f8-b5f2c25c21cc",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 187,
+   "metric_rows": 561,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 0% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    },
+    {
+     "code": "low_light",
+     "message": "Low light / low contrast detected; contrast enhancement was applied but pose accuracy is still reduced."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": null,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 74.5
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 10,
+     "athletes": 10,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 1
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 10.1,
+      "n_reps": 3,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       78.9,
+       95.6,
+       83.2
+      ],
+      "mean_rep_s": 1.72,
+      "mean_cycle_s": 2.65,
+      "mean_ascent_s": 0.92,
+      "mean_descent_s": 0.8
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__ErayBD__squat_2.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "erayBD-woman-2",
+   "note": "side view, outdoors, clean single person",
+   "video_id": "d83a559e-4ad0-4f88-9bf5-4b2633f8760d",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 280,
+   "metric_rows": 1400,
+   "quality_grade": "good",
+   "quality_warnings": [],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": 0.0,
+     "movement_asymmetry": 0.0,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": 0.0,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 100.0
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 3.0,
+      "n_reps": 5,
+      "signal": "knee_flexion",
+      "drift_pct": 4.3,
+      "rep_peaks": [
+       111.9,
+       110.3,
+       116.5,
+       118.5,
+       116.7
+      ],
+      "mean_rep_s": 1.76,
+      "mean_cycle_s": 2.2,
+      "mean_ascent_s": 0.84,
+      "mean_descent_s": 0.92,
+      "drift_direction": "increase"
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__ErayBD__squat_3.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "erayBD-woman-3",
+   "note": "side view, outdoors, clean single person",
+   "video_id": "c23c2f48-e885-49a3-8103-e32875577fbe",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 425,
+   "metric_rows": 2125,
+   "quality_grade": "good",
+   "quality_warnings": [],
+   "score": {
+    "overall": 22.1,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": 82.7,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 22.1,
+     "fatigue_risk": null,
+     "overall_health": 89.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 58.6
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 1.6,
+      "n_reps": 3,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       120.7,
+       117.3,
+       120.7
+      ],
+      "mean_rep_s": 1.68,
+      "mean_cycle_s": 2.3,
+      "mean_ascent_s": 0.87,
+      "mean_descent_s": 0.81
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__aminuabdusalam__squats.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "aminu-trainer",
+   "note": "3/4 side view, indoor, clean single person",
+   "video_id": "28ba2ed6-89ca-4226-bd9f-4516c65b53d9",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 2,
+   "caveat": "Multiple people in frame: 2 tracked (2 track IDs). Analysis followed track 1 (the person present in the most frames, followed in 100%). Verify on the annotated video that this is the intended athlete.",
+   "pose_frames": 441,
+   "metric_rows": 1520,
+   "quality_grade": "poor",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 48% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    },
+    {
+     "code": "right_leg_poorly_visible",
+     "message": "The right leg was fully visible in only 5% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    }
+   ],
+   "score": {
+    "overall": 0.0,
+    "category": "low",
+    "components": {
+     "fatigue_indicators": null,
+     "movement_asymmetry": null,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 0.0,
+     "fatigue_risk": null,
+     "overall_health": 100.0,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": null
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "low",
+     "shoulder": "low",
+     "hamstring": "low",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 12,
+     "athletes": 12,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 0
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 2.8,
+      "n_reps": 2,
+      "signal": "knee_flexion",
+      "rep_peaks": [
+       70.9,
+       73.8
+      ],
+      "mean_rep_s": 3.06,
+      "mean_cycle_s": 3.36,
+      "mean_ascent_s": 1.34,
+      "mean_descent_s": 1.72
+     },
+     "movement_type": "squatting"
+    }
+   }
+  },
+  {
+   "file": "squatting__Pradnya1208__youTube_video.mp4",
+   "movement": "squatting",
+   "view": "sagittal",
+   "athlete": "pradnya-backsquat",
+   "note": "barbell back squat in rack, side view, clean single person",
+   "video_id": "03043135-cc98-49b5-9395-041fbeaf4148",
+   "seconds": null,
+   "worker_result": null,
+   "status": "completed",
+   "error_code": null,
+   "error_message": null,
+   "detection_rate": 1.0,
+   "persons": 1,
+   "caveat": null,
+   "pose_frames": 514,
+   "metric_rows": 2184,
+   "quality_grade": "fair",
+   "quality_warnings": [
+    {
+     "code": "left_leg_poorly_visible",
+     "message": "The left leg was fully visible in only 62% of frames (hidden behind the other leg, out of frame, or in shadow). Metrics from that leg are dropped where it was not visible, and left/right symmetry is unreliable."
+    }
+   ],
+   "score": {
+    "overall": 28.6,
+    "category": "moderate",
+    "components": {
+     "fatigue_indicators": 42.8,
+     "movement_asymmetry": 100.0,
+     "biomechanical_deviations": 0.0,
+     "training_load_indicators": null,
+     "historical_injury_factors": 0.0
+    },
+    "sub_scores": {
+     "injury_risk": 28.6,
+     "fatigue_risk": 42.8,
+     "overall_health": 76.2,
+     "movement_quality": 100.0,
+     "biomechanical_efficiency": 47.5
+    },
+    "injury_categories": {
+     "acl": "low",
+     "overuse": "moderate",
+     "shoulder": "low",
+     "hamstring": "moderate",
+     "lower_back": "low",
+     "ankle_sprain": "low"
+    },
+    "baseline": {
+     "videos": 9,
+     "athletes": 9,
+     "required": 8,
+     "provisional": true,
+     "movement_type": "squatting",
+     "required_athletes": 3,
+     "excluded_incomplete": 2
+    },
+    "movement": {
+     "reps": {
+      "cv_pct": 6.0,
+      "n_reps": 4,
+      "signal": "knee_flexion",
+      "drift_pct": 15.7,
+      "rep_peaks": [
+       85.5,
+       90.9,
+       92.4,
+       99.0
+      ],
+      "mean_rep_s": 1.7,
+      "mean_cycle_s": 2.92,
+      "mean_ascent_s": 0.96,
+      "mean_descent_s": 0.74,
+      "drift_direction": "increase"
+     },
+     "movement_type": "squatting"
+    }
+   }
+  }
+ ]
+}

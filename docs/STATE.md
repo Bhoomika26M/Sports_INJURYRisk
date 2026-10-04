@@ -2,60 +2,50 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-10-02
-**Verified by (2026-10-02, real runs):** docker compose postgres+redis healthy on 5433/6379; `alembic upgrade head` clean (single head `0004`); `pytest tests/` → **191 passed, 0 failed, 0 skipped**; **all 9 clips in `/data` processed end-to-end with real YOLO 8.4.166 + real MediaPipe** (6 completed, 3 correctly rejected); UI verified in headless Chrome against the live stack — login, role-routed dashboard, `/videos`, `/videos/{id}/results` all render real data.
-**Two bugs found and fixed this session:**
-1. `backend/alembic/env.py` read `DATABASE_URL_SYNC` from `os.environ` instead of app settings, so a **host-side `alembic upgrade head` silently fell back to the container hostname `postgres:5432`** and failed with "could not translate host name". It now uses `settings.database_url_sync`, which honours `backend/.env` on the host and the compose-exported env var in Docker.
-2. `BiomechanicsFrame` was missing `model_config = {"from_attributes": True}` (the convention already used by `VideoResponse`, `AthleteResponse`, `Notification` and auth schemas), so **`GET /videos/{id}/biomechanics` returned 500 for any video that had metrics**. Caught by `tests/test_regressions.py::test_biomechanics_endpoint_serializes_stored_frames`, which was failing. Now 191/191.
+**Last verified:** 2026-10-04 (Host verification, native PostgreSQL 17 + local runtime verification, Alembic 0001→0005, backend & frontend live servers running, automated browser dashboard login verified)
 
-**Real-clip results (`/data`, all 9 processed with real models — the run STATE.md previously said was owed):**
+**Verified on 2026-10-04 (Live local stack, native Postgres 17 on :5432, Uvicorn on :8000, Next.js on :3000):**
+- **Database & Migrations**: Local PostgreSQL 17 active on port 5432; `injury_detection` database created; `injury_user` role provisioned; all 5 Alembic migrations (`0001` → `0005`) executed cleanly, establishing all 17 schema tables including `videos.analysis` and `risk_scores.assessment`.
+- **Database Seeding**: Executed `python -m app.seed`, creating 5 demo users across all roles (`coach@demo.com`, `athlete@demo.com`, `physio@demo.com`, `scientist@demo.com`, `admin@demo.com`), 3 athletes, injury records, training loads, and 7 movement types.
+- **FastAPI Backend**: Uvicorn running live on `http://localhost:8000`. `GET /health` returns HTTP 200 `{"status":"healthy"}`. OpenAPI docs verified at `/docs`. Auth endpoint `POST /api/v1/auth/login` and data endpoint `GET /api/v1/athletes` verified with real JWT Bearer tokens.
+- **Next.js Frontend**: Next.js 16 running live on `http://localhost:3000` (HTTP 200).
+- **Automated Browser Flow**: Verified via automated browser subagent: navigated to `http://localhost:3000/login`, authenticated with `coach@demo.com`, redirected to `http://localhost:3000/dashboard/coach`, and rendered the live coach dashboard with "Hi Sarah", team summary statistics, and all seeded athletes from PostgreSQL.
+- **Process & Named Pipe Diagnostics**: Diagnosed root cause of earlier Docker CLI hangs: orphaned `com.docker.backend` and stale CLI processes held Windows named pipes and ports from prior sessions; terminated zombies and documented native host pathway when non-elevated user permissions restrict starting `com.docker.service`.
 
-| Movement | Clip | Detection | Outcome |
-|---|---|---|---|
-| squatting | barbell_back_squat_side_view | 94.4% | completed, 743 frames, 3,715 metrics |
-| landing | single_leg_drop_soft_landing | 97.5% | completed, 272 frames |
-| landing | one_foot_landing_pivot | 93.0% | completed, 348 frames (6 persons max) |
-| jumping | box_jump_demo (3840x2026 AV1) | 100% | completed, 235 frames |
-| throwing | shot_put_slow_motion | 100% | completed, 767 frames |
-| cutting | aquabag_punch_cod | 84.4% | completed, 577 frames |
-| running | running_form_side_view | 30.9% | **rejected** `multiple_people_subject_unstable` |
-| cutting | 180_cut_mechanics | 41.9% | **rejected** `multiple_people_subject_unstable` |
-| sprinting | sprint_speed_drills | 14.9% | **rejected** `multiple_people_subject_unstable` |
+**Previously verified on 2026-10-03 (merge of the three parallel lines of work, then a real-data and end-to-end run):**
+- `alembic upgrade head` on a fresh database: `0001 → 0005`, single head, every column from all three lines present, `0005 → 0003 → head` round trip clean.
+- `pytest` → ****384 passed, 0 failed, 0 skipped** (3 min 58 s)** (see `docs/DECISIONS.md` 2026-10-03 for what the merge changed and why).
+- Frontend: `tsc --noEmit` clean, `eslint --max-warnings=0` clean, `next build` compiles all 21 page routes. *The sandbox cannot reach Google Fonts, so the build was run with Next's font mock; the code compiled, the font fetch is a network limit.*
+- **True end-to-end over HTTP** (`backend/scripts/e2e_http_check.py`): real uvicorn + a separate `arq` worker process. Login → create athlete → refusals (bad camera view 422, malformed id 422, no token 401, a text file renamed `.mp4` rejected by ffprobe at confirm) → real upload via the local-storage PUT → `confirm-upload` → worker runs YOLO + MediaPipe (39 s for a 6 s clip) → biomechanics → **risk score 200 against a baseline of 11 real videos from 11 athletes** → all five components, the five PDF sub-scores, six injury categories → recommendations. *Run with `MIN_BASELINE_VIDEOS=8`: the repo's real corpus is one clip short of the production floor (below).*
+- **Browser, against that live API** (`frontend/e2e/part3_results.mjs`, headless Chrome): 5/5 — login, scored results page (five sub-scores, injury-type cards, no console errors), a two-person clip shows its coverage caveat and a "provisional" warning, a front-view clip explains why it has no score, a poor-visibility clip shows its warning. Screenshot inspected.
+- **Real footage** (`docs/REAL_DATA_VALIDATION.md`, `docs/real-data/`): 24 clips from public GitHub repos through the real pipeline — **19 completed, 5 refused by the quality gates** (all five unusable). Scoring under the production floors and under a labelled demo floor of 8 videos is in that report.
 
-The three rejections are **correct behaviour**, not failures: each clip has 2-6 people in frame and the selected athlete could not be tracked in >=70% of frames, so the pipeline refuses to measure rather than substituting another person. This is the first validation of the 70% / 160px / track-stability thresholds on real footage — previously only covered by unit tests with fake YOLO/MediaPipe.
+**Bugs found by the merge or the real-data run, all fixed with regression tests:** caveated (multi-person / partial) videos could enter population baselines; the coverage gate rejected perfectly tracked slow-motion clips (frames read vs frames analysed); a leg visible in 13.5% of frames drove a 63.6 "high" score (engine 2.1); **the score depended on database row order** (a normal video flipped between 0 and 100; fixed by canonical ordering, engine 2.2); baselines stored a fabricated `0.0 ± 0.0`; the frontend never showed the coverage caveat; `static-ffmpeg==2.5.1` does not exist; the test harness reused a Redis client bound to a closed event loop and let Redis state (the recompute debounce key) leak between tests.
 
-**Open data-quality findings (not fixed — see DECISIONS.md):**
-- **Angle conventions are inconsistent between metrics.** `knee_flexion_angle_*` is reported as deviation from full extension (0 = straight, deep squat ~120), `trunk_lean_angle` as deviation from upright (0 = vertical), but `hip_flexion_angle_*` reads ~160-176 deg on clips where the athlete is standing or landing (i.e. it is a raw included angle where 180 = extended). The results page renders all three as a bare "Peak N°", so a physio comparing "hip 176°" with "knee 36°" is comparing opposite conventions with nothing on screen saying so.
-- **`trunk_lean_angle` still produces impossible outliers** on newly processed clips: `landing_single_leg_drop_soft_landing` has median 16.7 deg but p95 **152.6 deg**.
-- **Stale pre-fix rows remain in the database.** `squat_sample.mp4` was processed *before* the trunk-lean axis fix and stores `trunk_lean_angle` median **164.4 deg**. New clips are fine (medians 6-47 deg), which confirms the axis fix worked, but the old rows must be recomputed (`?recompute=true`) or purged before any of this data is shown to a user.
+**Real-data headline (read the report before quoting it):** the squat baseline has 9 other usable videos against a floor of 10 — **one clean, side-on, single-person squat from a new person closes it**. Running and jumping have none. Front/rear views correctly return "cannot score". The engine only flags large deviations (a 2-sigma shift is never flagged; ~half of 4-sigma shifts are caught at 30 videos), and with the 10-video floor ~10% of perfectly normal videos still score as strongly anomalous (~2% at 30 videos) — so scores on fewer than 30 baseline videos are labelled **provisional** in the API and the UI, and `MIN_BASELINE_VIDEOS=30` is recommended beyond a demo (`tests/test_anomaly_calibration.py`).
 
-**Still not verified:**
-- **Google OAuth against real Google**, and the OAuth browser landing: untested (no client credentials).
-- **Risk scoring has never returned a 200 on real footage.** Baselines require >=5 completed videos of the same movement type from >=3 athletes; the database cannot satisfy this with 9 clips. Every real clip correctly returns HTTP 202 `insufficient_baseline_data` (e.g. "0 of 5 videos"). The 0-anchored anomaly scale is still only verified on synthetic data.
-- **Full HTTP upload path** (`/upload-url` → PUT → `/confirm-upload` → arq worker enqueue) is not yet exercised; the 9 clips were run through `scripts/e2e_video_check.py`, which calls the real `process_video` coroutine directly and inserts the `Video` row itself, bypassing the upload endpoint and the Redis/arq hop.
-- S3/R2 swap still mocked to local disk. Deploy still owed.
+**Not verified (be honest about these):**
+- **Accuracy.** No ground truth for joint angles and **no injury labels**. "Completed" means it passed the gates and produced metrics. Nothing here estimates injury probability, accuracy or a false-positive rate; the PDF brief's probability and accuracy targets are **not met** and cannot be without labelled data.
+- **Squat variant / camera angle are not baseline dimensions.** Barbell back squats read "moderate" against a mostly bodyweight population.
+- `squat_proper_form` (one woman, tracked in 66% of frames) was refused by the 70% floor; a second person registered somewhere. Possible over-rejection, not investigated.
+- The 56 browser checks in `frontend/e2e/part1.mjs` / `part2.mjs` (which simulate the ML worker) were **not re-run** on the merged tree.
+- A full browser-driven upload (file chooser → results). The upload path was exercised over HTTP, the results pages in a browser, but not the upload *form* in a browser.
+- Google OAuth against real Google (no client credentials); `docker compose up` (not run); S3/R2 still mocked to local disk; deploy still owed.
+- Existing stored scores from before engine 2.2 recompute on next read (`engine_version` mismatch); nothing else invalidates them.
 
 ---
 
 ## Current status
 
-**Backend + API complete and verified at unit / DB / ASGI / live-HTTP level.** Schema `0001_init` → `0002_widen_confidence` → `0003_baseline_honesty_and_confidence_width` → `0004_video_coverage_caveat`; 7-movement registry seeded; JWT + a real Google OAuth2 authorization-code flow (state-validated, httpOnly refresh cookie; Google itself faked in tests); YOLO tracking with main-subject selection and pose-coverage diagnostics; 7 movement-specific biomechanics calculators; Isolation Forest anomaly scoring on a **0-anchored** scale, scored against a **leave-one-video-out** baseline that must contain ≥5 videos from ≥3 athletes (else HTTP 202 `insufficient_baseline_data`); transparent composite scoring (anomaly / asymmetry / prior-injury / ACWR / fatigue); rule-based recommendations; analytics; notifications; PDF/Excel/CSV exports with `methodology_note`; `/health` (liveness) and `/health/ready` (Postgres + Redis).
+**Backend + AI engine: merged, verified at unit / DB / ASGI / live-HTTP / real-footage level.** Schema `0001_init` → `0002_widen_confidence` → `0003_baseline_honesty_and_confidence_width` → `0004_video_coverage_caveat` → `0005_analysis_and_assessment`; 7-movement registry seeded. The engine is the video-level, cross-fitted, tail-only design (`ENGINE_VERSION = "2.2"`): five weighted components, the five sub-scores the brief asks for, per-injury-type risk levels, and an athlete-diverse baseline gate. It reports risk **levels with named drivers**, never an injury probability.
 
-**Frontend — rebuilt and adopted; build compiles and type-checks (20 routes).** The audited frontend rebuild (`docs/FRONTEND_AUDIT.md`) was adopted wholesale: a real component library (`src/components/`, 18 components), `lib/{format,hooks,nav,providers,session,types}.ts`, the previously missing `/videos` library, a 404 page, an error boundary, mobile bottom-nav, toasts/dialogs, and `@tanstack/react-query` as `frontend/AGENTS.md` requires. Its 10 documented frontend bugs (login 307 loop, empty upload dropdowns, 401 uploads, hard-coded 0% progress, unauthenticated media/PDF/Excel, no-op logout, no mobile nav, dead links) and its backend `select`-import 500 are fixed. The Google callback route (`/auth/callback`), login error messages for failed Google sign-in, and data-quality banners for partial-coverage / multi-person videos are retained.
-
-**Not yet verified (be honest about these):**
-- **End-to-end video processing on a real clip was NOT re-run in this session** (no clip in the repo archive, no MediaPipe pose model reachable, no YOLO). A previous session reported 213/213 frames, 1065 metrics and a risk score of 44.7 / moderate; **that score is obsolete** — it predates the trunk-lean fix, the leave-one-out baseline and the 0-anchored scale. On a database holding only that one clip the endpoint now correctly returns **202**, not a score. `scripts/e2e_video_check.py` handles both outcomes and must be re-run on a machine with the clip and model weights.
-- **Real multi-person clips** (`test-assets/internet-clips/7a6W56OeU8w.mp4`, `Px4cyTAHrWc.mp4`) were not available. The coverage diagnostics are verified by unit tests and by `process_video` integration tests with fake YOLO / MediaPipe passes, not on real footage. The 160 px / 40% / 10%-of-frames thresholds are unvalidated heuristics.
-- **Google OAuth against real Google, and any real-browser session** (including the `session_hint` middleware hint): untested. Needs real client credentials and a manual browser pass.
-- **`docker compose up`** was not run. The container-URL fix is verified by resolving the compose file's effective environment and by running the app in a simulated container network (DECISIONS.md, container-URLs entry).
-- Existing stored risk scores computed under the old calibration are not invalidated; use `?recompute=true`.
-- S3/R2 swap still mocked to local disk.
+**Frontend — rebuilt, adopted and merged; build compiles and type-checks (21 page routes).** Component library in `src/components/`; the results page now shows quality/coverage notes, the five sub-scores, injury-type cards and rep/gait summaries.
 
 | Milestone | Modules | Status |
 |---|---|---|
 | M1 — auth, athletes, env setup | 1, 2 | complete (verified; Google flow verified with a faked Google only) |
-| M2 — video, pose, biomechanics | 3, 4, 5 | complete (verified at unit / DB level; real-clip run owed) |
-| M3 — risk scoring, recommendations | 6, 7, 8, 9 | complete (verified; calibration measured on synthetic production-scale data, not real athletes) |
+| M2 — video, pose, biomechanics | 3, 4, 5 | complete; **verified on 24 real clips** (accuracy of angles not verifiable without ground truth) |
+| M3 — risk scoring, recommendations | 6, 7, 8, 9 | complete; verified end to end on real footage; squat baseline one clip short of the production floor
 | M4 — dashboards, notifications, reports, deploy | 10, 11, 12, 13 | complete except deploy (verified: build + API level, no live deploy) |
 
 ---

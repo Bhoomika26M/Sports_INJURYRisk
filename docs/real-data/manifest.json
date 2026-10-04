@@ -1,0 +1,170 @@
+[
+ {
+  "file": "squatting__thillai-c__squat.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "thillai-c",
+  "note": "side view, kettlebell goblet squat, clean single person"
+ },
+ {
+  "file": "squatting__rohanx01__squat.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "rohanx01",
+  "note": "side view, gym, single person"
+ },
+ {
+  "file": "squatting__jordanmargolis__demo-squat.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "jordanmargolis",
+  "note": "side view, living room, 5 s only"
+ },
+ {
+  "file": "squatting__guptabhishekumar__home_squat_realtime.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "gupta-home-woman",
+  "note": "studio, ~3/4 view"
+ },
+ {
+  "file": "squatting__guptabhishekumar__woman_bodyweight_squats.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "gupta-band-woman",
+  "note": "banded squat, ~3/4 view"
+ },
+ {
+  "file": "squatting__guptabhishekumar__woman_squats_side_view.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "gupta-couch-woman",
+  "note": "tight crop, legs partly cut off"
+ },
+ {
+  "file": "squatting__Johannes0Horn__squats.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "johannes-couple",
+  "note": "TWO people squatting side-on"
+ },
+ {
+  "file": "squatting__itertius__squat_sample.mp4",
+  "movement": "squatting",
+  "view": "other",
+  "athlete": "itertius",
+  "note": "barbell squat in rack, rear 3/4"
+ },
+ {
+  "file": "squatting__imustitanveer__squats.mp4",
+  "movement": "squatting",
+  "view": "other",
+  "athlete": "imustitanveer",
+  "note": "barbell squat, rear, motion blur"
+ },
+ {
+  "file": "squatting__RiccardoRiccio__squat_form.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "riccardo",
+  "note": "front view bodyweight squat"
+ },
+ {
+  "file": "squatting__guptabhishekumar__couple_squat_exercise.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "gupta-couple",
+  "note": "TWO people, front view"
+ },
+ {
+  "file": "squatting__guptabhishekumar__squat_proper_form.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "gupta-proper",
+  "note": "front view, demo/talking"
+ },
+ {
+  "file": "squatting__guptabhishekumar__webcam_squat_front.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "gupta-dumbbell",
+  "note": "stock edit with cuts and close-ups"
+ },
+ {
+  "file": "squatting__guptabhishekumar__bodyweight_squat.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "gupta-iuhealth",
+  "note": "JUNK: coaching intro, logo card, two people"
+ },
+ {
+  "file": "squatting__guptabhishekumar__laptop_squat_facing.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "gupta-slides",
+  "note": "JUNK: screen recording / slides"
+ },
+ {
+  "file": "squatting__guptabhishekumar__squat_mistakes.mp4",
+  "movement": "squatting",
+  "view": "frontal",
+  "athlete": "gupta-lecture",
+  "note": "JUNK: talking-head lecture"
+ },
+ {
+  "file": "running__laura-szczerbowska__running_side.mp4",
+  "movement": "running",
+  "view": "sagittal",
+  "athlete": "laura-side",
+  "note": "treadmill, side view, clean"
+ },
+ {
+  "file": "running__laura-szczerbowska__running_rear.mp4",
+  "movement": "running",
+  "view": "frontal",
+  "athlete": "laura-rear",
+  "note": "treadmill, rear view"
+ },
+ {
+  "file": "jumping__ZiyueWangUoB__isaiah_jump.mp4",
+  "movement": "jumping",
+  "view": "sagittal",
+  "athlete": "isaiah",
+  "note": "basketball dunk (not a clean vertical jump), small subject"
+ },
+ {
+  "file": "squatting__ErayBD__squat_1.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "erayBD-woman-1",
+  "note": "side view, white studio, clean single person"
+ },
+ {
+  "file": "squatting__ErayBD__squat_2.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "erayBD-woman-2",
+  "note": "side view, outdoors, clean single person"
+ },
+ {
+  "file": "squatting__ErayBD__squat_3.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "erayBD-woman-3",
+  "note": "side view, outdoors, clean single person"
+ },
+ {
+  "file": "squatting__aminuabdusalam__squats.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "aminu-trainer",
+  "note": "3/4 side view, indoor, clean single person"
+ },
+ {
+  "file": "squatting__Pradnya1208__youTube_video.mp4",
+  "movement": "squatting",
+  "view": "sagittal",
+  "athlete": "pradnya-backsquat",
+  "note": "barbell back squat in rack, side view, clean single person"
+ }
+]

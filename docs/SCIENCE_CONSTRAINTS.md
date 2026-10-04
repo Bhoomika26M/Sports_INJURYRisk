@@ -26,11 +26,20 @@ The ≥90% LSI threshold used in return-to-sport testing is real, widely cited, 
 - **Baseball pitching injury screening** (University of Waterloo) — sub-degree accuracy on 16 of 18 biomechanics metrics, AUC 0.811–0.825 for real injury outcomes — but required **7,348 pitchers** with confirmed injury labels. The clearest evidence the gap is data, not algorithms.
 - **Rugby tackle head-position risk** — narrow, single, well-defined mechanical indicator. The pattern this project follows.
 
+## Evidence added with the 2026-10-02 engine rebuild
+
+- **Fatigue has no consistent directional effect on landing kinematics.** A 2025 meta-analysis (44 studies) found no significant effect of fatigue on hip/knee flexion at landing; individual studies disagree on direction. Hence within-session "drift" is scored by its *size*, never assuming shallower or deeper means fatigue.
+- **Prior injury of the same region is the best-evidenced risk factor** for ankle sprain (meta-analysis, 26 studies, PMC12031617), hamstring strain (meta-analysis; single kinematic variables inconsistent), low back pain (pooled OR 3.5; training volume and load increases) and shoulder injury (previous injury, ROM, strength, load). So those categories are history/load-driven and use **no** single-camera kinematic driver.
+- **ACL loading**: decreased knee flexion, limited trunk flexion and increased medial knee alignment are associated with higher risk (systematic review, PMC11826863); valgus stays a qualitative flag.
+- **ACWR** is contested (Impellizzeri et al. 2020, Sports Med 51:581) and very sensitive to missing data: computed from daily loads with rest days = 0 (7-day mean / 28-day mean) and refused without a full 28-day window; used only as a bounded 15% input.
+- **Measurement-noise anchors** used as thresholds: ~6.5° RMSE (above) → movements with <~20° range are treated as noise, robust-z scale is floored at half the RMSE, and left/right comparison is refused when one leg was not reliably visible.
+
 ## The resulting rule for `risk_scoring` and `recommendations`
 
-Every risk score is a **transparent composite**, never a single unexplained number:
-1. A movement-anomaly component from unsupervised Isolation Forest scoring against a population baseline (Milestone 3) — a pattern-deviation signal, not an injury probability.
-2. A bounded, caveated asymmetry flag (LSI vs. the 90% convention, with its documented limitations stated).
-3. A bounded prior-injury flag (presence/absence, not a fabricated precise weight).
+Every risk score is a **transparent weighted composite**, never a single unexplained number (weights from the spec PDF; they are a specification, not fitted to injury outcomes):
+1. 35% biomechanical deviation — unsupervised, cross-fitted Isolation Forest + robust-z extremity on **video-level** features against **other videos** of the same movement (never the video itself). A pattern-deviation signal, not an injury probability.
+2. 20% prior-injury history — a coarse 4-level ordinal (relevance to the movement × recovery status), not a fabricated percentage.
+3. 20% left/right asymmetry — LSI as a *continuous* signal with its documented caveat; unavailable when one leg was not reliably visible.
+4. 15% training load (ACWR) and 10% fatigue (RPE trend + within-session drift).
 
-Every component's contribution is visible in `score_breakdown`. `methodology_note` on every `risk_scores` row states plainly that this is not a trained injury-prediction model.
+A component without data is reported **unavailable** (never scored as 0) and the rest renormalised; `data_completeness`, per-component `detail`, a video-quality `reliability` grade and `methodology_note` ship on every score. Per-injury-type risk is a *level* built from named drivers with their evidence stated — never a probability.
