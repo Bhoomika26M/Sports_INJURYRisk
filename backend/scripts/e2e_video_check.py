@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from sqlalchemy import func, select
 
+from app.config import settings
 from app.database import async_session_factory
 from app.modules.athletes.models import Athlete
 from app.modules.users.models import User
@@ -41,8 +42,9 @@ async def main():
 
     clip_name = os.path.basename(CLIP)
     storage_key = f"{uuid.uuid4()}_{clip_name}"
-    shutil.copy(CLIP, os.path.join("/uploads", storage_key))
-    print(f"clip copied -> /uploads/{storage_key}", flush=True)
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    shutil.copy(CLIP, os.path.join(settings.upload_dir, storage_key))
+    print(f"clip copied -> {os.path.join(settings.upload_dir, storage_key)}", flush=True)
 
     async with async_session_factory() as db:
         coach = (await db.scalars(select(User).where(User.email == "coach@demo.com"))).one()

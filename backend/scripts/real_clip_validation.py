@@ -91,7 +91,8 @@ async def process_phase(items, clips_dir, budget_s: float):
             return False
         async with async_session_factory() as db:
             key = f"{uuid.uuid4()}_{it['file']}"
-            shutil.copy(os.path.join(clips_dir, it["file"]), os.path.join("/uploads", key))
+            os.makedirs(settings.upload_dir, exist_ok=True)
+            shutil.copy(os.path.join(clips_dir, it["file"]), os.path.join(settings.upload_dir, key))
             v = Video(athlete_id=people[it["athlete"]].id, uploaded_by=coach.id, movement_type=it["movement"],
                       storage_key=key, original_filename=it["file"], camera_view=it["view"],
                       processing_status=VideoProcessingStatus.pending_upload)

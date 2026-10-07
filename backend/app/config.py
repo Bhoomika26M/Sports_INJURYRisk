@@ -1,13 +1,16 @@
 """Application configuration — reads from environment variables."""
 
-from pydantic_settings import BaseSettings
+from pathlib import Path
 from typing import Optional
+
+from pydantic import model_validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://injury_user:changeme_in_production@postgres:5432/injury_detection"
-    database_url_sync: str = "postgresql+psycopg2://injury_user:changeme_in_production@postgres:5432/injury_detection"
+    database_url_sync: str = ""  # derived from database_url when unset (see _derive_sync_url)
 
     # Redis
     redis_url: str = "redis://redis:6379/0"
@@ -40,7 +43,9 @@ class Settings(BaseSettings):
     # Frontend
     next_public_api_url: str = "http://localhost:8000/api/v1"
 
-    # Storage
+    # Storage. Local-disk stand-in for S3: API and arq worker must see the same directory.
+    # Docker sets UPLOAD_DIR=/uploads (the shared volume); a host run defaults to backend/uploads.
+    upload_dir: str = str(Path(__file__).resolve().parents[1] / "uploads")
     use_s3_storage: bool = False
     s3_bucket: Optional[str] = None
     s3_region: Optional[str] = None
@@ -64,7 +69,14 @@ class Settings(BaseSettings):
     def backend_cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.backend_cors_origins.split(",") if origin.strip()]
 
-    model_config = {"env_file": ".env", "extra": "ignore"}
+    @model_validator(mode="after")
+    def _derive_sync_url(self):
+        if not self.database_url_sync:
+            self.database_url_sync = self.database_url.replace("+asyncpg", "+psycopg2")
+        return self
+
+    # "../.env" = the repo-root .env the README tells you to create, found when running from backend/.
+    model_config = {"env_file": ("../.env", ".env"), "extra": "ignore"}
 
 
 settings = Settings()

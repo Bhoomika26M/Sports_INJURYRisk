@@ -76,3 +76,13 @@ def test_helper_reproduces_the_original_bug_when_no_override_exists():
     """Guards the guard: with only env_file (the old compose), the container sees the host URL."""
     old_style = {"env_file": [".env"]}
     assert urlparse(effective_env(old_style, HOST_DOTENV)["DATABASE_URL"].replace("+asyncpg", "")).hostname == "localhost"
+
+
+def test_host_run_settings_need_only_database_url_and_redis_url():
+    """Host runs read .env, not os.environ: the sync URL is derived and arq gets REDIS_URL from Settings."""
+    from app.config import Settings
+    from app.modules.pose.worker_settings import redis_settings_from_env
+
+    s = Settings(database_url="postgresql+asyncpg://u:p@localhost:5433/d", database_url_sync="")
+    assert s.database_url_sync == "postgresql+psycopg2://u:p@localhost:5433/d"
+    assert redis_settings_from_env().host == urlparse(os.environ["REDIS_URL"]).hostname

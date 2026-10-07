@@ -59,7 +59,7 @@ from app.core.deps import get_current_user
 from app.modules.users.models import User
 from app.modules.video.models import Video, VideoProcessingStatus
 
-os.makedirs("/uploads", exist_ok=True)
+os.makedirs(settings.upload_dir, exist_ok=True)
 
 STORAGE_KEY_PATTERN = re.compile(r'^[a-f0-9-]{36}_[\w\-. ]{1,200}\.(mp4|mov)$', re.IGNORECASE)
 
@@ -82,7 +82,7 @@ async def upload_local_file(
     if video.uploaded_by != current_user.id:
         raise HTTPException(status_code=403, detail={"error": {"code": "INSUFFICIENT_PERMISSIONS", "message": "Not the owner of this upload"}})
 
-    filepath = os.path.join("/uploads", key)
+    filepath = os.path.join(settings.upload_dir, key)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
     async with aiofiles.open(filepath, "wb") as f:
         async for chunk in request.stream():

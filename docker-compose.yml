@@ -8,6 +8,7 @@ x-container-env: &container-env
   DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD:-changeme_in_production}@postgres:5432/${POSTGRES_DB:-injury_detection}
   DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD:-changeme_in_production}@postgres:5432/${POSTGRES_DB:-injury_detection}
   REDIS_URL: redis://redis:6379/0
+  UPLOAD_DIR: /uploads
 
 services:
   postgres:

@@ -1,16 +1,10 @@
-import os
 from arq.connections import RedisSettings
 
+from app.config import settings
 from app.modules.pose.tasks import process_video
 
 def redis_settings_from_env() -> RedisSettings:
-    redis_url = os.environ.get("REDIS_URL", "redis://redis:6379")
-    import urllib.parse
-    url = urllib.parse.urlparse(redis_url)
-    host = url.hostname or "redis"
-    port = url.port or 6379
-    password = url.password
-    return RedisSettings(host=host, port=port, password=password)
+    return RedisSettings.from_dsn(settings.redis_url)
 
 from ultralytics import YOLO
 
