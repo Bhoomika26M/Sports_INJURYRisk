@@ -27,7 +27,7 @@ from app.modules.video.schemas import (
 )
 from app.modules.biomechanics.calculations import limb_symmetry_index
 
-SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ]{1,200}\.(mp4|mov)$', re.IGNORECASE)
+SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ]{1,200}\.(mp4|mov|webm|avi|mkv|m4v)$', re.IGNORECASE)
 
 def _safe_filename(original: str) -> str:
     base = os.path.basename(original)
@@ -160,13 +160,13 @@ async def confirm_upload(
     if video.uploaded_by != current_user.id:
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Must be the creator to confirm upload")
 
-    local_path = os.path.join("/uploads", video.storage_key)
+    local_path = os.path.join(settings.upload_dir, video.storage_key)
     if not os.path.exists(local_path):
         raise api_error(400, "NOT_FOUND", "File not found in storage")
 
     # Format validation
-    if not (video.original_filename.lower().endswith(".mp4") or video.original_filename.lower().endswith(".mov")):
-        await _reject_upload(db, video, "invalid_format", "Only .mp4 or .mov files are allowed", local_path)
+    if not video.original_filename.lower().endswith((".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v")):
+        await _reject_upload(db, video, "invalid_format", "Only .mp4, .mov, .webm, .avi, .mkv or .m4v files are allowed", local_path)
 
     # Run ffprobe (PATH first, static-ffmpeg bundle fallback for hosts
     # without a system install — Docker images ship ffmpeg already)
@@ -256,7 +256,7 @@ async def get_video_file(
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-    path = os.path.join("/uploads", video.storage_key)
+    path = os.path.join(settings.upload_dir, video.storage_key)
     if not os.path.exists(path):
         raise api_error(404, "NOT_FOUND", "File not found")
     return FileResponse(path, media_type="video/mp4")
@@ -341,7 +341,7 @@ async def delete_video(
 
     # Clean up local storage files
     for key in filter(None, [video.storage_key, video.thumbnail_key, video.annotated_video_key]):
-        path = os.path.join("/uploads", os.path.basename(key)) if not key.startswith("/uploads") else key
+        path = os.path.join(settings.upload_dir, os.path.basename(key))
         if os.path.exists(path):
             try:
                 os.remove(path)

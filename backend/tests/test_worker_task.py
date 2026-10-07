@@ -38,7 +38,7 @@ def stubbed_models(monkeypatch):
     async def fake_download(key):
         return "/tmp/fake.mp4"
 
-    def fake_track(path, model, stride=1):
+    def fake_track(path, model, stride=1, fps=30.0):
         seen["track_stride"] = stride
         return {"person_counts": [1] * 10, "tracks": {1: {i: (100, 100, 300, 600) for i in range(10)}},   # a 500 px tall athlete
                 "main_track_id": 1, "max_persons": 1, "frames_processed": 10, "tracked": True,

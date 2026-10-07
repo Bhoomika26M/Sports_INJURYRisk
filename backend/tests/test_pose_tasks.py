@@ -57,7 +57,7 @@ def pipeline(monkeypatch):
     monkeypatch.setattr(tasks, "download_from_storage", fake_download)
     monkeypatch.setattr(tasks, "cleanup_local_file", lambda p: None)
     monkeypatch.setattr(tasks, "extract_thumbnail", lambda src, dst: None)
-    monkeypatch.setattr(tasks, "track_persons", lambda path, model, stride=1: rec["tracking"])
+    monkeypatch.setattr(tasks, "track_persons", lambda path, model, stride=1, fps=30.0: rec["tracking"])
 
     def fake_pass(path, annotate_output_path=None, progress_callback=None, subject_boxes=None, diagnostics=None, stride=None,
                   full_frame_fallback=True):

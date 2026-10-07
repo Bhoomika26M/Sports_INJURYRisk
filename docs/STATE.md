@@ -2,7 +2,20 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-10-04 (Host verification, native PostgreSQL 17 + local runtime verification, Alembic 0001→0005, backend & frontend live servers running, automated browser dashboard login verified)
+**Last verified:** 2026-10-07 (Tracking fix + format support + full verification: BoT-SORT + `merge_track_fragments` in `pose/pipeline.py`; upload accepts `.webm/.avi/.mkv/.m4v`; `pytest` **394 passed** on Docker Postgres:5433/Redis:6379; `verify_data_videos.py` 9/9 expectations hold; new `scripts/verify_test_assets.py` covers all 5 test-assets — 2 squats pass, synthetic + 2 group classes correctly rejected)
+
+**Verified on 2026-10-07 (lateral-motion tracking fix, format support, full corpus verification):**
+- **Tracking fix:** `pose/pipeline.py` uses BoT-SORT (`YOLO_TRACKER`, default `botsort.yaml`) + pure `merge_track_fragments` (disjoint + similar size + plausible displacement, union-find). `track_persons` takes `fps=`; `tasks.py` and `verify_data_videos.py` pass it; test fakes accept the new kwargs. See `docs/DECISIONS.md` 2026-10-07 entries and `docs/TRACKING_FIX_REPORT.md`.
+- **Unit tests:** 7 new merge tests in `tests/test_tracking.py` (40/40 with `test_pose_coverage.py`); full suite `pytest` → **394 passed, 0 failed** (Docker `postgres` on host :5433, `redis` on :6379, both healthy).
+- **Data corpus** (`verify_data_videos.py --all --fast`): 9/9 `matches_expectation` — 6 PASS, 3 REJECT `multiple_people_subject_unstable`, per `docs/DATA_VIDEOS_ANALYSIS.md`.
+- **Test-assets** (new `scripts/verify_test_assets.py`): `squat_sample.mp4` PASS (1003/1003 validated, fair); `squat_demo.webm` PASS (1004/1004, VP9 decodes fine — upload API now accepts it); `test_figure.mp4` REJECT `low_detection_quality` (synthetic stick figure, 0 poses); `7a6W56OeU8w.mp4` + `Px4cyTAHrWc.mp4` (group fitness classes, 16/14 max persons) REJECT `multiple_people_subject_unstable`.
+- **Formats:** upload accepts `.mp4/.mov/.webm/.avi/.mkv/.m4v` (backend + frontend); `tsc` + `eslint` clean.
+
+**Verified on 2026-10-05 (zip apply, no science/scoring changes):**
+- **Applied:** `scratch/Sports_INJURYRisk-tkpr-fixed.zip` → 10 files (` .env.example`, `backend/Dockerfile`, `backend/app/config.py`, `backend/app/main.py`, `pose/tasks.py`, `pose/worker_settings.py`, `video/router.py`, `tests/test_compose_env.py`, `docker-compose.yml`, `docs/DECISIONS.md` 2026-10-05 entry). Byte-identical copy, `git status` shows only those 10 modified. No frontend, migration, scoring, or biomechanics changes.
+- **Targeted tests:** `pytest tests/test_compose_env.py` → 7 passed (incl. new `test_host_run_settings_need_only_database_url_and_redis_url`); `test_compose_env + test_hardening_unit + test_anomaly_calibration` → 84 passed. `app.main` imports cleanly and creates `backend/uploads/` (gitignored).
+- **Frontend:** `npx tsc --noEmit` clean, `npx eslint src --max-warnings=0` clean (frontend untouched by zip; full `next build` not re-run — needs font-network mock per prior STATE note).
+- **Not verified:** full `pytest` (384-test suite) — DB-backed tests error with `ConnectionRefusedError` because this host runs native Postgres on :5432 only and no Redis on :6379, while `tests/conftest.py` expects Postgres on :5433 + Redis on :6379. Pre-existing env gap, not caused by this change. Docker image rebuild with CPU torch also not verified (no Docker / pytorch.org unreachable in sandbox, as the zip's DECISIONS entry states).
 
 **Verified on 2026-10-04 (Live local stack, native Postgres 17 on :5432, Uvicorn on :8000, Next.js on :3000):**
 - **Database & Migrations**: Local PostgreSQL 17 active on port 5432; `injury_detection` database created; `injury_user` role provisioned; all 5 Alembic migrations (`0001` → `0005`) executed cleanly, establishing all 17 schema tables including `videos.analysis` and `risk_scores.assessment`.

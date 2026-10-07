@@ -150,6 +150,116 @@ def select_main_track(tracks: dict[int, dict[int, tuple]]) -> int | None:
     return max(tracks.items(), key=_score)[0]
 
 
+# --------------------------------------------------------------------------- #
+# Tracker choice + ID-fragment merging
+# --------------------------------------------------------------------------- #
+
+#: Which Ultralytics tracker config to run. BoT-SORT is the default because its motion
+#: model survives fast direction changes (cutting left/right) far better than ByteTrack's
+#: constant-velocity assumption — the failure that fragmented one lateral-moving athlete
+#: into several track IDs ("several people" when there was clearly one). Override with
+#: YOLO_TRACKER=bytetrack.yaml to get the old behaviour.
+YOLO_TRACKER = os.environ.get("YOLO_TRACKER", "botsort.yaml")
+
+#: Max temporal gap (seconds) across which two track fragments may still be the same
+#: person. Longer gaps risk merging two DIFFERENT people who entered sequentially.
+MAX_FRAGMENT_GAP_S = 0.5
+#: Two fragments merge only if their median box heights differ by less than this fraction.
+FRAGMENT_SIZE_TOL = 0.35
+#: ...and the box-centre jump across the gap is human-plausible: at most this many
+#: subject-heights per second (an all-out sprint is ~5-6 heights/s, so this is generous).
+MAX_FRAGMENT_SPEED_HEIGHTS_S = 8.0
+
+
+def _fragment_stats(frames: dict[int, tuple]) -> dict:
+    idx = sorted(frames)
+    boxes = [frames[i] for i in idx]
+    heights = sorted(b[3] - b[1] for b in boxes)
+
+    def center(b):
+        return ((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0)
+
+    return {
+        "first": idx[0],
+        "last": idx[-1],
+        "height": heights[len(heights) // 2],
+        "first_center": center(boxes[0]),
+        "last_center": center(boxes[-1]),
+    }
+
+
+def merge_track_fragments(tracks: dict[int, dict[int, tuple]], fps: float,
+                           *, max_gap_s: float = MAX_FRAGMENT_GAP_S) -> dict[int, dict[int, tuple]]:
+    """Merge track fragments of the SAME person split by tracker ID switches.
+
+    Losing the subject on a sharp cut and re-acquiring it under a new ID is the normal
+    failure mode of online trackers on lateral sport motion. Without merging, one athlete
+    cutting left/right reads as several substantive tracks: a false "multiple people"
+    diagnosis and a deflated main-track coverage (each fragment is short).
+
+    Two fragments merge when ALL hold:
+    * they are temporally DISJOINT (no shared frames) with a gap <= ``max_gap_s`` —
+      two people visible simultaneously can never merge, so a genuine group scene is
+      never collapsed into one person;
+    * their median box heights are similar (same person, not a bystander);
+    * the box-centre jump across the gap is human-plausible
+      (<= MAX_FRAGMENT_SPEED_HEIGHTS_S subject-heights/s — no teleports).
+    Merging is transitive (union-find). The merged track keeps the earliest
+    fragment's ID. Pure function — unit-tested with synthetic track scripts.
+    """
+    ids = list(tracks)
+    if len(ids) < 2:
+        return tracks
+    stats = {tid: _fragment_stats(tracks[tid]) for tid in ids}
+    parent = {tid: tid for tid in ids}
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra == rb:
+            return
+        # the merged track keeps the earliest-starting fragment's ID
+        if (stats[ra]["first"], ra) <= (stats[rb]["first"], rb):
+            parent[rb] = ra
+        else:
+            parent[ra] = rb
+
+    fps = fps if fps and fps > 0 else 30.0
+    for i in range(len(ids)):
+        for j in range(i + 1, len(ids)):
+            a, b = ids[i], ids[j]
+            sa, sb = stats[a], stats[b]
+            if sa["first"] <= sb["last"] and sb["first"] <= sa["last"]:
+                continue  # overlapping in time: different people, never merge
+            if sa["last"] < sb["first"]:
+                se, sl = sa, sb
+            elif sb["last"] < sa["first"]:
+                se, sl = sb, sa
+            else:
+                continue
+            gap_s = (sl["first"] - se["last"]) / fps
+            if gap_s <= 0 or gap_s > max_gap_s:
+                continue
+            h_ref = max(se["height"], sl["height"], 1e-6)
+            if abs(se["height"] - sl["height"]) / h_ref > FRAGMENT_SIZE_TOL:
+                continue
+            dx = sl["first_center"][0] - se["last_center"][0]
+            dy = sl["first_center"][1] - se["last_center"][1]
+            if (dx * dx + dy * dy) ** 0.5 > MAX_FRAGMENT_SPEED_HEIGHTS_S * h_ref * gap_s:
+                continue
+            union(a, b)
+
+    merged: dict[int, dict[int, tuple]] = {}
+    for tid in ids:
+        merged.setdefault(find(tid), {}).update(tracks[tid])
+    return merged
+
+
 def should_skip_frame(box, subject_boxes, full_frame_fallback: bool) -> bool:
     """True when pose must NOT be attempted on this frame.
 
@@ -184,12 +294,14 @@ def _reset_tracker_state(model) -> None:
         logger.warning(f"YOLO tracker reset failed, IDs may carry over: {e}")
 
 
-def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
+def track_persons(video_path: str, model=None, stride: int = 1, fps: float = 30.0) -> dict:
     """Track every person across the video with persistent YOLO IDs.
 
     Returns {
         "person_counts": [n_persons per processed frame],
-        "tracks": {track_id: {frame_idx: (x1, y1, x2, y2)}},
+        "tracks": {track_id: {frame_idx: (x1, y1, x2, y2)}} — ID-switch fragments of the
+                   same person are MERGED (see merge_track_fragments), so one lateral-moving
+                   athlete reads as one track, not several;
         "main_track_id": int | None (see select_main_track),
         "max_persons": int,
         "frames_processed": int,
@@ -198,6 +310,7 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
                          meaning per-frame identity is unavailable),
     }
     Frames are processed sequentially (stride=1) so tracker IDs stay consistent.
+    `fps` is the clip's frame rate, used only to express the fragment-merge gap in seconds.
     """
     if model is None:
         model = YOLO("yolov8n-pose.pt")
@@ -219,7 +332,7 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
             if frame_idx % stride == 0:
                 try:
                     if use_track:
-                        result = model.track(frame, persist=True, verbose=False)[0]
+                        result = model.track(frame, persist=True, verbose=False, tracker=YOLO_TRACKER)[0]
                     else:
                         result = model(frame, verbose=False)[0]
                 except Exception as e:
@@ -238,6 +351,14 @@ def track_persons(video_path: str, model=None, stride: int = 1) -> dict:
     finally:
         cap.release()
 
+    if saw_ids and len(tracks) > 1:
+        n_before = len(tracks)
+        tracks = merge_track_fragments(tracks, fps)
+        if len(tracks) != n_before:
+            logger.info(
+                f"Merged {n_before} raw track IDs into {len(tracks)} subject(s) "
+                f"(ID-switch fragments of the same person)"
+            )
     main_track_id = select_main_track(tracks) if saw_ids else None
     if not saw_ids:
         tracks = {}

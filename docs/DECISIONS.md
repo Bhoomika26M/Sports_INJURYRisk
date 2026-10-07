@@ -15,6 +15,16 @@ Append-only. New entries go at the top of their section, dated, never edited or 
 
 ## Decisions log
 
+### 2026-10-07 — Lateral-motion tracking: BoT-SORT + ID-fragment merging
+**Decision:** `pose/pipeline.py` runs YOLO tracking with `tracker="botsort.yaml"` (was the ByteTrack default; override with `YOLO_TRACKER=bytetrack.yaml`) and merges ID-switch fragments of the same person before main-subject selection. `merge_track_fragments(tracks, fps)` is pure: two fragments merge only when temporally disjoint (no shared frames) with gap ≤ 0.5 s, median box heights within 35%, and box-centre displacement ≤ 8 subject-heights/s; union-find, merged track keeps the earliest fragment's ID. `track_persons` takes `fps=` (gap in seconds); `pose/tasks.py` and `scripts/verify_data_videos.py` pass the real fps.
+**Why:** ByteTrack's constant-velocity motion model loses athletes on sharp cuts and re-acquires them under new IDs — one lateral-moving person fragmented into several substantive tracks, reading as false "multiple people" with deflated per-fragment coverage and wrongful rejection. BoT-SORT's motion model survives direction changes; merging repairs residual switches. Overlapping-in-time tracks NEVER merge, so genuine group scenes (3 runners, HIIT class) still read multi-person and are still rejected/flagged honestly. Thresholds (0.5 s, 35%, 8 heights/s) are conservative engineering heuristics, not validated cut-offs; they only affect track attribution, never raise a score.
+**Verification:** 7 new unit tests in `tests/test_tracking.py` (single-athlete ID switch merges; transitive 3-fragment merge; simultaneous people / teleport / size mismatch / long gap never merge; end-to-end via fake model); full `pytest` **394 passed**; `verify_data_videos.py --all --fast` 9/9 expectations hold (6 pass, 3 reject `multiple_people_subject_unstable`); all 5 `test-assets/` clips verified (`scripts/verify_test_assets.py`): 2 squats pass, synthetic stick-figure + 2 group-fitness classes correctly rejected.
+
+### 2026-10-07 — Broader video-format support (.webm, .avi, .mkv, .m4v)
+**Decision:** upload validation now accepts `.webm`, `.avi`, `.mkv`, and `.m4v` in addition to `.mp4`/`.mov`: widened `SAFE_FILENAME_PATTERN` and the `confirm_upload` extension check in `backend/app/modules/video/router.py`, and updated `acceptFile`, the file-input `accept` attribute, and helper/error copy in `frontend/src/app/(authenticated)/videos/upload/page.tsx`. No shape changes (typed Pydantic models untouched, snake_case keys unchanged); all other gates unchanged (ffprobe validation, 2–60 s, ≥480p, ≤200 MB); annotated-video output stays `.mp4`.
+**Why:** ffprobe validation is codec-agnostic and OpenCV decodes webm (VP9) / avi / mkv fine, so the `.mp4`/`.mov`-only gate was an artificial restriction, not a pipeline limit.
+**Verification:** `tests/test_video_upload.py` (3 passed, isolated DB `injury_detection_test_fmt` + Redis db 2); `npx tsc --noEmit` clean; `npx eslint src` clean.
+
 ### 2026-10-04 — Native host execution support & Docker Desktop zombie mitigation
 **Decision:** Support both Docker Compose execution and direct native Windows host runtime (`postgresql-x64-17` on port 5432, local uvicorn on port 8000, local Next.js on port 3000). Added `backend/.env` configuration pointing to port 5432. Documented and cleared orphaned Windows processes (`com.docker.backend`, stale `docker` / `docker-compose` CLI processes) that hung named pipes (`//./pipe/dockerDesktopLinuxEngine`) and blocked commands. Live stack verified with all 5 Alembic migrations (`0001` → `0005`), database seeding (`python -m app.seed`), live backend `/health` (HTTP 200), and automated browser login flow to `/dashboard/coach`.
 **Why:** In non-elevated user sessions on Windows hosts where `com.docker.service` cannot be started without administrative UAC elevation (System Error 5: Access is denied), native execution allows immediate full-stack development, database migration execution, and UI verification without container virtualization dependencies.
@@ -258,3 +268,14 @@ the frontend rebuild, and the AI-engine rebuild. The engine patch did not apply 
   to report; the PDF brief's "probability" and its accuracy targets are not met and cannot be without such data. Output is a risk *level* with named drivers.
 - **Open:** squat variant (bodyweight vs barbell) and exact camera angle are not baseline dimensions, so a barbell back squat reads "moderate"
   against a mostly-bodyweight population. See `docs/REAL_DATA_VALIDATION.md`.
+
+## 2026-10-05 — Host (non-Docker) runs: four fixes
+
+A native run from a fresh clone failed in four places that Docker and the author's pre-seeded host env hid.
+- `DATABASE_URL_SYNC` is derived from `DATABASE_URL` when unset (it was missing from `.env.example`, so `alembic upgrade head` fell back to host `postgres`).
+- `Settings` reads `../.env` then `.env`, so the repo-root `.env` the README creates is found when running from `backend/`.
+- The arq pool/worker took `REDIS_URL` from `os.environ`, which a `.env` file never populates; it now uses `Settings.redis_url` (video confirm-upload and the worker defaulted to host `redis`).
+- `/uploads` was hardcoded (and `makedirs`'d at import, crashing on macOS/Linux non-root). It is now `UPLOAD_DIR` (default `backend/uploads`; compose sets `/uploads`).
+- `.env.example` now holds host values (`localhost`); compose still overrides DB/Redis URLs with service names.
+
+- **Docker image uses CPU-only torch** (`--index-url https://download.pytorch.org/whl/cpu`, installed before `requirements.txt`). Inference already runs on CPU; the default Linux PyPI torch pulls several GB of unused CUDA wheels. The model weights themselves are small (`yolov8n-pose.pt`, pose landmarker `.task`) and download on first use. Not rebuilt/verified in the sandbox (no Docker, pytorch.org unreachable). Native Windows/macOS installs already get CPU torch from PyPI.

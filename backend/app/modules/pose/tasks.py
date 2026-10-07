@@ -6,6 +6,7 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 from sqlalchemy import select, update
 
+from app.config import settings
 from app.database import async_session_factory
 from app.modules.users.models import User
 from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntry
@@ -55,15 +56,15 @@ async def get_video(db, video_id: str) -> Video:
 
 
 async def download_from_storage(storage_key: str) -> str:
-    """For local development, the 'storage_key' is the file path inside /uploads."""
-    path = os.path.join("/uploads", os.path.basename(storage_key))
+    """For local development, the 'storage_key' is the file path inside settings.upload_dir."""
+    path = os.path.join(settings.upload_dir, os.path.basename(storage_key))
     if not os.path.exists(path):
         raise VideoProcessingError("storage_error", f"File not found at {path}")
     return path
 
 
 def cleanup_local_file(local_path: str):
-    """Clean up local temp file. For local dev with /uploads, we leave it since it's the only copy."""
+    """Clean up local temp file. For local dev with the upload dir, we leave it since it's the only copy."""
     pass
 
 
@@ -138,7 +139,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             # Slow-motion clips (>60 fps) are processed every Nth frame; tracking and pose
             # must use the same stride so subject boxes line up with processed frames.
             stride = compute_stride(fps)
-            tracking = track_persons(local_path, ctx.get("yolo_model"), stride=stride)
+            tracking = track_persons(local_path, ctx.get("yolo_model"), stride=stride, fps=fps)
             person_counts = tracking["person_counts"]
             if tracking["max_persons"] == 0:
                 raise VideoProcessingError(
@@ -166,7 +167,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
 
             # Generate thumbnail before long processing starts
             thumbnail_filename = f"thumb_{video_id}.jpg"
-            thumbnail_path = os.path.join("/uploads", thumbnail_filename)
+            thumbnail_path = os.path.join(settings.upload_dir, thumbnail_filename)
             try:
                 extract_thumbnail(local_path, thumbnail_path)
                 await update_video_status(db, video_id, VideoProcessingStatus.processing, thumbnail_key=thumbnail_path)
@@ -174,7 +175,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 logger.warning(f"Thumbnail generation failed for {video_id}, continuing without it: {e}")
 
             annotated_filename = f"annotated_{video_id}.mp4"
-            annotated_path = os.path.join("/uploads", annotated_filename)
+            annotated_path = os.path.join(settings.upload_dir, annotated_filename)
 
             # Define progress callback for MediaPipe
             async def _progress(pct):

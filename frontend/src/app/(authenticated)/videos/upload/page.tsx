@@ -112,9 +112,9 @@ function UploadFlow() {
     if (!f) return;
     setErrors((e) => ({ ...e, file: undefined }));
     const ext = f.name.toLowerCase();
-    if (!ext.endsWith(".mp4") && !ext.endsWith(".mov")) {
+    if (!ext.endsWith(".mp4") && !ext.endsWith(".mov") && !ext.endsWith(".webm") && !ext.endsWith(".avi") && !ext.endsWith(".mkv") && !ext.endsWith(".m4v")) {
       setFile(null); setProbe(null);
-      return setFileError("That file type isn't supported. Please choose an .mp4 or .mov video.");
+      return setFileError("That file type isn't supported. Please choose an .mp4, .mov, .webm, .avi, .mkv or .m4v video.");
     }
     if (f.size > MAX_BYTES) {
       setFile(null); setProbe(null);
@@ -386,11 +386,11 @@ function UploadFlow() {
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => { e.preventDefault(); setDragging(false); acceptFile(e.dataTransfer.files?.[0]); }}
             >
-              <input type="file" accept=".mp4,.mov,video/mp4,video/quicktime" className="sr-only"
+              <input type="file" accept=".mp4,.mov,.webm,.avi,.mkv,.m4v,video/mp4,video/quicktime,video/webm,video/x-msvideo,video/x-matroska,video/x-m4v" className="sr-only"
                 onChange={(e) => { acceptFile(e.target.files?.[0]); e.target.value = ""; }} />
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-surface text-ink-2"><Icon name="upload" className="h-6 w-6" /></span>
               <span className="font-semibold text-ink">Drop a video here, or tap to browse</span>
-              <span className="text-sm text-ink-3">.mp4 or .mov · up to 200 MB · 2–60 seconds</span>
+              <span className="text-sm text-ink-3">.mp4, .mov, .webm, .avi, .mkv or .m4v · up to 200 MB · 2–60 seconds</span>
             </label>
           ) : (
             <div className="row !bg-brand-tint/60">
