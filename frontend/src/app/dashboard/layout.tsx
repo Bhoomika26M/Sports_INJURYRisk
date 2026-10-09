@@ -18,7 +18,7 @@ export default function DashboardLayout({
     if (!fetchedUser) {
       router.push("/");
     } else {
-      setUser(fetchedUser);
+      setTimeout(() => setUser(fetchedUser), 0);
     }
   }, [router]);
 

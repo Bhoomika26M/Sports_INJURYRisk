@@ -23,7 +23,7 @@ export default function VideoUploadPage() {
   const [sleepQuality, setSleepQuality] = useState<number>(5);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<any | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -48,8 +48,8 @@ export default function VideoUploadPage() {
 
       const response = await uploadVideo(token, file, activity, surfaceType, footwear, rpe, sleepQuality);
       setResult(response);
-    } catch (err: any) {
-      setError(err.message || "An error occurred during video upload and processing.");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred during video upload and processing.");
     } finally {
       setUploading(false);
     }
@@ -194,9 +194,9 @@ export default function VideoUploadPage() {
                   className="w-full h-full object-contain"
                   src={`http://127.0.0.1:8000${result.processed_url}`}
                 />
-                <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs text-white flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                  Motion Enhanced
+                <div className={`absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded border text-xs text-white flex items-center gap-2 ${result.analytics.anomaly_detected ? 'border-rose-500/50' : 'border-white/10'}`}>
+                  <span className={`w-2 h-2 rounded-full ${result.analytics.anomaly_detected ? 'bg-rose-500 animate-pulse' : 'bg-green-500'}`}></span>
+                  {result.analytics.anomaly_detected ? 'Anomaly Detected' : 'Motion Enhanced'}
                 </div>
               </div>
 
@@ -225,6 +225,15 @@ export default function VideoUploadPage() {
                   </div>
                 ))}
               </div>
+
+              {result.analytics.corrective_recommendation && (
+                <div className="bg-indigo-900/20 p-4 rounded-xl border border-indigo-500/30 space-y-2">
+                  <div className="text-xs text-indigo-400 uppercase font-semibold">Corrective Recommendation</div>
+                  <div className="text-indigo-100 text-sm font-medium">
+                    {result.analytics.corrective_recommendation}
+                  </div>
+                </div>
+              )}
 
               <div className="text-xs text-slate-500 text-center pt-2">
                 Processed {result.analytics.frame_count} frames at {Math.round(result.analytics.fps)} FPS

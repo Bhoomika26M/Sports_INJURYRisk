@@ -27,6 +27,30 @@ class AthleteProfile(Base):
 
     user = relationship("User", back_populates="athlete_profile")
 
+class PhysicalAssessment(Base):
+    __tablename__ = "physical_assessments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    date = Column(String)
+    test_name = Column(String)
+    score = Column(Float)
+    notes = Column(String)
+
+    user = relationship("User")
+
+class PerformanceRecord(Base):
+    __tablename__ = "performance_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    date = Column(String)
+    metric = Column(String)
+    value = Column(Float)
+    unit = Column(String)
+
+    user = relationship("User")
+
 class VideoAnalysis(Base):
     __tablename__ = "video_analyses"
 
@@ -41,6 +65,19 @@ class VideoAnalysis(Base):
     risk_level = Column(String)
     injury_probabilities = Column(String)
     corrective_recommendation = Column(String)
+    created_at = Column(String)
+
+    user = relationship("User")
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    title = Column(String)
+    message = Column(String)
+    type = Column(String) # alert, warning, info
+    is_read = Column(Integer, default=0)
     created_at = Column(String)
 
     user = relationship("User")

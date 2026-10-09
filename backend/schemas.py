@@ -33,6 +33,38 @@ class AthleteProfileResponse(AthleteProfileBase):
     class Config:
         from_attributes = True
 
+# Physical Assessment Schemas
+class PhysicalAssessmentBase(BaseModel):
+    date: str
+    test_name: str
+    score: float
+    notes: Optional[str] = None
+
+class PhysicalAssessmentCreate(PhysicalAssessmentBase):
+    pass
+
+class PhysicalAssessmentResponse(PhysicalAssessmentBase):
+    id: int
+    user_id: int
+    class Config:
+        from_attributes = True
+
+# Performance Record Schemas
+class PerformanceRecordBase(BaseModel):
+    date: str
+    metric: str
+    value: float
+    unit: str
+
+class PerformanceRecordCreate(PerformanceRecordBase):
+    pass
+
+class PerformanceRecordResponse(PerformanceRecordBase):
+    id: int
+    user_id: int
+    class Config:
+        from_attributes = True
+
 # Auth
 class Token(BaseModel):
     access_token: str
@@ -54,5 +86,16 @@ class VideoAnalysisResponse(BaseModel):
     injury_probabilities: str
     corrective_recommendation: str
     created_at: str
-    class Config:
+    class ConfigDict:
+        from_attributes = True
+
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    title: str
+    message: str
+    type: str
+    is_read: int
+    created_at: str
+    class ConfigDict:
         from_attributes = True

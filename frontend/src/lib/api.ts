@@ -82,7 +82,7 @@ export const getAthleteProfile = async (token: string) => {
   return response.json();
 };
 
-export const createAthleteProfile = async (token: string, profileData: any) => {
+export const createAthleteProfile = async (token: string, profileData: Record<string, unknown>) => {
   const response = await fetch(`${API_URL}/athlete/profile`, {
     method: "POST",
     headers: {
@@ -99,7 +99,7 @@ export const createAthleteProfile = async (token: string, profileData: any) => {
   return response.json();
 };
 
-export const updateAthleteProfile = async (token: string, profileData: any) => {
+export const updateAthleteProfile = async (token: string, profileData: Record<string, unknown>) => {
   const response = await fetch(`${API_URL}/athlete/profile`, {
     method: "PUT",
     headers: {
@@ -134,8 +134,60 @@ export const uploadVideo = async (token: string, file: File, activity: string, s
   });
 
   if (!response.ok) {
-    throw new Error("Failed to upload video");
+    const errorText = await response.text();
+    console.error("Upload failed with status:", response.status, "Details:", errorText);
+    throw new Error(`Failed to upload video: ${response.status} ${errorText}`);
   }
 
+  return response.json();
+};
+
+export const createPhysicalAssessment = async (token: string, assessmentData: Record<string, unknown>) => {
+  const response = await fetch(`${API_URL}/athlete/assessments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(assessmentData),
+  });
+  if (!response.ok) throw new Error("Failed to create assessment");
+  return response.json();
+};
+
+export const getPhysicalAssessments = async (token: string) => {
+  const response = await fetch(`${API_URL}/athlete/assessments`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Failed to fetch assessments");
+  return response.json();
+};
+
+export const createPerformanceRecord = async (token: string, recordData: Record<string, unknown>) => {
+  const response = await fetch(`${API_URL}/athlete/performance`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(recordData),
+  });
+  if (!response.ok) throw new Error("Failed to create performance record");
+  return response.json();
+};
+
+export const getPerformanceRecords = async (token: string) => {
+  const response = await fetch(`${API_URL}/athlete/performance`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Failed to fetch performance records");
+  return response.json();
+};
+
+export const getAnalyses = async (token: string) => {
+  const response = await fetch(`${API_URL}/athlete/analyses`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error("Failed to fetch analyses");
   return response.json();
 };

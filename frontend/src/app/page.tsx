@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { login, register, googleLogin } from "@/lib/api";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function Home() {
   const [isLogin, setIsLogin] = useState(true);
@@ -15,21 +16,39 @@ export default function Home() {
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
 
-  const handleGoogleAuth = async () => {
-    const userEmail = prompt("Enter your Google Email for Demo Login:", "user@gmail.com");
-    if (!userEmail) return;
+  const googleLoginHook = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setError("");
+      try {
+        // We get an access token from Google, but usually we need user info.
+        // For simplicity, we can fetch user info from Google API here
+        const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        const userInfo = await res.json();
 
-    setLoading(true);
-    setError("");
-    try {
-      const data = await googleLogin(userEmail, role);
-      localStorage.setItem("token", data.access_token);
-      router.push("/dashboard");
-    } catch (err) {
-      setError("Google Login failed");
-    } finally {
-      setLoading(false);
+        if (!userInfo.email) {
+          throw new Error("Could not get email from Google");
+        }
+
+        const data = await googleLogin(userInfo.email, role);
+        localStorage.setItem("token", data.access_token);
+        router.push("/dashboard");
+      } catch (err) {
+        console.error(err);
+        setError("Google Login failed");
+      } finally {
+        setLoading(false);
+      }
+    },
+    onError: () => {
+      setError("Google Login was cancelled or failed");
     }
+  });
+
+  const handleGoogleAuth = async () => {
+    googleLoginHook();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

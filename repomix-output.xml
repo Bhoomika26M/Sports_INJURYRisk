@@ -1,0 +1,2523 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+backend/
+  auth.py
+  database.py
+  main.py
+  models.py
+  requirements.txt
+  schemas.py
+  video_processing.py
+frontend/
+  public/
+    file.svg
+    globe.svg
+    next.svg
+    vercel.svg
+    window.svg
+  src/
+    app/
+      dashboard/
+        fitness/
+          page.tsx
+        profile/
+          page.tsx
+        progress/
+          page.tsx
+        settings/
+          page.tsx
+        training/
+          page.tsx
+        upload/
+          page.tsx
+        layout.tsx
+        page.tsx
+      favicon.ico
+      globals.css
+      layout.tsx
+      page.tsx
+    lib/
+      api.ts
+      auth.ts
+  .gitignore
+  AGENTS.md
+  CLAUDE.md
+  eslint.config.mjs
+  next.config.ts
+  package.json
+  postcss.config.mjs
+  README.md
+  tsconfig.json
+.gitignore
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="backend/auth.py">
+from datetime import datetime, timedelta
+from typing import Optional
+from jose import JWTError, jwt
+
+SECRET_KEY = "supersecretkey"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+import bcrypt
+
+def verify_password(plain_password, hashed_password):
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+def get_password_hash(password):
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+</file>
+
+<file path="backend/database.py">
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///./sql_app.db"
+# If using PostgreSQL: "postgresql://user:password@postgresserver/db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+</file>
+
+<file path="frontend/public/file.svg">
+<svg fill="none" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M14.5 13.5V5.41a1 1 0 0 0-.3-.7L9.8.29A1 1 0 0 0 9.08 0H1.5v13.5A2.5 2.5 0 0 0 4 16h8a2.5 2.5 0 0 0 2.5-2.5m-1.5 0v-7H8v-5H3v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1M9.5 5V2.12L12.38 5zM5.13 5h-.62v1.25h2.12V5zm-.62 3h7.12v1.25H4.5zm.62 3h-.62v1.25h7.12V11z" clip-rule="evenodd" fill="#666" fill-rule="evenodd"/></svg>
+</file>
+
+<file path="frontend/public/globe.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><g clip-path="url(#a)"><path fill-rule="evenodd" clip-rule="evenodd" d="M10.27 14.1a6.5 6.5 0 0 0 3.67-3.45q-1.24.21-2.7.34-.31 1.83-.97 3.1M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m.48-1.52a7 7 0 0 1-.96 0H7.5a4 4 0 0 1-.84-1.32q-.38-.89-.63-2.08a40 40 0 0 0 3.92 0q-.25 1.2-.63 2.08a4 4 0 0 1-.84 1.31zm2.94-4.76q1.66-.15 2.95-.43a7 7 0 0 0 0-2.58q-1.3-.27-2.95-.43a18 18 0 0 1 0 3.44m-1.27-3.54a17 17 0 0 1 0 3.64 39 39 0 0 1-4.3 0 17 17 0 0 1 0-3.64 39 39 0 0 1 4.3 0m1.1-1.17q1.45.13 2.69.34a6.5 6.5 0 0 0-3.67-3.44q.65 1.26.98 3.1M8.48 1.5l.01.02q.41.37.84 1.31.38.89.63 2.08a40 40 0 0 0-3.92 0q.25-1.2.63-2.08a4 4 0 0 1 .85-1.32 7 7 0 0 1 .96 0m-2.75.4a6.5 6.5 0 0 0-3.67 3.44 29 29 0 0 1 2.7-.34q.31-1.83.97-3.1M4.58 6.28q-1.66.16-2.95.43a7 7 0 0 0 0 2.58q1.3.27 2.95.43a18 18 0 0 1 0-3.44m.17 4.71q-1.45-.12-2.69-.34a6.5 6.5 0 0 0 3.67 3.44q-.65-1.27-.98-3.1" fill="#666"/></g><defs><clipPath id="a"><path fill="#fff" d="M0 0h16v16H0z"/></clipPath></defs></svg>
+</file>
+
+<file path="frontend/public/next.svg">
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 394 80"><path fill="#000" d="M262 0h68.5v12.7h-27.2v66.6h-13.6V12.7H262V0ZM149 0v12.7H94v20.4h44.3v12.6H94v21h55v12.6H80.5V0h68.7zm34.3 0h-17.8l63.8 79.4h17.9l-32-39.7 32-39.6h-17.9l-23 28.6-23-28.6zm18.3 56.7-9-11-27.1 33.7h17.8l18.3-22.7z"/><path fill="#000" d="M81 79.3 17 0H0v79.3h13.6V17l50.2 62.3H81Zm252.6-.4c-1 0-1.8-.4-2.5-1s-1.1-1.6-1.1-2.6.3-1.8 1-2.5 1.6-1 2.6-1 1.8.3 2.5 1a3.4 3.4 0 0 1 .6 4.3 3.7 3.7 0 0 1-3 1.8zm23.2-33.5h6v23.3c0 2.1-.4 4-1.3 5.5a9.1 9.1 0 0 1-3.8 3.5c-1.6.8-3.5 1.3-5.7 1.3-2 0-3.7-.4-5.3-1s-2.8-1.8-3.7-3.2c-.9-1.3-1.4-3-1.4-5h6c.1.8.3 1.6.7 2.2s1 1.2 1.6 1.5c.7.4 1.5.5 2.4.5 1 0 1.8-.2 2.4-.6a4 4 0 0 0 1.6-1.8c.3-.8.5-1.8.5-3V45.5zm30.9 9.1a4.4 4.4 0 0 0-2-3.3 7.5 7.5 0 0 0-4.3-1.1c-1.3 0-2.4.2-3.3.5-.9.4-1.6 1-2 1.6a3.5 3.5 0 0 0-.3 4c.3.5.7.9 1.3 1.2l1.8 1 2 .5 3.2.8c1.3.3 2.5.7 3.7 1.2a13 13 0 0 1 3.2 1.8 8.1 8.1 0 0 1 3 6.5c0 2-.5 3.7-1.5 5.1a10 10 0 0 1-4.4 3.5c-1.8.8-4.1 1.2-6.8 1.2-2.6 0-4.9-.4-6.8-1.2-2-.8-3.4-2-4.5-3.5a10 10 0 0 1-1.7-5.6h6a5 5 0 0 0 3.5 4.6c1 .4 2.2.6 3.4.6 1.3 0 2.5-.2 3.5-.6 1-.4 1.8-1 2.4-1.7a4 4 0 0 0 .8-2.4c0-.9-.2-1.6-.7-2.2a11 11 0 0 0-2.1-1.4l-3.2-1-3.8-1c-2.8-.7-5-1.7-6.6-3.2a7.2 7.2 0 0 1-2.4-5.7 8 8 0 0 1 1.7-5 10 10 0 0 1 4.3-3.5c2-.8 4-1.2 6.4-1.2 2.3 0 4.4.4 6.2 1.2 1.8.8 3.2 2 4.3 3.4 1 1.4 1.5 3 1.5 5h-5.8z"/></svg>
+</file>
+
+<file path="frontend/public/vercel.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1155 1000"><path d="m577.3 0 577.4 1000H0z" fill="#fff"/></svg>
+</file>
+
+<file path="frontend/public/window.svg">
+<svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
+</file>
+
+<file path="frontend/src/app/dashboard/fitness/page.tsx">
+"use client";
+
+export default function FitnessPage() {
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h2 className="text-2xl font-bold text-white mb-6">My Fitness</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Overall Conditioning</h3>
+          <div className="flex items-center gap-4">
+            <div className="relative w-24 h-24">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                <path className="text-slate-800" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+                <path className="text-emerald-400" strokeDasharray="88, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" />
+              </svg>
+              <div className="absolute inset-0 flex items-center justify-center text-xl font-bold text-white">88%</div>
+            </div>
+            <div>
+              <div className="text-sm text-slate-400">Status</div>
+              <div className="text-lg font-medium text-emerald-400">Peak Performance</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="glass-panel p-6 rounded-2xl">
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Recent Wellness Metrics</h3>
+          <ul className="space-y-4">
+            <li className="flex justify-between items-center">
+              <span className="text-slate-400">Average RPE</span>
+              <span className="text-white font-medium">6.2 / 10</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span className="text-slate-400">Sleep Quality</span>
+              <span className="text-white font-medium">7.5 / 10</span>
+            </li>
+            <li className="flex justify-between items-center">
+              <span className="text-slate-400">Recovery Score</span>
+              <span className="text-emerald-400 font-medium">Excellent</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/dashboard/profile/page.tsx">
+"use client";
+
+import { useEffect, useState } from "react";
+import { getAthleteProfile, createAthleteProfile, updateAthleteProfile } from "@/lib/api";
+
+export default function ProfilePage() {
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formData, setFormData] = useState({
+    sport_type: "",
+    position: "",
+    age: "",
+    height: "",
+    weight: "",
+    injury_history: "",
+    training_load: "",
+  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  const loadProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
+      const data = await getAthleteProfile(token);
+      if (data) {
+        setProfile(data);
+        setFormData({
+          sport_type: data.sport_type || "",
+          position: data.position || "",
+          age: data.age?.toString() || "",
+          height: data.height?.toString() || "",
+          weight: data.weight?.toString() || "",
+          injury_history: data.injury_history || "",
+          training_load: data.training_load || "",
+        });
+      } else {
+        setIsEditing(true); // Auto-edit if no profile exists
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No token found");
+
+      const payload = {
+        ...formData,
+        age: parseInt(formData.age, 10),
+        height: parseFloat(formData.height),
+        weight: parseFloat(formData.weight),
+      };
+
+      if (profile) {
+        const updated = await updateAthleteProfile(token, payload);
+        setProfile(updated);
+        setSuccess("Profile updated successfully!");
+      } else {
+        const created = await createAthleteProfile(token, payload);
+        setProfile(created);
+        setSuccess("Profile created successfully!");
+      }
+      setIsEditing(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return <div className="text-white">Loading profile...</div>;
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-white">Athlete Profile Management</h2>
+          <p className="text-slate-400 text-sm mt-1">Manage your physical assessment records and training profiles.</p>
+        </div>
+        {!isEditing && (
+          <button 
+            onClick={() => setIsEditing(true)}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors font-medium text-sm shadow-lg shadow-indigo-500/20"
+          >
+            Edit Profile
+          </button>
+        )}
+      </div>
+
+      {error && <div className="p-4 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-400 text-sm font-medium">{error}</div>}
+      {success && <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-400 text-sm font-medium">{success}</div>}
+
+      <div className="glass-panel p-8 rounded-2xl">
+        {isEditing ? (
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <h3 className="text-lg font-bold text-white mb-4 border-b border-slate-800 pb-2">Athlete Information</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Sport Type</label>
+                <input 
+                  required type="text" name="sport_type" value={formData.sport_type} onChange={handleChange} placeholder="e.g. Basketball, Soccer"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Position</label>
+                <input 
+                  required type="text" name="position" value={formData.position} onChange={handleChange} placeholder="e.g. Point Guard, Striker"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all" 
+                />
+              </div>
+            </div>
+
+            <h3 className="text-lg font-bold text-white mt-8 mb-4 border-b border-slate-800 pb-2 pt-4">Physical Assessment Records</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Age</label>
+                <input 
+                  required type="number" name="age" value={formData.age} onChange={handleChange} placeholder="Years"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Height (cm)</label>
+                <input 
+                  required type="number" step="0.1" name="height" value={formData.height} onChange={handleChange} placeholder="e.g. 185"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all" 
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-slate-300">Weight (kg)</label>
+                <input 
+                  required type="number" step="0.1" name="weight" value={formData.weight} onChange={handleChange} placeholder="e.g. 80.5"
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all" 
+                />
+              </div>
+            </div>
+
+            <h3 className="text-lg font-bold text-white mt-8 mb-4 border-b border-slate-800 pb-2 pt-4">Training & History</h3>
+            
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">Injury History Management</label>
+              <textarea 
+                name="injury_history" value={formData.injury_history} onChange={handleChange} rows={3} placeholder="Describe any past injuries, surgeries, or chronic conditions..."
+                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all resize-none" 
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-slate-300">Training Profile & Load Management</label>
+              <textarea 
+                name="training_load" value={formData.training_load} onChange={handleChange} rows={3} placeholder="Describe current training load, frequency, intensity..."
+                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 placeholder:text-slate-600 outline-none transition-all resize-none" 
+              />
+            </div>
+
+            <div className="flex gap-4 pt-6 mt-6 border-t border-slate-800">
+              <button 
+                type="submit" disabled={saving}
+                className="px-6 py-3 bg-white text-slate-900 hover:bg-slate-200 transition-colors font-bold rounded-xl shadow-lg shadow-white/10 disabled:opacity-50"
+              >
+                {saving ? "Saving..." : "Save Profile"}
+              </button>
+              {profile && (
+                <button 
+                  type="button" onClick={() => setIsEditing(false)}
+                  className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors font-medium rounded-xl border border-slate-700"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-8">
+            <div>
+              <h3 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-4">Athlete Information</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <div className="text-sm text-slate-500">Athlete ID</div>
+                  <div className="text-lg font-medium text-white">#{profile.user_id}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500">Sport Type</div>
+                  <div className="text-lg font-medium text-white">{profile.sport_type}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500">Position</div>
+                  <div className="text-lg font-medium text-white">{profile.position}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500">Age</div>
+                  <div className="text-lg font-medium text-white">{profile.age} yrs</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-4">Physical Assessment Records</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <div>
+                  <div className="text-sm text-slate-500">Height</div>
+                  <div className="text-lg font-medium text-white">{profile.height} cm</div>
+                </div>
+                <div>
+                  <div className="text-sm text-slate-500">Weight</div>
+                  <div className="text-lg font-medium text-white">{profile.weight} kg</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-sm text-slate-500">Performance Tracking</div>
+                  <div className="text-emerald-400 font-medium flex items-center gap-2 mt-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Active monitoring enabled
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-sm font-semibold text-indigo-400 uppercase tracking-wider mb-4">Training & History</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-slate-900/50 p-5 rounded-xl border border-slate-800">
+                  <div className="text-sm text-slate-500 mb-2">Injury History Management</div>
+                  <div className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                    {profile.injury_history || "No injury history recorded."}
+                  </div>
+                </div>
+                <div className="bg-slate-900/50 p-5 rounded-xl border border-slate-800">
+                  <div className="text-sm text-slate-500 mb-2">Training Profile Management</div>
+                  <div className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap">
+                    {profile.training_load || "No training load data recorded."}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/dashboard/progress/page.tsx">
+"use client";
+
+export default function ProgressPage() {
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h2 className="text-2xl font-bold text-white mb-6">My Progress</h2>
+
+      <div className="glass-panel p-8 rounded-2xl">
+        <h3 className="text-lg font-semibold text-slate-200 mb-6">Risk Score Over Time</h3>
+
+        <div className="h-64 flex items-end justify-between gap-2 border-b border-l border-slate-800 p-4 pt-10 relative">
+          {/* Simulated chart bars */}
+          {[45, 40, 38, 30, 35, 25, 20, 18, 15, 12].map((height, i) => (
+            <div key={i} className="w-full bg-indigo-500/50 hover:bg-indigo-400 transition-colors rounded-t-sm relative group" style={{ height: `${height}%` }}>
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 bg-slate-800 text-xs px-2 py-1 rounded text-white transition-opacity">
+                {height}
+              </div>
+            </div>
+          ))}
+
+          <div className="absolute top-2 left-4 text-xs text-slate-500">Risk Score (Lower is better)</div>
+        </div>
+        <div className="flex justify-between mt-2 text-xs text-slate-500 px-4">
+          <span>10 Weeks Ago</span>
+          <span>Today</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+        <div className="glass-panel p-6 rounded-2xl bg-gradient-to-br from-emerald-900/20 to-transparent border-emerald-500/20">
+          <h4 className="text-emerald-400 font-medium mb-2">Great Job!</h4>
+          <p className="text-sm text-slate-300">Your knee valgus metrics have improved by 40% over the last month.</p>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl bg-gradient-to-br from-amber-900/20 to-transparent border-amber-500/20">
+          <h4 className="text-amber-400 font-medium mb-2">Area of Focus</h4>
+          <p className="text-sm text-slate-300">Core stability metrics show slight decline. Focus on your new training plan.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/dashboard/settings/page.tsx">
+"use client";
+
+export default function SettingsPage() {
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h2 className="text-2xl font-bold text-white mb-6">Settings</h2>
+
+      <div className="glass-panel p-6 rounded-2xl space-y-6 border border-slate-800">
+        <div>
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Notifications</h3>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-white font-medium">Email Alerts</div>
+                <div className="text-xs text-slate-400">Receive reports when new risk anomalies are detected</div>
+              </div>
+              <div className="w-12 h-6 bg-indigo-500 rounded-full relative cursor-pointer">
+                <div className="w-4 h-4 bg-white rounded-full absolute right-1 top-1"></div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-white font-medium">Daily Wellness Reminder</div>
+                <div className="text-xs text-slate-400">Push notification to enter RPE and Sleep Data</div>
+              </div>
+              <div className="w-12 h-6 bg-indigo-500 rounded-full relative cursor-pointer">
+                <div className="w-4 h-4 bg-white rounded-full absolute right-1 top-1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-slate-800 pt-6">
+          <h3 className="text-lg font-semibold text-slate-200 mb-4">Account</h3>
+          <div className="space-y-4">
+            <button className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors">
+              Change Password
+            </button>
+            <button className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-sm font-medium rounded-lg transition-colors ml-4 border border-rose-500/20">
+              Delete Account
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/dashboard/training/page.tsx">
+"use client";
+
+export default function TrainingPlansPage() {
+  const plans = [
+    { title: "Knee Valgus Correction", duration: "4 Weeks", status: "Active", tasks: ["Banded Side Steps", "Single Leg Romanian Deadlifts"] },
+    { title: "Core Stability Routine", duration: "Ongoing", status: "Active", tasks: ["Planks", "Russian Twists"] },
+    { title: "Post-Match Recovery", duration: "1 Day", status: "Pending", tasks: ["Foam Rolling", "Light Stretching", "Cold Plunge"] }
+  ];
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <h2 className="text-2xl font-bold text-white mb-6">Training & Corrective Plans</h2>
+
+      <div className="grid gap-6">
+        {plans.map((plan, i) => (
+          <div key={i} className="glass-panel p-6 rounded-2xl border border-slate-800">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">{plan.title}</h3>
+                <p className="text-sm text-slate-400">Duration: {plan.duration}</p>
+              </div>
+              <span className={`px-3 py-1 rounded-full text-xs font-medium ${plan.status === 'Active' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-slate-800 text-slate-400'}`}>
+                {plan.status}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-slate-300">Prescribed Exercises:</p>
+              <ul className="list-disc list-inside text-slate-400 text-sm space-y-1">
+                {plan.tasks.map((task, j) => (
+                  <li key={j}>{task}</li>
+                ))}
+              </ul>
+            </div>
+
+            <button className="mt-6 w-full py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors">
+              View Full Plan Details
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/globals.css">
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-inter);
+  --color-primary-500: #6366f1;
+  --color-primary-600: #4f46e5;
+  --color-dark-bg: #0f1115;
+  --color-card-bg: rgba(255, 255, 255, 0.05);
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0f1115;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+@layer utilities {
+  .glass-panel {
+    background: rgba(20, 22, 27, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .text-gradient {
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-image: linear-gradient(to right, #4f46e5, #ec4899);
+  }
+
+  .animate-float {
+    animation: float 6s ease-in-out infinite;
+  }
+
+  @keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+    100% { transform: translateY(0px); }
+  }
+}
+</file>
+
+<file path="frontend/src/app/layout.tsx">
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+});
+
+export const metadata: Metadata = {
+  title: "Sports Injury Risk Detection",
+  description: "AI-powered Sports Injury Risk Detection Platform",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" className={`${inter.variable} antialiased`}>
+      <body className="min-h-screen bg-slate-950 text-slate-50 flex flex-col font-sans">
+        {children}
+      </body>
+    </html>
+  );
+}
+</file>
+
+<file path="frontend/src/lib/auth.ts">
+export const getUserFromToken = () => {
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("token");
+  if (!token) return null;
+  
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    return {
+      email: decoded.sub,
+      role: decoded.role
+    };
+  } catch (e) {
+    return null;
+  }
+};
+</file>
+
+<file path="frontend/.gitignore">
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+</file>
+
+<file path="frontend/AGENTS.md">
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
+</file>
+
+<file path="frontend/CLAUDE.md">
+@AGENTS.md
+</file>
+
+<file path="frontend/eslint.config.mjs">
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
+
+const eslintConfig = defineConfig([
+  ...nextVitals,
+  ...nextTs,
+  // Override default ignores of eslint-config-next.
+  globalIgnores([
+    // Default ignores of eslint-config-next:
+    ".next/**",
+    "out/**",
+    "build/**",
+    "next-env.d.ts",
+  ]),
+]);
+
+export default eslintConfig;
+</file>
+
+<file path="frontend/next.config.ts">
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+</file>
+
+<file path="frontend/package.json">
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "next": "16.3.7",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.7",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="frontend/postcss.config.mjs">
+const config = {
+  plugins: {
+    "@tailwindcss/postcss": {},
+  },
+};
+
+export default config;
+</file>
+
+<file path="frontend/README.md">
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+
+## Getting Started
+
+First, run the development server:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Learn More
+
+To learn more about Next.js, take a look at the following resources:
+
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+
+## Deploy on Vercel
+
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+</file>
+
+<file path="frontend/tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts"
+  ],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="backend/models.py">
+from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy.orm import relationship
+from database import Base
+
+class User(Base):
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, unique=True, index=True)
+    hashed_password = Column(String)
+    role = Column(String) # Athlete, Coach, Physiotherapist, Sports Scientist, Administrator
+    
+    athlete_profile = relationship("AthleteProfile", back_populates="user", uselist=False)
+
+class AthleteProfile(Base):
+    __tablename__ = "athlete_profiles"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    sport_type = Column(String)
+    position = Column(String)
+    age = Column(Integer)
+    height = Column(Float)
+    weight = Column(Float)
+    injury_history = Column(String)
+    training_load = Column(String)
+
+    user = relationship("User", back_populates="athlete_profile")
+
+class VideoAnalysis(Base):
+    __tablename__ = "video_analyses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    activity = Column(String)
+    surface_type = Column(String)
+    footwear = Column(String)
+    rpe = Column(Integer)
+    sleep_quality = Column(Integer)
+    risk_score = Column(Float)
+    risk_level = Column(String)
+    injury_probabilities = Column(String)
+    corrective_recommendation = Column(String)
+    created_at = Column(String)
+
+    user = relationship("User")
+</file>
+
+<file path="backend/requirements.txt">
+fastapi
+uvicorn[standard]
+sqlalchemy
+pydantic
+psycopg2-binary
+pymongo
+opencv-python-headless
+ultralytics
+mediapipe
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+bcrypt
+</file>
+
+<file path="frontend/src/app/dashboard/upload/page.tsx">
+"use client";
+
+import { useState } from "react";
+import { uploadVideo } from "@/lib/api";
+
+const ACTIVITIES = [
+  "Running",
+  "Sprinting",
+  "Jumping",
+  "Squatting",
+  "Landing",
+  "Throwing",
+  "Cutting Movements",
+  "Sport-Specific Drills"
+];
+
+export default function VideoUploadPage() {
+  const [file, setFile] = useState<File | null>(null);
+  const [activity, setActivity] = useState<string>("Squatting");
+  const [surfaceType, setSurfaceType] = useState<string>("Unknown");
+  const [footwear, setFootwear] = useState<string>("Unknown");
+  const [rpe, setRpe] = useState<number>(5);
+  const [sleepQuality, setSleepQuality] = useState<number>(5);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
+  const [result, setResult] = useState<any>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!file) {
+      setError("Please select a video file first.");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+    setResult(null);
+
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("No authorization token found");
+
+      const response = await uploadVideo(token, file, activity, surfaceType, footwear, rpe, sleepQuality);
+      setResult(response);
+    } catch (err: any) {
+      setError(err.message || "An error occurred during video upload and processing.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-white">Video Upload & Processing Engine</h2>
+        <p className="text-slate-400 text-sm mt-1">Upload athlete footage for AI-powered biomechanical analysis.</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Upload Form */}
+        <div className="glass-panel p-8 rounded-2xl">
+          <form onSubmit={handleUpload} className="space-y-6">
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">Supported Activity</label>
+              <select
+                value={activity}
+                onChange={(e) => setActivity(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all appearance-none"
+              >
+                {ACTIVITIES.map((act) => (
+                  <option key={act} value={act}>{act}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Surface Type</label>
+                <select
+                  value={surfaceType}
+                  onChange={(e) => setSurfaceType(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all appearance-none"
+                >
+                  <option value="Unknown">Unknown</option>
+                  <option value="Grass">Grass</option>
+                  <option value="Artificial Turf">Artificial Turf</option>
+                  <option value="Hardwood">Hardwood</option>
+                  <option value="Track">Track</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Footwear</label>
+                <select
+                  value={footwear}
+                  onChange={(e) => setFootwear(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all appearance-none"
+                >
+                  <option value="Unknown">Unknown</option>
+                  <option value="Cleats">Cleats</option>
+                  <option value="Running Shoes">Running Shoes</option>
+                  <option value="Barefoot">Barefoot</option>
+                  <option value="Court Shoes">Court Shoes</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">RPE (1-10)</label>
+                <input
+                  type="number"
+                  min="1" max="10"
+                  value={rpe}
+                  onChange={(e) => setRpe(parseInt(e.target.value))}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-300">Sleep Quality (1-10)</label>
+                <input
+                  type="number"
+                  min="1" max="10"
+                  value={sleepQuality}
+                  onChange={(e) => setSleepQuality(parseInt(e.target.value))}
+                  className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-100 outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-slate-300">Video File</label>
+              <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors bg-slate-900/30">
+                <input
+                  type="file"
+                  accept="video/mp4,video/quicktime"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="video-upload"
+                />
+                <label htmlFor="video-upload" className="cursor-pointer flex flex-col items-center">
+                  <svg className="w-10 h-10 text-indigo-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                  <span className="text-white font-medium mb-1">
+                    {file ? file.name : "Click to browse or drag and drop"}
+                  </span>
+                  <span className="text-xs text-slate-500">MP4 or MOV (Max 50MB)</span>
+                </label>
+              </div>
+            </div>
+
+            {error && (
+              <div className="p-4 rounded-xl bg-rose-500/20 border border-rose-500/50 text-rose-400 text-sm font-medium">
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={uploading || !file}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {uploading ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-white" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing Engine Running...
+                </>
+              ) : "Process Video"}
+            </button>
+          </form>
+        </div>
+
+        {/* Results Panel */}
+        <div className="glass-panel p-8 rounded-2xl flex flex-col">
+          <h3 className="text-lg font-bold text-white mb-6 border-b border-slate-800 pb-4">Analysis Results</h3>
+
+          {result ? (
+            <div className="space-y-6 flex-1">
+              <div className="aspect-video bg-slate-950 rounded-xl overflow-hidden border border-slate-700 relative">
+                <video
+                  controls
+                  className="w-full h-full object-contain"
+                  src={`http://127.0.0.1:8000${result.processed_url}`}
+                />
+                <div className="absolute top-3 left-3 px-2 py-1 bg-black/60 backdrop-blur-md rounded border border-white/10 text-xs text-white flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  Motion Enhanced
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Activity Analyzed</div>
+                  <div className="text-lg font-medium text-white">{result.analytics.activity_analyzed}</div>
+                </div>
+                <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800">
+                  <div className="text-xs text-slate-500 uppercase font-semibold mb-1">Risk Score</div>
+                  <div className={`text-xl font-bold ${result.analytics.risk_score > 30 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                    {result.analytics.risk_score} <span className="text-sm font-normal text-slate-500">/ 100</span>
+                  </div>
+                  <div className="text-xs mt-1 text-slate-400">Risk Level: <span className="text-white font-medium">{result.analytics.risk_level}</span></div>
+                </div>
+              </div>
+
+              <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-800 space-y-3">
+                <div className="text-xs text-slate-500 uppercase font-semibold">Biomechanical Findings</div>
+                {result.analytics.risk_flags.map((flag: string, idx: number) => (
+                  <div key={idx} className="flex items-start gap-3">
+                    <svg className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <span className="text-slate-200 text-sm">{flag}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="text-xs text-slate-500 text-center pt-2">
+                Processed {result.analytics.frame_count} frames at {Math.round(result.analytics.fps)} FPS
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center text-slate-500 text-center">
+              <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <p>Upload a video to see frame extraction, <br />motion enhancement, and risk detection results.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/app/dashboard/page.tsx">
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { getUserFromToken } from "@/lib/auth";
+
+export default function DashboardHome() {
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
+
+  useEffect(() => {
+    setUser(getUserFromToken());
+  }, []);
+
+  if (!user) return null;
+
+  switch (user.role) {
+    case "Athlete":
+      return <AthleteDashboard />;
+    case "Physiotherapist":
+      return <PhysioDashboard />;
+    case "Sports Scientist":
+      return <ScientistDashboard />;
+    case "Administrator":
+      return <AdminDashboard />;
+    case "Coach":
+    default:
+      return <CoachDashboard />;
+  }
+}
+
+function AthleteDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">My Fitness Score</div>
+          <div className="text-3xl font-bold text-white">88/100</div>
+          <div className="text-xs text-green-400 mt-2">+2 from last week</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Injury Risk Level</div>
+          <div className="text-3xl font-bold text-emerald-400">Low</div>
+          <div className="text-xs text-slate-400 mt-2">Optimal form detected</div>
+        </div>
+        <Link href="/dashboard/upload" className="glass-panel p-6 rounded-2xl border-indigo-500/30 bg-indigo-500/5 hover:bg-indigo-500/10 transition-colors cursor-pointer flex flex-col items-center justify-center text-indigo-400 hover:text-indigo-300">
+          <span className="font-medium">Upload Training Video</span>
+        </Link>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        Workout plans and progress charts go here
+      </div>
+    </div>
+  );
+}
+
+function PhysioDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Active Injuries</div>
+          <div className="text-3xl font-bold text-white">4</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Rehab Plans Active</div>
+          <div className="text-3xl font-bold text-white">12</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Cleared to Play</div>
+          <div className="text-3xl font-bold text-emerald-400">2 This Week</div>
+        </div>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        Injury-risk reports and recovery status tracking go here
+      </div>
+    </div>
+  );
+}
+
+function ScientistDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Team Fatigue Index</div>
+          <div className="text-3xl font-bold text-amber-400">Elevated</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Workload Spikes</div>
+          <div className="text-3xl font-bold text-rose-400">3 Players</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Reports Generated</div>
+          <div className="text-3xl font-bold text-white">14</div>
+        </div>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        Complex performance data and workload/fatigue trend graphs go here
+      </div>
+    </div>
+  );
+}
+
+function AdminDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Total Users</div>
+          <div className="text-3xl font-bold text-white">245</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Active Teams</div>
+          <div className="text-3xl font-bold text-white">8</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">System Health</div>
+          <div className="text-3xl font-bold text-emerald-400">99.9%</div>
+        </div>
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Storage Used</div>
+          <div className="text-3xl font-bold text-white">1.2 TB</div>
+        </div>
+      </div>
+      <div className="glass-panel rounded-2xl p-6 h-64 flex items-center justify-center text-slate-400">
+        User management, system settings, and platform activity logs go here
+      </div>
+    </div>
+  );
+}
+
+function CoachDashboard() {
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto">
+      {/* Top Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Team Overall Risk Score</div>
+          <div className="text-3xl font-bold text-white flex items-end gap-2">
+            28<span className="text-lg text-green-400">/ 100</span>
+          </div>
+          <div className="text-xs text-green-400 mt-2 flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" /></svg>
+            -12% from last week
+          </div>
+        </div>
+        
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">High Risk Athletes</div>
+          <div className="text-3xl font-bold text-white">
+            2
+          </div>
+          <div className="text-xs text-rose-400 mt-2 flex items-center gap-1">
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
+            +1 since yesterday
+          </div>
+        </div>
+
+        <div className="glass-panel p-6 rounded-2xl">
+          <div className="text-sm font-medium text-slate-400 mb-1">Videos Analyzed</div>
+          <div className="text-3xl font-bold text-white">
+            143
+          </div>
+          <div className="text-xs text-indigo-400 mt-2 flex items-center gap-1">
+            <span>Last 7 days</span>
+          </div>
+        </div>
+
+        <Link href="/dashboard/upload" className="glass-panel p-6 rounded-2xl border-indigo-500/30 bg-indigo-500/5 cursor-pointer hover:bg-indigo-500/10 transition-colors group">
+          <div className="h-full flex flex-col items-center justify-center text-indigo-400 group-hover:text-indigo-300">
+            <svg className="w-8 h-8 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span className="font-medium">Upload New Video</span>
+          </div>
+        </Link>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Left Column - Athletes List */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="glass-panel rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-lg font-bold text-white">Athlete Risk Assessment</h3>
+              <button className="text-sm text-indigo-400 hover:text-indigo-300 font-medium">View All</button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Athlete Item 1 */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300">MS</div>
+                  <div>
+                    <div className="font-medium text-white">Michael Smith</div>
+                    <div className="text-xs text-slate-400">Point Guard • Knee Valgus Detected</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-rose-400">84/100 Risk</div>
+                    <div className="text-xs text-slate-500">Critical</div>
+                  </div>
+                  <div className="w-2 h-10 rounded-full bg-rose-500/20 relative">
+                    <div className="absolute bottom-0 w-full bg-rose-500 rounded-full" style={{ height: '84%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Athlete Item 2 */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300">DJ</div>
+                  <div>
+                    <div className="font-medium text-white">David Johnson</div>
+                    <div className="text-xs text-slate-400">Shooting Guard • Minor Fatigue</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-amber-400">42/100 Risk</div>
+                    <div className="text-xs text-slate-500">Moderate</div>
+                  </div>
+                  <div className="w-2 h-10 rounded-full bg-amber-500/20 relative">
+                    <div className="absolute bottom-0 w-full bg-amber-500 rounded-full" style={{ height: '42%' }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Athlete Item 3 */}
+              <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-colors cursor-pointer">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-slate-300">EW</div>
+                  <div>
+                    <div className="font-medium text-white">Ethan Williams</div>
+                    <div className="text-xs text-slate-400">Power Forward • Optimal Form</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6">
+                  <div className="text-right">
+                    <div className="text-sm font-bold text-emerald-400">12/100 Risk</div>
+                    <div className="text-xs text-slate-500">Low</div>
+                  </div>
+                  <div className="w-2 h-10 rounded-full bg-emerald-500/20 relative">
+                    <div className="absolute bottom-0 w-full bg-emerald-500 rounded-full" style={{ height: '12%' }}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column - Breakdown */}
+        <div className="space-y-6">
+          <div className="glass-panel rounded-2xl p-6">
+            <h3 className="text-lg font-bold text-white mb-6">Recent Video Analysis</h3>
+            
+            <div className="aspect-video bg-slate-900 rounded-xl relative overflow-hidden group mb-4 border border-slate-800">
+              {/* Fake Video Thumbnail / AI Overlay */}
+              <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1546519638-68e109498ffc?q=80&w=2090&auto=format&fit=crop')] bg-cover bg-center opacity-40 mix-blend-luminosity"></div>
+              
+              {/* Simulated skeleton overlay */}
+              <div className="absolute top-[20%] left-[45%] w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></div>
+              <div className="absolute top-[40%] left-[40%] w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></div>
+              <div className="absolute top-[40%] left-[50%] w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-[0_0_10px_#4ade80]"></div>
+              <div className="absolute top-[60%] left-[38%] w-2 h-2 bg-rose-500 rounded-full animate-pulse shadow-[0_0_10px_#f43f5e]"></div>
+              
+              {/* Connecting lines simulated */}
+              <div className="absolute top-[21%] left-[45%] w-[1px] h-[20%] bg-green-400/50 transform -rotate-12 origin-top"></div>
+              
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950/40">
+                <button className="w-12 h-12 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-lg hover:bg-indigo-500 transition-colors cursor-pointer z-10">
+                  <svg className="w-6 h-6 ml-1" fill="currentColor" viewBox="0 0 20 20"><path d="M4 4l12 6-12 6z"/></svg>
+                </button>
+              </div>
+              
+              {/* Status Badge */}
+              <div className="absolute top-3 right-3 px-2.5 py-1 bg-rose-500/20 border border-rose-500/50 text-rose-400 text-xs font-bold rounded-lg backdrop-blur-sm">
+                Anomaly Detected
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Athlete</span>
+                <span className="text-white font-medium">Michael Smith</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Movement</span>
+                <span className="text-white font-medium">Squat Jump</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-400">Issue Found</span>
+                <span className="text-rose-400 font-medium">Valgus Collapse (Left)</span>
+              </div>
+              
+              <button className="w-full mt-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-sm font-medium rounded-lg transition-colors border border-slate-700">
+                View Detailed Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+    </div>
+  );
+}
+</file>
+
+<file path=".gitignore">
+# Backend
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# Frontend (if not already handled by Next.js inner gitignore)
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+frontend/.env.development.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data & Uploads
+backend/*.db
+backend/uploads/
+backend/processed/
+</file>
+
+<file path="backend/schemas.py">
+from pydantic import BaseModel
+from typing import Optional
+
+# User Schemas
+class UserBase(BaseModel):
+    email: str
+    role: str
+
+class UserCreate(UserBase):
+    password: str
+
+class UserResponse(UserBase):
+    id: int
+    class Config:
+        from_attributes = True
+
+# Athlete Schemas
+class AthleteProfileBase(BaseModel):
+    sport_type: str
+    position: str
+    age: int
+    height: float
+    weight: float
+    injury_history: Optional[str] = None
+    training_load: Optional[str] = None
+
+class AthleteProfileCreate(AthleteProfileBase):
+    pass
+
+class AthleteProfileResponse(AthleteProfileBase):
+    id: int
+    user_id: int
+    class Config:
+        from_attributes = True
+
+# Auth
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+class GoogleLogin(BaseModel):
+    email: str
+    role: Optional[str] = "Athlete"
+
+class VideoAnalysisResponse(BaseModel):
+    id: int
+    activity: str
+    surface_type: Optional[str] = None
+    footwear: Optional[str] = None
+    rpe: Optional[int] = None
+    sleep_quality: Optional[int] = None
+    risk_score: float
+    risk_level: str
+    injury_probabilities: str
+    corrective_recommendation: str
+    created_at: str
+    class Config:
+        from_attributes = True
+</file>
+
+<file path="backend/video_processing.py">
+import cv2
+import os
+import uuid
+import math
+import numpy as np
+
+try:
+    import mediapipe as mp
+    mp_pose = mp.solutions.pose
+    mp_drawing = mp.solutions.drawing_utils
+except (ImportError, AttributeError):
+    mp = None
+    mp_pose = None
+    mp_drawing = None
+
+def calculate_angle(a, b, c):
+    """Calculate the angle between 3 points (x, y)."""
+    ang = math.degrees(math.atan2(c[1]-b[1], c[0]-b[0]) - math.atan2(a[1]-b[1], a[0]-b[0]))
+    return ang + 360 if ang < 0 else ang
+
+def process_video_with_mediapipe(input_path: str, output_dir: str, activity: str = "Unknown", surface_type: str = "Unknown", footwear: str = "Unknown", rpe: int = 5, sleep_quality: int = 5):
+    cap = cv2.VideoCapture(input_path)
+    if not cap.isOpened():
+        raise Exception("Error opening video stream or file")
+
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    
+    # Video Quality Validation
+    if width < 320 or height < 240:
+        cap.release()
+        raise Exception(f"Video resolution too low: {width}x{height}. Minimum required is 320x240.")
+    if frame_count < fps * 1: # less than 1 second
+        cap.release()
+        raise Exception(f"Video too short. Minimum duration is 1 second.")
+
+    filename = f"{uuid.uuid4()}.mp4"
+    output_path = os.path.join(output_dir, filename)
+
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+
+    risk_flags = []
+    min_knee_angle = 180
+    max_knee_extension = 0
+    
+    # Trajectory tracking (Motion trajectory analysis)
+    trajectory_points = []
+
+    with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
+        while cap.isOpened():
+            success, image = cap.read()
+            if not success:
+                break
+
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            image_rgb.flags.writeable = False
+            results = pose.process(image_rgb)
+            
+            image_rgb.flags.writeable = True
+            image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+            
+            if results.pose_landmarks:
+                mp_drawing.draw_landmarks(
+                    image_bgr,
+                    results.pose_landmarks,
+                    mp_pose.POSE_CONNECTIONS,
+                    landmark_drawing_spec=mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2),
+                    connection_drawing_spec=mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2)
+                )
+
+                landmarks = results.pose_landmarks.landmark
+                
+                # Keypoint extraction & Key Body Points
+                try:
+                    head = [landmarks[mp_pose.PoseLandmark.NOSE.value].x, landmarks[mp_pose.PoseLandmark.NOSE.value].y]
+                    shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x, landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+                    elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
+                    wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x, landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
+                    hip = [landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x, landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y]
+                    knee = [landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x, landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y]
+                    ankle = [landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x, landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y]
+                    foot = [landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].x, landmarks[mp_pose.PoseLandmark.LEFT_FOOT_INDEX.value].y]
+                    
+                    # Track ankle trajectory
+                    px_ankle = tuple(np.multiply(ankle, [width, height]).astype(int))
+                    trajectory_points.append(px_ankle)
+                    
+                    # Draw trajectory
+                    for i in range(1, len(trajectory_points)):
+                        cv2.line(image_bgr, trajectory_points[i-1], trajectory_points[i], (0, 255, 255), 2)
+                        
+                    # Calculate Knee Angle
+                    angle = calculate_angle(hip, knee, ankle)
+                    if angle > 180:
+                        angle = 360 - angle
+                        
+                    min_knee_angle = min(min_knee_angle, angle)
+                    max_knee_extension = max(max_knee_extension, angle)
+                    
+                    cv2.putText(image_bgr, str(int(angle)), 
+                           tuple(np.multiply(knee, [width, height]).astype(int)), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+                except Exception as e:
+                    pass
+
+            out.write(image_bgr)
+
+    cap.release()
+    out.release()
+    
+    # Assess risk based on activity
+    risk_score = 0
+    if activity in ["Squatting", "Jumping", "Landing"]:
+        if min_knee_angle < 70:
+            risk_flags.append("Extreme knee flexion detected (High Risk)")
+            risk_score += 40
+        elif min_knee_angle < 90:
+            risk_flags.append("Deep knee flexion detected (Moderate Risk)")
+            risk_score += 20
+    elif activity in ["Running", "Sprinting"]:
+        if max_knee_extension > 175:
+            risk_flags.append("Knee overextension (High Risk of hamstring injury)")
+            risk_score += 30
+    elif activity in ["Throwing"]:
+        risk_flags.append("Shoulder/Elbow dynamics monitored")
+    elif activity in ["Cutting Movements"]:
+        risk_flags.append("Monitoring knee valgus and sudden directional changes")
+        risk_score += 15
+            
+    # Environmental & Equipment Modifiers
+    if surface_type == "Artificial Turf" and footwear == "Cleats":
+        risk_flags.append("Turf + Cleats detected (Increased ACL strain risk)")
+        risk_score += 15
+    elif surface_type == "Hardwood" and footwear == "Running Shoes":
+        risk_flags.append("Hardwood + Running shoes (Potential grip/slip hazard)")
+        risk_score += 10
+
+    # Subjective Wellness Modifiers
+    fatigue_modifier = 0
+    if rpe > 7:
+        fatigue_modifier += 10
+        risk_flags.append("High Perceived Exertion (Fatigue risk)")
+    if sleep_quality < 5:
+        fatigue_modifier += 15
+        risk_flags.append("Poor Sleep Quality (CNS fatigue risk)")
+        
+    risk_score += fatigue_modifier
+            
+    if not risk_flags:
+        risk_flags.append("Optimal biomechanics observed")
+        
+    # Risk level categorization
+    total_risk = min(risk_score, 100)
+    if total_risk < 20:
+        risk_level = "Low"
+    elif total_risk < 50:
+        risk_level = "Moderate"
+    elif total_risk < 80:
+        risk_level = "High"
+    else:
+        risk_level = "Critical"
+        
+    return {
+        "filename": filename,
+        "analytics": {
+            "activity_analyzed": activity,
+            "min_knee_angle": round(min_knee_angle, 2),
+            "max_knee_extension": round(max_knee_extension, 2),
+            "risk_score": total_risk,
+            "risk_level": risk_level,
+            "risk_flags": risk_flags,
+            "surface_type": surface_type,
+            "footwear": footwear,
+            "rpe": rpe,
+            "sleep_quality": sleep_quality,
+            "frame_count": frame_count,
+            "fps": fps
+        }
+    }
+</file>
+
+<file path="frontend/src/app/dashboard/layout.tsx">
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { getUserFromToken } from "@/lib/auth";
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [user, setUser] = useState<{ email: string; role: string } | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const fetchedUser = getUserFromToken();
+    if (!fetchedUser) {
+      router.push("/");
+    } else {
+      setUser(fetchedUser);
+    }
+  }, [router]);
+
+  if (!user) {
+    return <div className="min-h-screen bg-slate-950 flex items-center justify-center text-white">Loading...</div>;
+  }
+
+  const getNavLinks = (role: string) => {
+    switch (role) {
+      case "Athlete":
+        return [
+          { name: "My Overview", href: "/dashboard" },
+          { name: "Profile", href: "/dashboard/profile" },
+          { name: "My Fitness", href: "/dashboard/fitness" },
+          { name: "Training Plans", href: "/dashboard/training" },
+          { name: "Progress", href: "/dashboard/progress" },
+        ];
+      case "Coach":
+        return [
+          { name: "Team Overview", href: "/dashboard" },
+          { name: "Player Monitoring", href: "#" },
+          { name: "Training Assignments", href: "#" },
+          { name: "Workload Alerts", href: "#" },
+        ];
+      case "Physiotherapist":
+        return [
+          { name: "Injury Dashboard", href: "/dashboard" },
+          { name: "Rehab Plans", href: "#" },
+          { name: "Recovery Status", href: "#" },
+          { name: "Return-to-Play", href: "#" },
+        ];
+      case "Sports Scientist":
+        return [
+          { name: "Performance Analytics", href: "/dashboard" },
+          { name: "Metrics Comparison", href: "#" },
+          { name: "Fatigue Trends", href: "#" },
+          { name: "Reports", href: "#" },
+        ];
+      case "Administrator":
+        return [
+          { name: "Platform Overview", href: "/dashboard" },
+          { name: "User Management", href: "#" },
+          { name: "Team Config", href: "#" },
+          { name: "System Settings", href: "#" },
+        ];
+      default:
+        return [{ name: "Overview", href: "/dashboard" }];
+    }
+  };
+
+  const navLinks = getNavLinks(user.role);
+
+  return (
+    <div className="flex min-h-screen bg-slate-950">
+      {/* Sidebar */}
+      <aside className="w-64 border-r border-slate-800 bg-slate-950/50 hidden md:flex flex-col">
+        <div className="h-16 flex items-center px-6 border-b border-slate-800">
+          <span className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-500">
+            SportsAI
+          </span>
+        </div>
+
+        <nav className="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
+          {navLinks.map((link, idx) => (
+            <Link key={idx} href={link.href} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-colors ${idx === 0 ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'}`}>
+              {idx === 0 && (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              )}
+              {idx !== 0 && (
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              )}
+              {link.name}
+            </Link>
+          ))}
+          <Link href="/dashboard/settings" className="flex items-center gap-3 px-4 py-3 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 rounded-xl font-medium transition-colors">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Settings
+          </Link>
+        </nav>
+
+        <div className="p-6 border-t border-slate-800">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-pink-500 flex items-center justify-center text-white font-bold">
+              {user.email.substring(0, 2).toUpperCase()}
+            </div>
+            <div className="overflow-hidden">
+              <div className="text-sm font-medium text-slate-200 truncate">{user.email}</div>
+              <div className="text-xs text-slate-500">{user.role}</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-screen overflow-hidden">
+        <header className="h-16 flex items-center justify-between px-8 border-b border-slate-800 bg-slate-950/50 backdrop-blur-md sticky top-0 z-10">
+          <h2 className="text-xl font-semibold capitalize">{user.role} Dashboard</h2>
+          <div className="flex items-center gap-4">
+            <button className="p-2 text-slate-400 hover:text-slate-200 transition-colors relative">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-pink-500 rounded-full border-2 border-slate-950"></span>
+            </button>
+            <button onClick={() => { localStorage.removeItem("token"); router.push("/"); }} className="px-4 py-2 text-sm font-medium text-slate-300 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">
+              Log Out
+            </button>
+          </div>
+        </header>
+        <div className="flex-1 overflow-y-auto p-8 relative">
+          <div className="absolute top-0 right-0 w-[40%] h-[40%] bg-indigo-500/10 blur-[100px] pointer-events-none" />
+          {children}
+        </div>
+      </main>
+    </div>
+  );
+}
+</file>
+
+<file path="frontend/src/lib/api.ts">
+export const API_URL = "http://127.0.0.1:8000";
+
+export const register = async (email: string, password: string, role: string) => {
+  const response = await fetch(`${API_URL}/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password, role }),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.detail || "Registration failed");
+  }
+
+  return response.json();
+};
+
+export const login = async (email: string, password: string) => {
+  const formData = new URLSearchParams();
+  formData.append("username", email);
+  formData.append("password", password);
+
+  const response = await fetch(`${API_URL}/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body: formData.toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Invalid credentials");
+  }
+
+  return response.json();
+};
+
+export const googleLogin = async (email: string, role: string = "Athlete") => {
+  const response = await fetch(`${API_URL}/auth/google`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, role }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Google login failed");
+  }
+
+  return response.json();
+};
+
+export const getMe = async (token: string) => {
+  const response = await fetch(`${API_URL}/users/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch user");
+  }
+
+  return response.json();
+};
+
+export const getAthleteProfile = async (token: string) => {
+  const response = await fetch(`${API_URL}/athlete/profile`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error("Failed to fetch profile");
+  }
+
+  return response.json();
+};
+
+export const createAthleteProfile = async (token: string, profileData: any) => {
+  const response = await fetch(`${API_URL}/athlete/profile`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(profileData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to create profile");
+  }
+
+  return response.json();
+};
+
+export const updateAthleteProfile = async (token: string, profileData: any) => {
+  const response = await fetch(`${API_URL}/athlete/profile`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(profileData),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update profile");
+  }
+
+  return response.json();
+};
+
+export const uploadVideo = async (token: string, file: File, activity: string, surfaceType: string = "Unknown", footwear: string = "Unknown", rpe: number = 5, sleepQuality: number = 5) => {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("activity", activity);
+  formData.append("surface_type", surfaceType);
+  formData.append("footwear", footwear);
+  formData.append("rpe", rpe.toString());
+  formData.append("sleep_quality", sleepQuality.toString());
+
+  const response = await fetch(`${API_URL}/video/upload`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to upload video");
+  }
+
+  return response.json();
+};
+</file>
+
+<file path="backend/main.py">
+import os
+import shutil
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlalchemy.orm import Session
+from datetime import timedelta
+from fastapi.staticfiles import StaticFiles
+
+import models
+import schemas
+import auth
+from database import engine, get_db
+from video_processing import process_video_with_mediapipe
+
+# Create all tables
+models.Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="Sports Injury Risk Detection API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+os.makedirs("uploads", exist_ok=True)
+os.makedirs("processed", exist_ok=True)
+
+app.mount("/processed", StaticFiles(directory="processed"), name="processed")
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = auth.jwt.decode(token, auth.SECRET_KEY, algorithms=[auth.ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise credentials_exception
+    except auth.JWTError:
+        raise credentials_exception
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+
+@app.post("/register", response_model=schemas.UserResponse)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    hashed_password = auth.get_password_hash(user.password)
+    db_user = models.User(email=user.email, hashed_password=hashed_password, role=user.role)
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/token", response_model=schemas.Token)
+def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/auth/google", response_model=schemas.Token)
+def login_with_google(google_data: schemas.GoogleLogin, db: Session = Depends(get_db)):
+    user = db.query(models.User).filter(models.User.email == google_data.email).first()
+    if not user:
+        hashed_password = auth.get_password_hash("google_mock_password_random_secure")
+        user = models.User(email=google_data.email, hashed_password=hashed_password, role=google_data.role)
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.email, "role": user.role}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.get("/users/me", response_model=schemas.UserResponse)
+def read_users_me(current_user: models.User = Depends(get_current_user)):
+    return current_user
+
+
+@app.post("/athlete/profile", response_model=schemas.AthleteProfileResponse)
+def create_athlete_profile(profile: schemas.AthleteProfileCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "Athlete":
+        raise HTTPException(status_code=403, detail="Only Athletes can create a profile")
+    
+    existing = db.query(models.AthleteProfile).filter(models.AthleteProfile.user_id == current_user.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Profile already exists")
+
+    db_profile = models.AthleteProfile(**profile.model_dump(), user_id=current_user.id)
+    db.add(db_profile)
+    db.commit()
+    db.refresh(db_profile)
+    return db_profile
+
+@app.get("/athlete/profile", response_model=schemas.AthleteProfileResponse)
+def get_athlete_profile(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    profile = db.query(models.AthleteProfile).filter(models.AthleteProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return profile
+
+@app.put("/athlete/profile", response_model=schemas.AthleteProfileResponse)
+def update_athlete_profile(profile_update: schemas.AthleteProfileCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if current_user.role != "Athlete":
+        raise HTTPException(status_code=403, detail="Only Athletes can update a profile")
+    
+    profile = db.query(models.AthleteProfile).filter(models.AthleteProfile.user_id == current_user.id).first()
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    for key, value in profile_update.model_dump().items():
+        setattr(profile, key, value)
+    
+    db.commit()
+    db.refresh(profile)
+    return profile
+
+from fastapi import Form
+
+@app.post("/video/upload")
+async def upload_and_process_video(
+    file: UploadFile = File(...), 
+    activity: str = Form("Unknown"),
+    surface_type: str = Form("Unknown"),
+    footwear: str = Form("Unknown"),
+    rpe: int = Form(5),
+    sleep_quality: int = Form(5),
+    current_user: models.User = Depends(get_current_user)
+):
+    # Save the uploaded file
+    file_path = f"uploads/{file.filename}"
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # Process the video
+    try:
+        result = process_video_with_mediapipe(
+            file_path, "processed", activity, surface_type, footwear, rpe, sleep_quality
+        )
+        return {
+            "message": "Video processed successfully", 
+            "original_file": file.filename,
+            "processed_url": f"/processed/{result['filename']}",
+            "analytics": result['analytics']
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+</file>
+
+<file path="frontend/src/app/page.tsx">
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { login, register, googleLogin } from "@/lib/api";
+
+export default function Home() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState("demo@sportsai.com");
+  const [password, setPassword] = useState("password123");
+  const [role, setRole] = useState("Athlete");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const router = useRouter();
+
+  const handleGoogleAuth = async () => {
+    const userEmail = prompt("Enter your Google Email for Demo Login:", "user@gmail.com");
+    if (!userEmail) return;
+
+    setLoading(true);
+    setError("");
+    try {
+      const data = await googleLogin(userEmail, role);
+      localStorage.setItem("token", data.access_token);
+      router.push("/dashboard");
+    } catch (err) {
+      setError("Google Login failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      if (isLogin) {
+        const data = await login(email, password);
+        localStorage.setItem("token", data.access_token);
+        router.push("/dashboard");
+      } else {
+        await register(email, password, role);
+        const data = await login(email, password);
+        localStorage.setItem("token", data.access_token);
+        router.push("/dashboard");
+      }
+    } catch (err) {
+      if (err instanceof Error) {
+        if (err.message.toLowerCase().includes("failed to fetch")) {
+          setError("Cannot connect to server. Please ensure the backend is running.");
+        } else {
+          setError(err.message || "An error occurred. Please try again.");
+        }
+      } else {
+        setError("An error occurred. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="flex-grow flex flex-col items-center justify-center relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-indigo-600/20 blur-[120px]" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-pink-600/20 blur-[120px]" />
+
+      <div className="z-10 w-full max-w-5xl px-6 py-20 flex flex-col md:flex-row items-center gap-12">
+
+        {/* Left column: Hero content */}
+        <div className="flex-1 space-y-8 text-center md:text-left">
+          <div className="inline-block px-4 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 text-sm font-medium tracking-wide">
+            AI-Powered Biomechanics
+          </div>
+
+          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight">
+            Predict &amp; Prevent <br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-500">
+              Sports Injuries
+            </span>
+          </h1>
+
+          <p className="text-lg md:text-xl text-slate-400 max-w-xl mx-auto md:mx-0">
+            Advanced pose estimation and biomechanical analysis to identify risks before injuries happen. Trusted by top athletes, coaches, and medical teams.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center gap-4 pt-4 justify-center md:justify-start">
+            <Link
+              href="/dashboard"
+              className="px-8 py-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] hover:shadow-[0_0_30px_rgba(79,70,229,0.6)] hover:-translate-y-0.5 w-full sm:w-auto text-center"
+            >
+              Enter Dashboard
+            </Link>
+            <button className="px-8 py-4 rounded-xl border border-slate-700 hover:border-slate-500 bg-slate-800/50 hover:bg-slate-800 text-white font-medium transition-all w-full sm:w-auto">
+              View Demo
+            </button>
+          </div>
+        </div>
+
+        {/* Right column: Login / Feature card */}
+        <div className="flex-1 w-full max-w-md">
+          <div className="glass-panel p-8 rounded-2xl relative group">
+            <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none" />
+
+            <div className="relative z-10 space-y-6">
+              <div className="text-center">
+                <h3 className="text-2xl font-bold text-white mb-2">{isLogin ? "Platform Access" : "Create Account"}</h3>
+                <p className="text-slate-400 text-sm">{isLogin ? "Sign in to your intelligent sports hub" : "Join the sports injury prevention platform"}</p>
+              </div>
+
+              <form className="space-y-4" onSubmit={handleSubmit}>
+                {error && <div className="text-rose-500 text-sm font-medium">{error}</div>}
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-300">Email Address</label>
+                  <input
+                    type="email"
+                    placeholder="coach@team.com"
+                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 placeholder:text-slate-600"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-slate-300">Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 placeholder:text-slate-600"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300 text-sm font-medium"
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                {!isLogin && (
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-slate-300">Role</label>
+                    <select
+                      className="w-full px-4 py-3 bg-slate-900/50 border border-slate-700 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-colors text-slate-100 appearance-none"
+                      value={role}
+                      onChange={(e) => setRole(e.target.value)}
+                    >
+                      <option value="Athlete">Athlete</option>
+                      <option value="Coach">Coach</option>
+                      <option value="Physiotherapist">Physiotherapist</option>
+                      <option value="Sports Scientist">Sports Scientist</option>
+                      <option value="Administrator">Administrator</option>
+                    </select>
+                  </div>
+                )}
+
+                {isLogin && (
+                  <div className="flex items-center justify-between text-sm">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" className="rounded border-slate-700 bg-slate-900/50 text-indigo-500 focus:ring-indigo-500/30" />
+                      <span className="text-slate-400">Remember me</span>
+                    </label>
+                    <a href="#" className="text-indigo-400 hover:text-indigo-300 transition-colors">Forgot password?</a>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="block w-full py-3 px-4 bg-white text-slate-900 text-center font-bold rounded-xl hover:bg-slate-200 transition-colors mt-6 disabled:opacity-50"
+                >
+                  {loading ? (isLogin ? "Signing In..." : "Creating Account...") : (isLogin ? "Sign In ->" : "Sign Up ->")}
+                </button>
+
+                <div className="mt-4 flex items-center justify-between">
+                  <hr className="w-full border-slate-700" />
+                  <span className="px-3 text-slate-400 text-sm">or</span>
+                  <hr className="w-full border-slate-700" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGoogleAuth}
+                  className="w-full py-3 px-4 bg-slate-800 border border-slate-700 text-white font-semibold rounded-xl hover:bg-slate-700 transition-colors flex items-center justify-center gap-3 mt-4"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                  </svg>
+                  {isLogin ? "Sign In with Google" : "Register with Google"}
+                </button>
+              </form>
+
+              <div className="text-center mt-4">
+                <button
+                  onClick={() => setIsLogin(!isLogin)}
+                  className="text-sm text-indigo-400 hover:text-indigo-300 transition-colors"
+                >
+                  {isLogin ? "Need an account? Register" : "Already have an account? Sign in"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+  );
+}
+</file>
+
+</files>
