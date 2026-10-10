@@ -45,6 +45,13 @@ GAIT_CONFIRM_BAND = 0.15
 # Plausible step rates (steps/min) — outside this the detector is counting noise.
 CADENCE_PLAUSIBLE_SPM = (60.0, 330.0)
 
+# Engine 2.3 video-level metrics. World landmarks are hip-centred (no absolute position), so every metric below is read
+# from RELATIVE geometry and timing; each constant says where its value comes from.
+FLIGHT_S = (0.15, 1.0)  # plausible flight time (s): 0.15 s <-> a 2.8 cm jump, 1.0 s <-> 1.2 m (h = g t^2 / 8)
+FLIGHT_MIN_FRAC = 0.25  # a flight is >= 1/4 of the dips either side; back-to-back cosine reps leave a ~16% gap that is only valley width
+LESS_CONTACT_DEG, LESS_DISPLACEMENT_DEG = 30.0, 45.0  # LESS error thresholds (Padua 2009): knee flexion at contact; contact -> peak
+LIFT_M, MIN_STANCE_S = 0.08, 1.0  # single-leg stance: free ankle >= 8 cm above the stance ankle (> pose jitter) for >= 1 s
+
 
 @dataclass
 class Rep:
@@ -185,7 +192,7 @@ def analyze_reps(series: dict[str, np.ndarray], movement_type: str, fps: float) 
 # Gait timing
 # --------------------------------------------------------------------------- #
 
-def analyze_gait(xyz: np.ndarray, fps: float) -> dict | None:
+def analyze_gait(xyz: np.ndarray, fps: float, amp_xyz: np.ndarray | None = None) -> dict | None:
     """Step cadence and left/right step-time asymmetry from feet-passing events.
 
     `xyz` is [T, 33, 3] world landmarks (hip-centred, NaN allowed). The signed separation
@@ -193,6 +200,9 @@ def analyze_gait(xyz: np.ndarray, fps: float) -> dict | None:
     crossing is one step event. The travel axis is found by PCA of the ankle-separation
     vector in the ground plane (x, z), so it works for a side-on camera AND oblique
     angles without being told which way the athlete runs.
+
+    `amp_xyz` (optional): the same track cleaned WITHOUT the despike pass. Timing keeps using `xyz`; the
+    amplitude metrics (stride length, overstride) read their peaks from `amp_xyz`, because the despike clips them.
 
     Returns None when no stride pattern is present. Timing only — no absolute angles.
     """
@@ -256,7 +266,128 @@ def analyze_gait(xyz: np.ndarray, fps: float) -> dict | None:
     if len(intervals) >= 4:
         a, b = intervals[0::2].mean(), intervals[1::2].mean()
         out["step_time_asymmetry_pct"] = round(float(100 * abs(a - b) / ((a + b) / 2)), 1)
+
+    # Engine 2.3. Per step (the window between two feet-passing events) take the moment the feet are furthest apart along
+    # the travel axis = foot contact of the leading foot (Zeni 2008: contact = maximum anterior foot position; validated
+    # for walking, and other kinematic methods time running contacts better, so read contact as +-a few frames).
+    #   stride length = 2 x median step length (one left + one right step)
+    #   overstride    = how far the LEADING ankle sits ahead of the pelvis (the world origin) at that moment; toes give "ahead".
+    # Read from the cleaned (not _smoothed) ankles: the 5-point average above is for timing and flattens the swing.
+    # The peaks come from `amp_xyz` (cleaned WITHOUT the Hampel despike) when given: the despike clips the extremes of fast
+    # cyclic motion, which read -7..-22% low on closed-form straight-leg running (DECISIONS 2026-10-09). The median over
+    # steps is what keeps a stray glitch out of the result.
+    # ponytail: one fixed travel axis, so a cut that changes direction mid-clip blurs both. Moved into
+    # analysis["movement"]["metrics"] by analyze_movement.
+    amp = xyz if amp_xyz is None else amp_xyz  # same frames and NaN pattern as xyz, so `ok` indexes both
+    lax, rax = (amp[ok][:, LANDMARK[f"{s}_ankle"]][:, [0, 2]] @ vt[0] for s in ("left", "right"))  # position along the travel axis
+    apart = lax - rax
+    peaks = [lo_i + int(np.argmax(np.abs(apart[lo_i:hi_i])))
+             for lo_i, hi_i in ((int(np.ceil(e0)), int(e1) + 1) for e0, e1 in zip(events[:-1], events[1:])) if hi_i > lo_i]
+    if peaks:
+        out["stride_length_m"] = round(float(2 * np.median(np.abs(apart[peaks]))), 2)
+        toes = np.concatenate([(amp[ok][:, LANDMARK[f"{s}_foot_index"]] - amp[ok][:, LANDMARK[f"{s}_heel"]])[:, [0, 2]] @ vt[0]
+                               for s in ("left", "right")])
+        if np.isfinite(toes).any() and np.nanmean(toes) != 0:
+            fwd = np.sign(np.nanmean(toes))
+            out["overstride_indicator"] = round(float(np.median([fwd * (lax[i] if fwd * apart[i] > 0 else rax[i]) for i in peaks])), 2)
     return out
+
+
+# --------------------------------------------------------------------------- #
+# Engine 2.3 video-level metrics (names match movement_metrics rows; units live in app/seed.py)
+# --------------------------------------------------------------------------- #
+
+def _deficit(x: float, ref: float) -> float:
+    """0 when x reaches `ref`, 1 when x is 0 (linear between, clipped)."""
+    return float(np.clip(1 - x / ref, 0, 1))
+
+
+def landing_jump_metrics(series: dict[str, np.ndarray], xyz: np.ndarray | None, fps: float, movement_type: str) -> dict:
+    """flight_time, contact_flexion, stiff_landing_index (landing, jumping) and countermovement_depth (jumping).
+
+    Reps are the knee-flexion cycles. FLIGHT is the knee-extended gap between one rep's end (take-off) and the next
+    rep's start (touch-down): hip-centred world landmarks carry no vertical position, so flight can only be inferred
+    from the timing of joint angles (resolution 1/fps). A "landing" clip counts every rep as a landing; a "jumping"
+    clip only the reps that follow a flight (the first dip is the countermovement, not a landing).
+    contact_flexion = knee flexion where the landing rep starts. stiff_landing_index = mean of two LESS deficits in
+    [0, 1]: 1 = no knee flexion at contact AND none from contact to peak (LESS errors: < 30 deg at contact, < 45 deg
+    displacement). A kinematic proxy, not a force. Displacement is a difference, so a constant angle bias cancels.
+    countermovement_depth = how far the hip drops towards the ankles in the dip before a flight (m).
+    A flight must also be >= FLIGHT_MIN_FRAC of the dips either side, else it is just the valley's width (the repo's
+    reps end where the knee is within 5% of its range, so edges read a little long: < 2 frames).
+    ponytail: a standing pause of 0.15-1.0 s between two dips still reads as flight; add an extension-velocity check
+    once real jump clips show false flights.
+    """
+    sig = primary_signal(series, movement_type)
+    if sig is None or fps <= 0:
+        return {}
+    reps = detect_reps_detailed(sig[1])
+    if not reps:
+        return {}
+    knee = _smooth(sig[1])
+    active = [(r.end - r.start) / fps for r in reps]
+    gaps = [(k, (reps[k + 1].start - reps[k].end) / fps) for k in range(len(reps) - 1)]
+    flights = [(k, g) for k, g in gaps if FLIGHT_S[0] <= g <= FLIGHT_S[1] and g >= FLIGHT_MIN_FRAC * min(active[k], active[k + 1])]
+    landings = list(range(len(reps))) if movement_type == "landing" else [k + 1 for k, _ in flights]
+    out: dict = {}
+    if flights:
+        out["flight_time"] = round(float(np.mean([g for _, g in flights])), 2)
+    if landings:
+        contact = [float(knee[reps[i].start]) for i in landings]
+        out["contact_flexion"] = round(float(np.mean(contact)), 1)
+        out["stiff_landing_index"] = round(float(np.mean([
+            (_deficit(c, LESS_CONTACT_DEG) + _deficit(reps[i].peak - c, LESS_DISPLACEMENT_DEG)) / 2
+            for i, c in zip(landings, contact)
+        ])), 2)
+    if movement_type == "jumping" and flights and xyz is not None and len(xyz) == len(knee):
+        ankle = xyz[:, [LANDMARK["left_ankle"], LANDMARK["right_ankle"]], 1].mean(axis=1)
+        hip = xyz[:, [LANDMARK["left_hip"], LANDMARK["right_hip"]], 1].mean(axis=1)
+        h = ankle - hip  # hip height above the ankles (y points DOWN)
+        dips = [seg[np.isfinite(seg)] for seg in (h[reps[k].start:reps[k].end + 1] for k, _ in flights)]
+        dips = [d.min() for d in dips if len(d)]
+        if dips and np.isfinite(h).any():
+            out["countermovement_depth"] = round(float(np.percentile(h[np.isfinite(h)], 95) - np.mean(dips)), 2)
+    return out
+
+
+def balance_metrics(xyz: np.ndarray | None, fps: float) -> dict:
+    """stance_time (s) and com_sway (m, SD) of the longest single-leg stance in the clip.
+
+    Single-leg stance = one ankle >= LIFT_M above the other (y points DOWN) for >= MIN_STANCE_S. COM = centre of the
+    four trunk landmarks; sway = SD of its horizontal image-plane (x) offset from the stance ankle, i.e. the body moving
+    over its base of support. Depth (z) is dropped: it is the least reliable monocular axis.
+    ponytail: pose jitter (~1-2 cm) is the noise floor of com_sway and quiet healthy stance sits near it; calibrate on
+    real single-leg clips before reading small values.
+    """
+    if xyz is None or fps <= 0:
+        return {}
+    lift = xyz[:, LANDMARK["right_ankle"], 1] - xyz[:, LANDMARK["left_ankle"], 1]  # > 0: left foot raised, right stands
+    a, b, stance = 0, 0, ""
+    for mask, ankle in ((lift > LIFT_M, "right_ankle"), (-lift > LIFT_M, "left_ankle")):
+        edges = np.flatnonzero(np.diff(np.r_[0, mask.astype(np.int8), 0]))  # run starts / first index after each run
+        for lo_i, hi_i in zip(edges[::2], edges[1::2]):
+            if hi_i - lo_i > b - a:
+                a, b, stance = int(lo_i), int(hi_i), ankle
+    if (b - a) / fps < MIN_STANCE_S:
+        return {}
+    trunk = [LANDMARK[n] for n in ("left_shoulder", "right_shoulder", "left_hip", "right_hip")]
+    d = xyz[a:b, trunk, 0].mean(axis=1) - xyz[a:b, LANDMARK[stance], 0]
+    out = {"stance_time": round((b - a) / fps, 2)}
+    if np.isfinite(d).sum() > 1:
+        out["com_sway"] = round(float(np.nanstd(d)), 3)
+    return out
+
+
+def trunk_rotation_velocity(series: dict[str, np.ndarray], fps: float) -> dict:
+    """Peak (95th percentile) rate of change of the hip-shoulder separation `trunk_rotation`, deg/s.
+
+    ponytail: the peak is capped by the frame rate and by the 10 Hz throwing low-pass (a 1000 deg/s pitch lasts ~4 frames
+    at 30 fps), so it under-reads fast throws: compare within an athlete, never against lab values.
+    """
+    r = series.get("trunk_rotation")
+    if r is None or len(r) < MIN_FRAMES or fps <= 0:
+        return {}
+    return {"trunk_rotation_velocity": round(float(np.percentile(np.abs(np.gradient(_smooth(r))) * fps, 95)))}
 
 
 # --------------------------------------------------------------------------- #
@@ -269,11 +400,13 @@ def analyze_movement(
     series: dict[str, np.ndarray],
     xyz: np.ndarray | None,
     fps: float,
+    amp_xyz: np.ndarray | None = None,
 ) -> dict:
     """Movement-appropriate analysis + label-sanity warnings.
 
     `series`: {metric_name: dense per-frame values} of VALIDATED metrics.
     `xyz`   : cleaned [T,33,3] world landmarks (for gait timing) or None.
+    `amp_xyz`: the same track cleaned without the despike pass (gait amplitude metrics only), or None.
     """
     out: dict = {"movement_type": movement_type}
     warnings: list[dict] = []
@@ -281,7 +414,7 @@ def analyze_movement(
     reps = analyze_reps(series, movement_type, fps) if series else None
     # Gait timing needs the direction of travel to lie in the image plane. Head-on/tail-on
     # (frontal) running puts travel along depth, which monocular video estimates worst.
-    gait = analyze_gait(xyz, fps) if (xyz is not None and camera_view != "frontal") else None
+    gait = analyze_gait(xyz, fps, amp_xyz) if (xyz is not None and camera_view != "frontal") else None
 
     if movement_type in REP_MOVEMENTS:
         out["reps"] = reps
@@ -316,6 +449,17 @@ def analyze_movement(
     else:  # sport_specific / unknown: report whatever structure exists, no label to contradict
         out["reps"] = reps
         out["gait"] = gait
+
+    metrics: dict = {}  # Engine 2.3 video-level metrics, keyed like movement_metrics.metric_name; absent = unavailable, never 0
+    if movement_type in GAIT_MOVEMENTS and gait:
+        metrics.update({k: gait.pop(k) for k in ("stride_length_m", "overstride_indicator") if k in gait})
+    elif movement_type in ("landing", "jumping"):
+        metrics.update(landing_jump_metrics(series, xyz, fps, movement_type))
+        if movement_type == "landing" and camera_view in ("sagittal", "other"):
+            metrics.update(balance_metrics(xyz, fps))
+    elif movement_type == "throwing":
+        metrics.update(trunk_rotation_velocity(series, fps))
+    out["metrics"] = metrics
 
     out["warnings"] = warnings
     return out

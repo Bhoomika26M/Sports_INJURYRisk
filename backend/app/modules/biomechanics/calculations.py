@@ -115,6 +115,57 @@ def limb_symmetry_index(left_peak: float, right_peak: float) -> float:
     return round((weaker / stronger) * 100, 1)
 
 
+def ankle_dorsiflexion_angle(world_landmarks: dict, side: str) -> float | None:
+    """Sagittal ankle angle, 0 deg = shank (ankle->knee) perpendicular to the foot (heel->toe), + = dorsiflexion.
+
+    None when a foot landmark is absent or the geometry is degenerate; NaN-free by construction.
+    The foot landmarks are the least reliable ones the pose model gives: MediaPipe vs IMU on 27 adults had
+    MAE ~7.5-7.8 deg and ICC < 0.5 for dorsiflexion (Russo 2026, Sensors 26:2148) against ~2-4.6 deg for the knee
+    (docs/DECISIONS.md 2026-10-08). Read it as a within-athlete trend, never as an absolute clinical angle.
+    """
+    try:
+        knee, ankle, heel, toe = (np.array(world_landmarks[str(LANDMARK[f"{side}_{n}"])]) for n in ("knee", "ankle", "heel", "foot_index"))
+    except KeyError:
+        return None
+    if not (np.linalg.norm(knee - ankle) > 1e-6 and np.linalg.norm(toe - heel) > 1e-6):  # also False for NaN (occluded)
+        return None
+    return round(90.0 - joint_angle(knee, ankle, ankle + toe - heel), 1)
+
+
+def hip_adduction_deviation(world_landmarks: dict, side: str) -> float | None:
+    """QUALITATIVE ONLY (frontal plane, same rule as knee_valgus_flag): knee offset medial to the hip as % of thigh length.
+
+    + = knee toward the midline (adducted), - = abducted. Frontal x is the lateral axis, like knee_valgus_flag.
+    No flag threshold: no validated cut-off exists for it, so it is stored as a deviation, never as a precise angle.
+    """
+    other = "right" if side == "left" else "left"
+    try:
+        hip, knee, hip_o = (np.array(world_landmarks[str(LANDMARK[n])]) for n in (f"{side}_hip", f"{side}_knee", f"{other}_hip"))
+    except KeyError:
+        return None
+    thigh, medial = np.linalg.norm(knee - hip), np.sign(hip_o[0] - hip[0])
+    if not (thigh > 1e-6) or medial == 0:
+        return None
+    return round(float(100 * medial * (knee[0] - hip[0]) / thigh), 1)
+
+
+def lower_body_extras(landmarks: dict, camera_view: str) -> list[dict]:
+    """Engine 2.3 per-frame metrics shared by every lower-body calculator (one call each, registry untouched)."""
+    out = []
+    for side in ("left", "right"):
+        if camera_view in ("sagittal", "other"):
+            v = ankle_dorsiflexion_angle(landmarks, side)
+            name = f"ankle_dorsiflexion_angle_{side}"
+            if v is not None:
+                out.append({"name": name, "value": v, "plane": "sagittal", "confidence": METRIC_CONFIDENCE[name]})
+        if camera_view in ("frontal", "other"):
+            v = hip_adduction_deviation(landmarks, side)
+            name = f"hip_adduction_deviation_{side}"
+            if v is not None:
+                out.append({"name": name, "value": v, "plane": "frontal", "confidence": METRIC_CONFIDENCE[name]})
+    return out
+
+
 # Mapping metric names to their confidence levels
 METRIC_CONFIDENCE = {
     "knee_flexion_angle_left": "validated",
@@ -124,4 +175,10 @@ METRIC_CONFIDENCE = {
     "trunk_lean_angle": "validated",
     "knee_valgus_deviation_left": "qualitative",
     "knee_valgus_deviation_right": "qualitative",
+    # Qualitative, not validated: SCIENCE_CONSTRAINTS sources knee/hip flexion and trunk lean only, and the one ankle study
+    # found (Russo 2026: MAE ~7.5 deg, ICC < 0.5) is below that bar. A qualitative metric never becomes an anomaly feature.
+    "ankle_dorsiflexion_angle_left": "qualitative",
+    "ankle_dorsiflexion_angle_right": "qualitative",
+    "hip_adduction_deviation_left": "qualitative",
+    "hip_adduction_deviation_right": "qualitative",
 }

@@ -337,6 +337,45 @@ MOVEMENT_METRICS = [
     ("cutting", "knee_valgus_deviation_right", "frontal", "qualitative"),
 ]
 
+# Engine 2.3 (docs/DECISIONS.md 2026-10-08). Rows above are 4-tuples (unit defaults to degrees); rows below add
+# (unit, description). Per-frame rows are stored in biomechanical_metrics; "video-level" rows live in
+# videos.analysis["movement"]["metrics"] under the same metric_name.
+_LOWER_BODY = ("squatting", "landing", "running", "sprinting", "jumping", "cutting")
+_ANKLE = ("0 = shank perpendicular to the foot (heel to toe), + = dorsiflexion. Qualitative: the weakest sagittal angle (foot "
+          "landmarks), MediaPipe vs IMU MAE ~7.5 deg, ICC < 0.5 (Russo 2026). A within-athlete trend flag, never an absolute "
+          "angle, and it does not feed anomaly scoring.")
+_HIP = "Qualitative frontal flag: knee offset medial to the hip as % of thigh length (+ adducted, - abducted). Never a precise angle."
+_VIDEO = "Video-level (videos.analysis.movement.metrics), not per-frame. "
+MOVEMENT_METRICS += [(m, f"ankle_dorsiflexion_angle_{s}", "sagittal", "qualitative", "degrees", _ANKLE)
+                     for m in _LOWER_BODY for s in ("left", "right")]
+MOVEMENT_METRICS += [(m, f"hip_adduction_deviation_{s}", "frontal", "qualitative", "% thigh length", _HIP)
+                     for m in _LOWER_BODY for s in ("left", "right")]
+for _m in ("running", "sprinting", "cutting"):
+    MOVEMENT_METRICS += [
+        (_m, "stride_length_m", "sagittal", "validated", "m",
+         _VIDEO + "2 x median step length (feet furthest apart along the travel axis). Side view only. Peaks are read from a track cleaned "
+                  "without the despike pass; within ~2% of the closed-form geometry on synthetic running. Compare within an athlete."),
+        (_m, "overstride_indicator", "sagittal", "validated", "m",
+         _VIDEO + "Median distance the leading ankle sits ahead of the pelvis where the feet are furthest apart (approximates foot contact; not scaled to leg length). No validated cut-off: compare within an athlete."),
+    ]
+for _m in ("landing", "jumping"):
+    MOVEMENT_METRICS += [
+        (_m, "flight_time", "sagittal", "validated", "s",
+         _VIDEO + "Knee-extended gap between reps (take-off to touch-down), inferred from joint-angle timing. Resolution 1/fps."),
+        (_m, "contact_flexion", "sagittal", "validated", "degrees", _VIDEO + "Knee flexion where each landing starts, mean."),
+        (_m, "stiff_landing_index", "sagittal", "validated", "index",
+         _VIDEO + "0 (soft) to 1 (stiff): mean of two LESS deficits (knee flexion at contact vs 30 deg, contact-to-peak vs 45 deg). Kinematic proxy, not a force."),
+    ]
+MOVEMENT_METRICS += [
+    ("jumping", "countermovement_depth", "sagittal", "validated", "m", _VIDEO + "Hip drop towards the ankles in the dip before a flight."),
+    ("landing", "stance_time", "sagittal", "validated", "s",
+     _VIDEO + "Longest single-leg stance (free ankle >= 8 cm above the stance ankle for >= 1 s)."),
+    ("landing", "com_sway", "sagittal", "validated", "m",
+     _VIDEO + "SD of the trunk-centre horizontal offset from the stance ankle during that stance. Noise floor is pose jitter (~1-2 cm)."),
+    ("throwing", "trunk_rotation_velocity", "transverse", "validated", "deg/s",
+     _VIDEO + "Peak (p95) rate of change of the hip-shoulder separation. Under-reads fast throws at 30 fps; compare within an athlete."),
+]
+
 
 async def seed_movements(db: AsyncSession) -> None:
     """Seed movement_types + movement_metrics registry (idempotent)."""
@@ -350,19 +389,20 @@ async def seed_movements(db: AsyncSession) -> None:
         logger.info(f"Created movement_type: {mt['code']}")
     await db.flush()
 
-    for movement_type, metric_name, plane, confidence in MOVEMENT_METRICS:
+    for movement_type, metric_name, plane, confidence, *extra in MOVEMENT_METRICS:
         result = await db.execute(
             select(MovementMetric).where(
                 MovementMetric.movement_type == movement_type,
                 MovementMetric.metric_name == metric_name,
             )
         )
-        if result.scalar_one_or_none():
+        row = result.scalar_one_or_none()
+        unit, description = (extra[0] if extra else "degrees"), (extra[1] if len(extra) > 1 else None)
+        if row:  # the code is the source of truth: a DB seeded by an older version converges instead of keeping stale tiers/text
+            row.plane, row.confidence, row.unit, row.description = plane, confidence, unit, description
             continue
-        db.add(MovementMetric(
-            movement_type=movement_type, metric_name=metric_name,
-            plane=plane, confidence=confidence, unit="degrees",
-        ))
+        db.add(MovementMetric(movement_type=movement_type, metric_name=metric_name, plane=plane, confidence=confidence,
+                              unit=unit, description=description))
     await db.flush()
     logger.info("Movement registry seeded")
 

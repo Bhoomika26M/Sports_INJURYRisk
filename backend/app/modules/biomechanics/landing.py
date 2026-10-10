@@ -5,7 +5,7 @@ Frontal-plane metrics (qualitative): knee_valgus/varus IC
 """
 
 from app.modules.biomechanics.calculations import (
-    knee_flexion_angle, hip_flexion_angle, trunk_lean_angle, knee_valgus_flag, METRIC_CONFIDENCE
+    knee_flexion_angle, hip_flexion_angle, trunk_lean_angle, knee_valgus_flag, METRIC_CONFIDENCE, lower_body_extras
 )
 
 
@@ -48,4 +48,5 @@ class LandingCalculator:
             if kv_r["deviation_pct"] is not None:
                 metrics.append({"name": "knee_valgus_deviation_right", "value": kv_r["deviation_pct"], "plane": "frontal", "confidence": METRIC_CONFIDENCE["knee_valgus_deviation_right"]})
 
+        metrics += lower_body_extras(landmarks, camera_view)  # Engine 2.3: ankle dorsiflexion (sagittal), hip adduction (frontal, qualitative)
         return metrics

@@ -31,7 +31,7 @@ import numpy as np
 
 from app.modules.biomechanics.movement_analysis import MEASUREMENT_NOISE_DEG, MIN_MEANINGFUL_RANGE_DEG
 
-ENGINE_VERSION = "2.2"   # 2.1: poorly visible legs excluded from the comparison; 2.2: canonical baseline order + provisional flag
+ENGINE_VERSION = "2.3"   # 2.1: poorly visible legs excluded from the comparison; 2.2: canonical baseline order + provisional flag; 2.3: ankle dorsiflexion + hip adduction per-frame metrics, video-level stride/landing/balance metrics
 
 # Below this many baseline videos the anomaly comparison is noisy: simulated at production scale, ~10% of PERFECTLY
 # NORMAL videos score as strongly anomalous with 10 baseline videos, ~2% with 30 (tests/test_anomaly_calibration.py).
