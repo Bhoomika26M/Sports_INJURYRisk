@@ -12,7 +12,10 @@ import math
 
 import numpy as np
 
-from app.modules.biomechanics.movement_analysis import analyze_movement
+from app.modules.biomechanics.classification import (
+    AUTO, CLASSIFICATION_VERSION, WARN_MIN_CONF, classify_movement, compare_labels,
+)
+from app.modules.biomechanics.movement_analysis import GAIT_MOVEMENTS, analyze_movement
 from app.modules.biomechanics.registry import get_calculator
 from app.modules.pose.analysis import (
     Track,
@@ -101,17 +104,34 @@ def _jsonable(o):
     return o
 
 
+def identify_labels(frame_results: list[dict], fps: float | None) -> tuple[str, str] | None:
+    """(movement_type, camera_view) the footage itself shows, for an upload that declared none (AUTO); else None.
+
+    Both verdicts must clear WARN_MIN_CONF: a guess that is not sure would put the clip in the wrong baseline, so
+    it fails instead. The classifier caps jumping / landing / cutting below that bar, so those are always chosen by hand.
+    """
+    track = build_track(frame_results, fps)
+    if track is None:
+        return None
+    c = classify_movement(clean_track(track), None, track.fps_eff)
+    if "unknown" in (c["movement_type"], c["camera_view"]) or c["confidence"] < WARN_MIN_CONF:
+        return None
+    return c["movement_type"], c["camera_view"]
+
+
 def analyze_frames(
     frame_results: list[dict],
     movement_type: str,
     camera_view: str,
     fps: float | None,
     diagnostics: dict | None = None,
+    auto: bool = False,
 ) -> tuple[list[dict], dict]:
     """Raw detected frames -> (per-frame metrics, analysis report).
 
     `diagnostics` is the dict the pose pass filled in (total frames, lighting, whether
     contrast enhancement ran, ...). Returns ([], report-with-poor-grade) when nothing usable.
+    `auto`: the labels were identified from the footage (identify_labels), not declared, so there is nothing to agree with.
     """
     diagnostics = diagnostics or {}
     track = build_track(frame_results, fps)
@@ -125,7 +145,9 @@ def analyze_frames(
 
     validated = [m for m in metrics if m["confidence"] == "validated"]
     series = _dense_series(metrics, track)
-    movement = analyze_movement(movement_type, camera_view, series, cleaned, track.fps_eff)
+    # gait amplitude (stride length, overstride) is read off peaks the despike would clip: give it a track without that pass
+    amp = clean_track(track, movement_type, despike=False) if movement_type in GAIT_MOVEMENTS else None
+    movement = analyze_movement(movement_type, camera_view, series, cleaned, track.fps_eff, amp)
 
     quality = quality_report(
         track, cleaned,
@@ -142,10 +164,24 @@ def analyze_frames(
         if quality["grade"] == "good":
             quality["grade"] = "fair"
 
+    # What does the clip actually show? Identified from kinematics on a LABEL-NEUTRAL cleaning pass, so the
+    # verdict can't be shaped by the label it checks. Advisory: suggests and warns, never relabels or rescores.
+    classification = classify_movement(clean_track(track), series, track.fps_eff)
+    labels = compare_labels(classification, movement_type, camera_view)
+    if auto:  # nothing was declared, so nothing can disagree: the verdict IS the label (the UI says so)
+        none = {"movement_type": None, "camera_view": None}
+        labels = {"declared": {"movement_type": AUTO, "camera_view": AUTO}, "agrees": dict(none), "suggested": dict(none),
+                  "warnings": []}
+    legacy_mismatch = any(w["code"] == "movement_type_mismatch_suspected" for w in quality["warnings"])
+    # one problem, one warning: the stride-in-a-rep-clip warning above already says it
+    quality["warnings"].extend(w for w in labels.pop("warnings")
+                               if not (legacy_mismatch and w["code"] == "classifier_movement_mismatch_suspected"))
+
     analysis = {
         "version": ANALYSIS_VERSION,
         "quality": quality,
         "movement": movement,
+        "classification": {"version": CLASSIFICATION_VERSION, **classification, **labels},
         "pipeline": {k: diagnostics.get(k) for k in ("stride", "model", "frames_read", "frame_errors") if k in diagnostics},
     }
     return metrics, _jsonable(analysis)
