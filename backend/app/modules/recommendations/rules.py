@@ -17,6 +17,30 @@ Z_FLAG = 2.0  # |z| at which a single metric is called out
 # priority 1 = act first ... 5 = maintenance
 MAX_RECOMMENDATIONS = 8
 
+# One recommendation per literature heuristic flag (risk_scoring/movement_signals.py), emitted only when the flag is
+# "flagged". Stiff landing and depth REUSE the title of the generic population-relative finding above, which they
+# replace when both fire: same advice, but with the cited evidence and the absolute value.
+FLAG_RECS = {
+    "stiff_landing": ("exercise", 2, "Soft-landing and depth-control drills",
+        "Knee flexion changed by only {value:.0f}° across this landing clip; the Landing Error Scoring System counts "
+        "less than {threshold:.0f}° between initial contact and peak flexion as an error (Padua 2009). Stiff, upright "
+        "landings carry higher impact forces than soft ones (SL-LESS study) and reduced knee flexion at landing is "
+        "associated with higher ACL loading (systematic review, PMC11826863). Progress landing drills from box "
+        "step-downs to bilateral then single-leg landings, cueing 'land quietly, knees tracking over toes'; re-record "
+        "to track change. Screening aid: have a coach or physiotherapist confirm."),
+    "inadequate_depth": ("exercise", 3, "Depth progression (tempo / box squat)",
+        "Peak knee flexion was {value:.0f}°, short of the {threshold:.0f}° that separates partial from parallel squats. "
+        "In a 10-week trial of loaded squats only the half-squat group reported rising pain, stiffness and disability "
+        "(Pallarés 2019). Use tempo or box squats to a progressively deeper, pain-free target depth and re-record to "
+        "confirm. Pose estimates tend to over-read squat angles, so the true depth may be shallower than shown."),
+    "low_cadence": ("training_modification", 3, "Gradually raise running step rate",
+        "Step rate was {value:.0f} steps/min. High-school runners in the lowest step-rate tertile (up to "
+        "{threshold:.0f}) had higher odds of shin injury (Luedke 2016) and a lower step rate predicted bone stress "
+        "injury in collegiate runners (Kliethermes 2021); a higher step rate has been shown to reduce impact forces "
+        "and joint loading. Try a small, gradual increase (for example with a metronome) and re-record at the same "
+        "pace. Step rate rises with speed, so a slow jog reads low."),
+}
+
 
 def _feat(features: list[dict], metric: str, stat: str) -> dict | None:
     for f in features:
@@ -171,6 +195,13 @@ def generate_recommendations(assessment: dict, movement_type: str) -> list[dict]
     if cat_level("overuse") in elevated and not load.get("available"):
         add("recovery", 3, "Log training load to enable overuse monitoring",
             "Overuse risk cannot be assessed well without a training log. Record session duration and RPE for 4 weeks.")
+
+    # --- literature heuristic flags (flagged only) -------------------------------------
+    for fl in assessment.get("heuristic_flags") or []:
+        if fl.get("status") == "flagged" and fl.get("key") in FLAG_RECS:
+            category, priority, title, text = FLAG_RECS[fl["key"]]
+            recs[:] = [r for r in recs if r["title"] != title]   # the evidence-linked version supersedes the generic one
+            add(category, priority, title, text.format(value=fl["value"], threshold=fl["threshold"]))
 
     # --- keep it honest when there is nothing to fix -----------------------------------
     if not recs:

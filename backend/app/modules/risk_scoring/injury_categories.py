@@ -12,6 +12,8 @@ actually supports, which is lopsided:
   trunk flexion, knee valgus — the last only as a qualitative flag here). For hamstring,
   ankle and shoulder, single kinematic variables are reported as inconsistent or unvalidated
   from a single camera, so NO video driver is used for them and the result says so.
+* The one exception is a literature-cited heuristic flag (movement_signals.FLAGS): a flag with a published
+  cut-off and an injury-outcome link may add ONE capped driver (stiff landing -> ACL, low step rate -> overuse).
 
 Output is a risk LEVEL built from named factors, never an injury probability.
 """
@@ -28,6 +30,13 @@ from app.modules.risk_scoring.scoring import (
 # z at which a deviation in the risky direction starts to count / counts fully.
 KIN_Z_START, KIN_Z_FULL = 1.0, 3.0
 VALGUS_FLAG_PCT = 10.0  # same qualitative threshold as biomechanics.calculations.knee_valgus_flag
+
+# Heuristic flag -> (category, weight). Only flags with an injury-outcome link feed a category; partial-depth
+# squat (loaded-squat pain/ROM evidence) and overstride (not measurable) deliberately feed none.
+FLAG_DRIVERS = {"stiff_landing": ("acl", 1.5), "low_cadence": ("overuse", 1.5)}
+# Coarse, and capped below "critical" (> 75): one absolute cut-off from one study cohort must not be able to
+# decide a category on its own, even when it is the category's only driver.
+FLAG_POINTS = {"ok": 0.0, "borderline": 33.0, "flagged": 66.0}   # "not_assessable" adds no driver
 
 CATEGORIES = {
     "acl": {
@@ -115,8 +124,9 @@ def assess_injury_categories(
     injuries: list[dict],
     components: dict[str, Component],
     qualitative: dict[str, float] | None,
+    heuristic_flags: list[dict] | None = None,
 ) -> dict:
-    """`injuries`: score_history detail rows (body_part, region, status, ...)."""
+    """`injuries`: score_history detail rows (body_part, region, status, ...). `heuristic_flags`: movement_signals output."""
     feats = anomaly["features"] if anomaly else []
     load = components.get("training_load_indicators")
     fatigue = components.get("fatigue_indicators")
@@ -180,6 +190,12 @@ def assess_injury_categories(
             unresolved = [i for i in injuries if i["status"] == "unresolved"]
             add("unresolved prior injury", (100.0 if unresolved else 0.0), 1.0, "history")
 
+        for fl in heuristic_flags or ():
+            cat, weight = FLAG_DRIVERS.get(fl["key"], (None, 0.0))
+            if cat == key and fl["status"] in FLAG_POINTS:
+                add(fl["label"], FLAG_POINTS[fl["status"]], weight, "heuristic_flag",
+                    {"flag": fl["key"], "value": fl["value"], "threshold": fl["threshold"], "unit": fl["unit"]})
+
         if drivers:
             total_w = sum(d["weight"] for d in drivers)
             risk = sum(d["score"] * d["weight"] for d in drivers) / total_w
@@ -190,7 +206,8 @@ def assess_injury_categories(
                 "level": categorize(risk),
                 "drivers": sorted(drivers, key=lambda d: d["score"] * d["weight"], reverse=True),
                 "based_on": sources,
-                "video_kinematics_used": video_on and any(d["source"] == "video" for d in drivers),
+                "video_kinematics_used": (video_on and any(d["source"] == "video" for d in drivers))
+                                         or any(d["source"] == "heuristic_flag" for d in drivers),
                 "evidence": meta["evidence"],
             }
         else:

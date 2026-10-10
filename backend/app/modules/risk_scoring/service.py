@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.modules.athletes.models import Athlete, InjuryHistory
 from app.modules.athletes.service import compute_acwr, compute_rpe_trend
-from app.modules.biomechanics.movement_analysis import analyze_reps
+from app.modules.biomechanics.movement_analysis import REP_MOVEMENTS, analyze_reps
 from app.modules.notifications.service import create_notification, recipients_for_athlete
 from app.modules.recommendations.models import Recommendation
 from app.modules.recommendations.rules import generate_recommendations
@@ -26,6 +26,7 @@ from app.modules.risk_scoring.anomaly import assess_video_anomaly
 from app.modules.risk_scoring.baselines import min_baseline_athletes, min_baseline_videos
 from app.modules.risk_scoring.features import (
     drop_unreliable_side_features,
+    fetch_all_video_features,
     fetch_baseline_set,
     fetch_metric_series,
     fetch_qualitative_extremes,
@@ -33,6 +34,7 @@ from app.modules.risk_scoring.features import (
 )
 from app.modules.risk_scoring.injury_categories import assess_injury_categories
 from app.modules.risk_scoring.models import AnomalyScore, RiskScore
+from app.modules.risk_scoring.movement_signals import athlete_trend, fatigue_index, heuristic_flags, rep_outliers
 from app.modules.risk_scoring.scoring import (
     ENGINE_VERSION,
     MIN_LEG_USABLE_PCT,
@@ -46,7 +48,7 @@ from app.modules.risk_scoring.scoring import (
     score_history,
     score_training_load,
 )
-from app.modules.video.models import Video
+from app.modules.video.models import Video, VideoProcessingStatus
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +95,53 @@ async def _safe(coro, what: str):
     except Exception:  # noqa: BLE001
         logger.exception("risk assessment: could not compute %s; component treated as unavailable", what)
         return None
+
+
+async def _population_rep_peaks(db: AsyncSession, video: Video, signal: str | None) -> list[tuple[str, list[float]]]:
+    """(athlete_id, rep_peaks) of OTHER completed, caveat-free videos of this movement that counted reps on the same signal."""
+    rows = (await db.execute(select(Video.athlete_id, Video.analysis).where(
+        Video.movement_type == video.movement_type, Video.processing_status == VideoProcessingStatus.completed,
+        Video.coverage_caveat.is_(None), Video.id != video.id,
+    ))).all()
+    out = []
+    for athlete_id, analysis in rows:
+        reps = ((analysis or {}).get("movement") or {}).get("reps") or {}
+        if signal and reps.get("signal") == signal and reps.get("rep_peaks"):
+            out.append((str(athlete_id), reps["rep_peaks"]))
+    return out
+
+
+async def _prior_features(db: AsyncSession, video: Video) -> list[dict[str, float]]:
+    """Feature vectors of this athlete's EARLIER videos of the same movement and camera view, oldest first."""
+    ids = (await db.scalars(select(Video.id).where(
+        Video.athlete_id == video.athlete_id, Video.movement_type == video.movement_type,
+        Video.camera_view == video.camera_view, Video.created_at < video.created_at, Video.id != video.id,
+    ).order_by(Video.created_at))).all()
+    # ponytail: a second population scan per assessment; filter by athlete in SQL if the video count grows
+    per_video = await fetch_all_video_features(db, video.movement_type)
+    return [per_video[str(i)] for i in ids if str(i) in per_video]
+
+
+async def _extras(db: AsyncSession, video: Video, features: dict[str, float], unreliable_sides: list[str],
+                  dynamics: dict | None, analysis: dict) -> dict:
+    """Rep outliers, heuristic flags, athlete trend, fatigue index. Additive: none of them enters the composite."""
+    mv, peaks = video.movement_type, (dynamics or {}).get("rep_peaks") or []
+    no_reps = {"available": False, "reason": "repetition movements only (squat, landing, jump, throw)"}
+    if mv not in REP_MOVEMENTS:
+        outliers = fatigue = no_reps
+    else:
+        fatigue = fatigue_index(peaks)
+        if unreliable_sides:   # rep peaks average both knees; one hidden leg would pollute them
+            outliers = {"available": False, "reason": "a leg was not reliably visible, so rep peaks are not comparable"}
+        else:
+            outliers = rep_outliers(peaks, await _population_rep_peaks(db, video, (dynamics or {}).get("signal")),
+                                    min_baseline_videos(), min_baseline_athletes())
+    return {
+        "heuristic_flags": heuristic_flags(mv, features, (analysis.get("movement") or {}).get("gait")),
+        "rep_outliers": outliers,
+        "fatigue_index": fatigue,
+        "athlete_trend": athlete_trend(features, await _prior_features(db, video)),
+    }
 
 
 async def compute_assessment(db: AsyncSession, video: Video, athlete: Athlete) -> dict:
@@ -146,12 +195,14 @@ async def compute_assessment(db: AsyncSession, video: Video, athlete: Athlete) -
     combined = combine(components)
     sub_scores = compute_sub_scores(components, combined["overall_score"], dynamics)
     qualitative = await fetch_qualitative_extremes(db, video.id)
+    extras = await _safe(_extras(db, video, features, unreliable_sides, dynamics, analysis), "movement signals") or {}
     categories = assess_injury_categories(
         movement_type=video.movement_type,
         anomaly=anomaly,
         injuries=history.detail.get("injuries", []),
         components={c.key: c for c in components},
         qualitative=qualitative,
+        heuristic_flags=extras.get("heuristic_flags"),
     )
 
     reliability = quality.get("grade", "unknown")
@@ -166,6 +217,7 @@ async def compute_assessment(db: AsyncSession, video: Video, athlete: Athlete) -
         "missing_components": combined["missing_components"],
         "sub_scores": sub_scores,
         "injury_categories": categories,
+        **extras,   # heuristic_flags, rep_outliers, fatigue_index, athlete_trend (absent only if _extras failed; logged)
         "baseline": {
             "videos": len(baseline_rows), "required": need,
             "athletes": baseline.athletes, "required_athletes": need_athletes,
