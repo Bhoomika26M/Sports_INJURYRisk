@@ -13,6 +13,7 @@ import logging
 from sqlalchemy import delete, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.biomechanics.classification import AUTO
 from app.modules.pose.processing import analyze_frames
 from app.modules.video.models import BiomechanicalMetric, PoseFrame, Video, VideoProcessingStatus
 
@@ -34,8 +35,10 @@ async def reprocess_video(db: AsyncSession, video: Video) -> dict:
                        "world_landmarks": kp, "visibility": vis})
 
     fps = float(video.fps) if video.fps else None
+    # the labels of an "auto" upload were overwritten with the identified ones: keep saying so
+    auto = ((video.analysis or {}).get("classification") or {}).get("declared", {}).get("movement_type") == AUTO
     metrics, analysis = analyze_frames(frames, video.movement_type, video.camera_view, fps,
-                                       {"frames_processed": len(frames)})
+                                       {"frames_processed": len(frames)}, auto=auto)
 
     await db.execute(delete(BiomechanicalMetric).where(BiomechanicalMetric.video_id == video.id))
     if metrics:

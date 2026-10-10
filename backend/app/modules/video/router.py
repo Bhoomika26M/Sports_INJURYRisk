@@ -26,8 +26,11 @@ from app.modules.video.schemas import (
     BiomechanicsResponse, BiomechanicsSummary, BiomechanicsFrame,
 )
 from app.modules.biomechanics.calculations import limb_symmetry_index
+from app.modules.biomechanics.classification import AUTO
 
-SAFE_FILENAME_PATTERN = re.compile(r'^[\w\-. ]{1,200}\.(mp4|mov|webm|avi|mkv|m4v)$', re.IGNORECASE)
+# One list for the filename gate AND the storage-key gate (main.py): they drifted once (storage PUT still said mp4|mov).
+VIDEO_EXTENSIONS = "mp4|mov|webm|avi|mkv|m4v"
+SAFE_FILENAME_PATTERN = re.compile(rf'^[\w\-. ]{{1,200}}\.({VIDEO_EXTENSIONS})$', re.IGNORECASE)
 
 def _safe_filename(original: str) -> str:
     base = os.path.basename(original)
@@ -111,15 +114,16 @@ async def create_upload_url(
     if current_user.role == UserRole.athlete and athlete.user_id != current_user.id:
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Athletes can only upload for themselves")
 
-    # Validate movement_type exists
-    from app.modules.video.models import MovementType
-    mt = await db.scalar(select(MovementType).where(MovementType.code == data.movement_type))
-    if not mt:
-        raise api_error(400, "INVALID_MOVEMENT_TYPE", f"Unsupported movement type: {data.movement_type}")
+    if data.movement_type != AUTO:  # "auto" (both labels, enforced by the schema) is resolved from the footage by the worker
+        # Validate movement_type exists
+        from app.modules.video.models import MovementType
+        mt = await db.scalar(select(MovementType).where(MovementType.code == data.movement_type))
+        if not mt:
+            raise api_error(400, "INVALID_MOVEMENT_TYPE", f"Unsupported movement type: {data.movement_type}")
 
-    # Validate camera_view is allowed for this movement_type
-    if data.camera_view not in mt.camera_views:
-        raise api_error(400, "INVALID_CAMERA_VIEW", f"Camera view '{data.camera_view}' not supported for {mt.display_name}. Allowed: {mt.camera_views}")
+        # Validate camera_view is allowed for this movement_type
+        if data.camera_view not in mt.camera_views:
+            raise api_error(400, "INVALID_CAMERA_VIEW", f"Camera view '{data.camera_view}' not supported for {mt.display_name}. Allowed: {mt.camera_views}")
 
     safe_name = _safe_filename(data.original_filename)
     video = Video(
@@ -181,7 +185,7 @@ async def confirm_upload(
         await _reject_upload(db, video, "validator_unavailable", "Video validator (ffprobe) is not installed on this host", local_path)
     cmd = [
         ffprobe_bin, "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,r_frame_rate,duration",
+        "-show_entries", "stream=width,height,r_frame_rate,duration:format=duration",
         "-of", "json", local_path
     ]
     try:
@@ -195,7 +199,9 @@ async def confirm_upload(
             fps = float(num) / float(den) if float(den) != 0 else 0.0
         else:
             fps = float(fps_str)
-        duration = float(stream["duration"])
+        # WebM / Matroska carry no per-stream duration: fall back to the container's
+        d = stream.get("duration")
+        duration = float(d if d not in (None, "N/A") else data["format"]["duration"])
     except Exception as e:
         logger.error(f"ffprobe failed: {e}")
         await _reject_upload(db, video, "invalid_format", "Could not parse video format", local_path)

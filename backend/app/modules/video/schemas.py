@@ -3,14 +3,23 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
+
+from app.modules.biomechanics.classification import AUTO
 
 
 class VideoUploadRequest(BaseModel):
     athlete_id: str
     movement_type: str = Field(min_length=1, max_length=50)
-    camera_view: str = Field(pattern="^(sagittal|frontal|other)$")
+    camera_view: str = Field(pattern="^(sagittal|frontal|other|auto)$")
     original_filename: str = Field(min_length=1, max_length=255)
+
+    @model_validator(mode="after")
+    def _auto_means_both(self):
+        """"auto" asks the footage to decide, and it decides both labels together: one of them alone is a client bug."""
+        if (self.movement_type == AUTO) != (self.camera_view == AUTO):
+            raise ValueError('movement_type and camera_view must both be "auto" or neither')
+        return self
 
 
 class VideoUploadResponse(BaseModel):

@@ -9,7 +9,7 @@ from app.config import settings
 from app.core.health import router as health_router
 from app.modules.auth.router import router as auth_router
 from app.modules.athletes.router import router as athletes_router
-from app.modules.video.router import router as videos_router
+from app.modules.video.router import VIDEO_EXTENSIONS, router as videos_router
 from app.modules.risk_scoring.router import router as risk_scoring_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.analytics.router import router as analytics_router
@@ -61,7 +61,7 @@ from app.modules.video.models import Video, VideoProcessingStatus
 
 os.makedirs(settings.upload_dir, exist_ok=True)
 
-STORAGE_KEY_PATTERN = re.compile(r'^[a-f0-9-]{36}_[\w\-. ]{1,200}\.(mp4|mov)$', re.IGNORECASE)
+STORAGE_KEY_PATTERN = re.compile(rf'^[a-f0-9-]{{36}}_[\w\-. ]{{1,200}}\.({VIDEO_EXTENSIONS})$', re.IGNORECASE)
 
 @app.put("/api/v1/local-storage/{key:path}")
 async def upload_local_file(

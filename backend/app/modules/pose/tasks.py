@@ -17,7 +17,8 @@ from app.modules.pose.pipeline import (
     track_persons, run_mediapipe_full_pass, extract_thumbnail, compute_stride, probe_video,
 )
 from app.modules.pose.coverage import assess_coverage, summarize_tracking
-from app.modules.pose.processing import analyze_frames, compute_biomechanics  # noqa: F401  (compute_biomechanics re-exported)
+from app.modules.pose.processing import analyze_frames, compute_biomechanics, identify_labels  # noqa: F401  (compute_biomechanics re-exported)
+from app.modules.biomechanics.classification import AUTO
 from app.modules.biomechanics.calculations import (
     knee_flexion_angle, trunk_lean_angle, knee_valgus_flag, limb_symmetry_index, METRIC_CONFIDENCE
 )
@@ -120,7 +121,7 @@ async def store_biomechanical_metrics(db, video_id: str, metrics: list[dict]):
 async def process_video(ctx: dict, video_id: str) -> dict:
     """
     arq worker task. Enqueued automatically by confirm-upload on successful validation.
-    Timeout: 5 minutes (pessimistic — arq marks it failed and does not silently hang).
+    Timeout: WorkerSettings.job_timeout (30 min on the CPU-only image — arq marks it failed, it does not silently hang).
     Retries: up to 2 on unhandled exceptions; VideoProcessingError is NOT retried
     (it means the video itself is the problem, not a transient failure — retrying won't fix it).
     """
@@ -177,9 +178,13 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             annotated_filename = f"annotated_{video_id}.mp4"
             annotated_path = os.path.join(settings.upload_dir, annotated_filename)
 
-            # Define progress callback for MediaPipe
+            # Progress callback for MediaPipe. It is scheduled from the worker thread while the main
+            # coroutine is suspended on run_in_executor, so it MUST NOT touch this job's `db` session:
+            # two coroutines sharing one AsyncSession raise IllegalStateChangeError ("_connection_for_bind()
+            # is already in progress"). Give each progress write its own short-lived session.
             async def _progress(pct):
-                await update_video_progress(db, video_id, pct)
+                async with async_session_factory() as progress_db:
+                    await update_video_progress(progress_db, video_id, pct)
 
             import asyncio
             loop = asyncio.get_running_loop()
@@ -212,13 +217,25 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 )
             # "partial" is accepted with an explicit caveat; "ok" carries a note only for multi-person clips.
 
+            # An "auto" upload declared no labels: the footage decides, or the upload fails (before anything is stored).
+            movement_type, camera_view, auto = video.movement_type, video.camera_view, video.movement_type == AUTO
+            if auto:
+                labels = identify_labels(frame_results, fps)
+                if labels is None:
+                    raise VideoProcessingError(
+                        "movement_not_identified",
+                        "The movement and camera angle could not be identified confidently from this clip. "
+                        "Upload it again and choose them yourself.",
+                    )
+                movement_type, camera_view = labels
+                await update_video_status(db, video_id, VideoProcessingStatus.processing,
+                                          movement_type=movement_type, camera_view=camera_view)
+
             await store_pose_frames(db, video_id, frame_results)
 
             # Step 3 — clean landmarks (visibility gating, gap-fill, despike, smoothing), compute
             # movement-type metrics, movement-specific analysis and the quality report.
-            metrics, analysis = analyze_frames(
-                frame_results, video.movement_type, video.camera_view, fps, diagnostics
-            )
+            metrics, analysis = analyze_frames(frame_results, movement_type, camera_view, fps, diagnostics, auto=auto)
             await store_biomechanical_metrics(db, video_id, metrics)
 
             await update_video_status(
