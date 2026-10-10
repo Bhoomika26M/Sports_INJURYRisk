@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api, ApiError } from "@/lib/api-client";
 import { useVideo } from "@/lib/hooks";
-import { breakdownLabel, humanize, LEVEL_TONE, metricLabel, movementLabel, RISK, SUB_SCORE_LABELS, wholeDegrees } from "@/lib/format";
+import { breakdownLabel, classificationRows, humanize, LEVEL_TONE, metricLabel, movementLabel, RISK, SUB_SCORE_LABELS, wholeDegrees } from "@/lib/format";
 import type { Biomechanics, InsufficientBaseline, Recommendation, RiskScore, Video, VideoQuality } from "@/lib/types";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
@@ -40,6 +40,43 @@ function QualityNotes({ video, quality, caveat, baseline }: { video: Video; qual
       {cav && <p className="text-sm text-ink-2">{cav}</p>}
       {warns.length > 0 && <ul className="space-y-1 text-sm text-ink-2">{warns.map((w) => <li key={w.code}>• {w.message}</li>)}</ul>}
       {(q?.grade === "poor" || cav) && <p className="text-xs text-ink-3">Treat any score on this clip as provisional.</p>}
+    </section>
+  );
+}
+
+/** What the classifier saw in the clip, set against the labels it was uploaded with. Absent on videos processed before it existed. */
+function ClassificationNotes({ video }: { video: Video }) {
+  const view = classificationRows(video.analysis?.classification, video);
+  if (!view) return null;
+  const off = view.rows.filter((r) => r.same === false);
+  return (
+    <section className="card-soft flex flex-col gap-4 p-6">
+      <h2 className="text-lg font-semibold text-ink">What the clip shows</h2>
+      {view.auto && (
+        <Notice tone="info">
+          No labels were given, so the movement and camera angle were identified from the footage. That check is a heuristic that has not been validated on real clips: confirm them before relying on this video&apos;s measurements.
+        </Notice>
+      )}
+      {off.length > 0 && (
+        <Notice tone="warn">
+          {off.map((r) => <p key={r.label}>{r.label} looks different from the label: the clip seems to show <b>{r.found}</b>, but it is labelled <b>{r.labelled}</b>.</p>)}
+          <p>The measurements below follow the label, so check it before relying on them.</p>
+        </Notice>
+      )}
+      <dl className="grid gap-3 sm:grid-cols-2">
+        {view.rows.map((r) => (
+          <div key={r.label} className="rounded-[12px] bg-white px-4 py-3">
+            <dt className="text-xs text-ink-3">{r.label}</dt>
+            <dd className="flex flex-wrap items-center gap-2 font-semibold text-ink">
+              {r.found ?? "Couldn't tell"}
+              {r.same === true && <span className="badge badge-ok">Matches the label</span>}
+              {r.same === false && <span className="badge badge-warn">Differs from the label</span>}
+              {r.same === null && r.suggests && <span className="badge badge-muted">Suggested instead of the label</span>}
+            </dd>
+            <p className="text-xs text-ink-3">{r.labelled ? `Labelled as ${r.labelled}` : "Identified from the footage"}</p>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }
@@ -285,6 +322,8 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
       ) : (
         <Notice tone="info">{risk.message ? `${risk.message} ` : "There's no risk score for this video. "}The measurements are below.</Notice>
       )}
+
+      <ClassificationNotes video={video} />
 
       <QualityNotes
         video={video}

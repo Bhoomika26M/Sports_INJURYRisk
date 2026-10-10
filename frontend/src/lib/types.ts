@@ -80,7 +80,7 @@ export interface Video {
   person_count_detected?: number | null;
   /** Set when the clip was accepted with limits (several people, or the athlete measured on few frames). */
   coverage_caveat?: string | null;
-  analysis?: { quality?: VideoQuality } | null;
+  analysis?: VideoAnalysis | null;
   error_code: string | null;
   error_message: string | null;
   progress_pct: number;
@@ -140,6 +140,22 @@ export type RiskCategory = "low" | "moderate" | "high" | "critical";
 
 export interface QualityWarning { code: string; message: string }
 export interface VideoQuality { grade: "good" | "fair" | "poor" | "unknown"; warnings?: QualityWarning[] }
+
+/**
+ * The movement classifier's read of a clip against what was uploaded (backend `biomechanics/classification.py`, stored in
+ * `videos.analysis.classification`). Absent on videos processed before it existed.
+ * `movement_type` / `camera_view`: what the clip shows ("unknown" = could not tell). `agrees.*`: true = same as the label,
+ * false = confidently different, null = cannot tell. `suggested.*`: the classifier's own value wherever it differs with at
+ * least half-confidence. An "auto" upload carries `declared.* = "auto"`: nothing was declared, so nothing can disagree.
+ */
+export interface VideoClassification {
+  movement_type?: string | null;
+  camera_view?: string | null;
+  declared?: { movement_type?: string | null; camera_view?: string | null };
+  agrees?: { movement_type?: boolean | null; camera_view?: boolean | null };
+  suggested?: { movement_type?: string | null; camera_view?: string | null };
+}
+export interface VideoAnalysis { quality?: VideoQuality; classification?: VideoClassification | null }
 
 /** One of the five weighted components. `available:false` means "no data", which is NOT a zero. */
 export interface RiskComponent {

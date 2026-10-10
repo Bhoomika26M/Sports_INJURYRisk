@@ -1,0 +1,140 @@
+[
+  {
+    "name": "squat_matches",
+    "video": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal"
+    },
+    "classification": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal",
+      "declared": {
+        "movement_type": "squatting",
+        "camera_view": "sagittal"
+      },
+      "agrees": {
+        "movement_type": true,
+        "camera_view": true
+      },
+      "suggested": {
+        "movement_type": null,
+        "camera_view": null
+      }
+    }
+  },
+  {
+    "name": "run_labelled_squat",
+    "video": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal"
+    },
+    "classification": {
+      "movement_type": "running",
+      "camera_view": "sagittal",
+      "declared": {
+        "movement_type": "squatting",
+        "camera_view": "sagittal"
+      },
+      "agrees": {
+        "movement_type": false,
+        "camera_view": true
+      },
+      "suggested": {
+        "movement_type": "running",
+        "camera_view": null
+      }
+    }
+  },
+  {
+    "name": "run_labelled_sprinting",
+    "video": {
+      "movement_type": "sprinting",
+      "camera_view": "sagittal"
+    },
+    "classification": {
+      "movement_type": "running",
+      "camera_view": "sagittal",
+      "declared": {
+        "movement_type": "sprinting",
+        "camera_view": "sagittal"
+      },
+      "agrees": {
+        "movement_type": null,
+        "camera_view": true
+      },
+      "suggested": {
+        "movement_type": "running",
+        "camera_view": null
+      }
+    }
+  },
+  {
+    "name": "squat_labelled_frontal",
+    "video": {
+      "movement_type": "squatting",
+      "camera_view": "frontal"
+    },
+    "classification": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal",
+      "declared": {
+        "movement_type": "squatting",
+        "camera_view": "frontal"
+      },
+      "agrees": {
+        "movement_type": true,
+        "camera_view": false
+      },
+      "suggested": {
+        "movement_type": null,
+        "camera_view": "sagittal"
+      }
+    }
+  },
+  {
+    "name": "standing_still",
+    "video": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal"
+    },
+    "classification": {
+      "movement_type": "unknown",
+      "camera_view": "sagittal",
+      "declared": {
+        "movement_type": "squatting",
+        "camera_view": "sagittal"
+      },
+      "agrees": {
+        "movement_type": null,
+        "camera_view": true
+      },
+      "suggested": {
+        "movement_type": null,
+        "camera_view": null
+      }
+    }
+  },
+  {
+    "name": "squat_auto",
+    "video": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal"
+    },
+    "classification": {
+      "movement_type": "squatting",
+      "camera_view": "sagittal",
+      "declared": {
+        "movement_type": "auto",
+        "camera_view": "auto"
+      },
+      "agrees": {
+        "movement_type": null,
+        "camera_view": null
+      },
+      "suggested": {
+        "movement_type": null,
+        "camera_view": null
+      }
+    }
+  }
+]

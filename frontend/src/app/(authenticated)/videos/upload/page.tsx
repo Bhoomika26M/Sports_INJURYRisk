@@ -7,7 +7,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, uploadFile } from "@/lib/api-client";
 import { useAuth } from "@/lib/auth-context";
 import { useAllAthletes, useMovementTypes, useVideo } from "@/lib/hooks";
-import { athleteName, cameraLabel, canManageAthletes, formatBytes, processingFailureHelp } from "@/lib/format";
+import { athleteName, AUTO_DETECT, cameraLabel, canManageAthletes, formatBytes, processingFailureHelp } from "@/lib/format";
 import type { UploadTicket } from "@/lib/types";
 import { PageHeader } from "@/components/page-header";
 import { Field } from "@/components/field";
@@ -81,6 +81,7 @@ function UploadFlow() {
     athletes.find((a) => a.id === paramId)?.id ?? (athletes.length === 1 ? athletes[0].id : "");
   const athleteId = athleteChoice ?? defaultAthlete;
 
+  const auto = movement === AUTO_DETECT;
   const movementInfo = movements.find((m) => m.code === movement);
   const allowedViews = movementInfo?.camera_views ?? [];
   const view =
@@ -148,7 +149,7 @@ function UploadFlow() {
 
   async function start(e: React.FormEvent) {
     e.preventDefault();
-    if (phase.name !== "form") return;
+    if (phase.name === "uploading" || phase.name === "analyzing") return;
 
     const next: typeof errors = {};
     if (!athleteId) next.athlete = "Choose who this video is for.";
@@ -166,7 +167,7 @@ function UploadFlow() {
       const ticket = await api.post<UploadTicket>("/videos/upload-url", {
         athlete_id: athleteId,
         movement_type: movement,
-        camera_view: view,
+        camera_view: auto ? AUTO_DETECT : view,
         original_filename: file.name,
       });
       await uploadFile(ticket.upload_url, file, {
@@ -181,8 +182,7 @@ function UploadFlow() {
       setPhase({ name: "analyzing", videoId: ticket.video_id, startedAt: Date.now() });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return setPhase({ name: "form" });
-      const rejected = err instanceof ApiError && err.status === 400;
-      if (rejected) removeFile(); // the server rejected this file and discarded it
+      if (err instanceof ApiError && err.status === 400) removeFile(); // the server rejected this file and discarded it
       setPhase({ name: "failed", message: err instanceof Error ? err.message : "The upload didn't go through." });
     }
   }
@@ -350,7 +350,13 @@ function UploadFlow() {
                   {m.display_name}
                 </label>
               ))}
+              <label className="choice">
+                <input type="radio" name="movement" value={AUTO_DETECT} checked={auto} className="sr-only"
+                  onChange={() => { setMovement(AUTO_DETECT); setViewChoice(null); setErrors((x) => ({ ...x, movement: undefined })); }} />
+                Auto-detect
+              </label>
             </div>
+            {auto && <p className="mt-2 text-sm text-ink-3">We&apos;ll work out the movement and camera angle from the clip, and only when the match is clear: otherwise the upload is declined and you choose them. Jumps, landings and cuts always need choosing. If you know them, choosing them yourself is more reliable.</p>}
             {errors.movement && <p className="mt-2 text-sm text-danger">{errors.movement}</p>}
           </fieldset>
         </section>
