@@ -2,7 +2,15 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-10-07 (Tracking fix + format support + full verification: BoT-SORT + `merge_track_fragments` in `pose/pipeline.py`; upload accepts `.webm/.avi/.mkv/.m4v`; `pytest` **394 passed** on Docker Postgres:5433/Redis:6379; `verify_data_videos.py` 9/9 expectations hold; new `scripts/verify_test_assets.py` covers all 5 test-assets — 2 squats pass, synthetic + 2 group classes correctly rejected)
+**Last verified:** 2026-10-09 (Tasks 1–4 merged + integration pass: classifier verdict shown by the results page, Auto-detect upload, all six upload formats, gait amplitude, ankle tier — see `docs/DECISIONS.md` 2026-10-09; backend `pytest` **540 passed**, frontend `tsc` + `eslint` clean, `next build --webpack` compiles with Google Fonts mocked).
+
+**Previously verified:** 2026-10-07 (Tracking fix + format support + full verification: BoT-SORT + `merge_track_fragments` in `pose/pipeline.py`; upload accepts `.webm/.avi/.mkv/.m4v`; `pytest` **394 passed** on Docker Postgres:5433/Redis:6379; `verify_data_videos.py` 9/9 expectations hold; new `scripts/verify_test_assets.py` covers all 5 test-assets — 2 squats pass, synthetic + 2 group classes correctly rejected)
+
+**Verified on 2026-10-09 (Tasks 1–4 merged + integration pass):**
+- **Merge:** the four task zips collide only on `docs/DECISIONS.md` (merged: all seven entries kept). Backend `pytest` → **540 passed, 0 failed** (517 for the plain merge = 394 + 48 T1 + 48 T2 + 23 T3 + 4 T4; 23 new integration tests). Local Postgres 16 + Redis; `ultralytics` stubbed, so no real YOLO weights ran.
+- **Frontend:** `tsc --noEmit` and `eslint src --max-warnings=0` clean; `next build --webpack` compiles (Google Fonts mocked: the sandbox cannot reach them; 20 routes listed incl. `/_not-found`); `node e2e/classification_contract.mjs` 6/6 over real backend output. `e2e/part4_classification.mjs` (Chrome + live stack) was **not run**.
+- **Fixed seams:** results page reads T1's real classification shape (T4's guessed names rendered 0 of 6); `POST /videos/upload-url` accepts `auto/auto`, resolved fail-closed by the worker (`movement_not_identified`); all six upload formats pass the real PUT + confirm path (four failed before); stride / overstride within ~2% on closed-form running (were −12…−22%); ankle dorsiflexion is `qualitative`; T3's overstride text matches T2's metric.
+- **Not verified:** any threshold in T1–T3 on real clips; the classifier and Auto-detect on the 14 corpus clips (run `scripts/process_corpus.py` and read its new "Classifier vs the known labels" table: WRONG must be 0); the shared Hampel despike on real clips. After deploy run `scripts/reprocess_metrics.py` so older videos gain `classification` and `analysis.movement.metrics`.
 
 **Verified on 2026-10-07 (lateral-motion tracking fix, format support, full corpus verification):**
 - **Tracking fix:** `pose/pipeline.py` uses BoT-SORT (`YOLO_TRACKER`, default `botsort.yaml`) + pure `merge_track_fragments` (disjoint + similar size + plausible displacement, union-find). `track_persons` takes `fps=`; `tasks.py` and `verify_data_videos.py` pass it; test fakes accept the new kwargs. See `docs/DECISIONS.md` 2026-10-07 entries and `docs/TRACKING_FIX_REPORT.md`.
@@ -50,7 +58,7 @@ The single source of truth for "what actually exists right now." Update this aft
 
 ## Current status
 
-**Backend + AI engine: merged, verified at unit / DB / ASGI / live-HTTP / real-footage level.** Schema `0001_init` → `0002_widen_confidence` → `0003_baseline_honesty_and_confidence_width` → `0004_video_coverage_caveat` → `0005_analysis_and_assessment`; 7-movement registry seeded. The engine is the video-level, cross-fitted, tail-only design (`ENGINE_VERSION = "2.2"`): five weighted components, the five sub-scores the brief asks for, per-injury-type risk levels, and an athlete-diverse baseline gate. It reports risk **levels with named drivers**, never an injury probability.
+**Backend + AI engine: merged, verified at unit / DB / ASGI / live-HTTP / real-footage level.** Schema `0001_init` → `0002_widen_confidence` → `0003_baseline_honesty_and_confidence_width` → `0004_video_coverage_caveat` → `0005_analysis_and_assessment`; 7-movement registry seeded. The engine is the video-level, cross-fitted, tail-only design (`ENGINE_VERSION = "2.3"`): five weighted components, the five sub-scores the brief asks for, per-injury-type risk levels, and an athlete-diverse baseline gate. It reports risk **levels with named drivers**, never an injury probability.
 
 **Frontend — rebuilt, adopted and merged; build compiles and type-checks (21 page routes).** Component library in `src/components/`; the results page now shows quality/coverage notes, the five sub-scores, injury-type cards and rep/gait summaries.
 

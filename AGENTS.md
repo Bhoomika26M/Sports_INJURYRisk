@@ -8,10 +8,10 @@ A platform where coaches, physiotherapists, and sports scientists upload athlete
 
 Full module map, milestone breakdown, tech stack rationale, directory tree: **`/docs/ARCHITECTURE.md`**
 
-## Current System State (Engine 2.2 & Full Stack)
+## Current System State (Engine 2.3 & Full Stack)
 
 - **Database**: PostgreSQL with 5 Alembic migrations (`0001` → `0005`) managing 17 schema tables (including `videos.analysis` and `risk_scores.assessment` JSONB fields).
-- **AI Engine (v2.2)**: Video-level cross-fitted Isolation Forest + robust-z tail anomaly scoring. 5 weighted components (35% biomechanical deviation, 20% prior injury history, 20% bilateral asymmetry, 15% training load ACWR, 10% fatigue/consistency).
+- **AI Engine (v2.3)**: Video-level cross-fitted Isolation Forest + robust-z tail anomaly scoring. 5 weighted components (35% biomechanical deviation, 20% prior injury history, 20% bilateral asymmetry, 15% training load ACWR, 10% fatigue/consistency).
 - **6 Injury Categories**: ACL, hamstring, ankle sprain, shoulder, lower back, overuse — assessed as risk *levels* with named drivers, never ML probability.
 - **Baseline Sufficiency Gate**: Requires `MIN_BASELINE_VIDEOS=10` completed videos across `MIN_BASELINE_ATHLETES=3` distinct athletes before computing a population score. Below floor returns HTTP 202 ("baseline building", never fabricated scores).
 - **Pose & Quality Pipeline**: YOLOv8n-pose person detection and persistent tracking (`track_persons`) with main-subject lock. MediaPipe landmarks gated at <0.5 visibility. Clips with 40–70% coverage get an explicit `coverage_caveat` (excluded from population baselines); <40% rejected.
@@ -75,7 +75,7 @@ docker compose up --build
 
 - **Backend Test Suite**:
   ```bash
-  cd backend && pytest   # 384 passed
+  cd backend && pytest   # 540 passed
   ```
 - **Frontend Type & Lint Check**:
   ```bash

@@ -95,7 +95,7 @@ CREATE TABLE videos (
     fps                         NUMERIC(5,2),
     resolution_width            INTEGER,
     resolution_height           INTEGER,
-    camera_view                 VARCHAR(20) NOT NULL CHECK (camera_view IN ('sagittal', 'frontal', 'other')),
+    camera_view                 VARCHAR(20) NOT NULL CHECK (camera_view IN ('sagittal', 'frontal', 'other', 'auto')),  -- 'auto' only until the worker identifies it (DECISIONS 2026-10-09); movement_type is 'auto' the same way
     processing_status           video_processing_status NOT NULL DEFAULT 'pending_upload',
     person_count_detected       INTEGER,
     detection_rate              NUMERIC(4,3),
