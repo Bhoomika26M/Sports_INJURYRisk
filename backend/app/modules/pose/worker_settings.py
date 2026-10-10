@@ -16,6 +16,12 @@ class WorkerSettings:
     functions = [process_video]
     on_startup = startup
     redis_settings = redis_settings_from_env()
-    job_timeout = 300          # 5 minutes, pessimistic
+    # Per-job wall clock. The shipped image is CPU-only (see backend/Dockerfile), where a 60 s clip at
+    # 30 fps is ~1800 frames of YOLO tracking + MediaPipe pose, well past arq's 300 s default. 30 minutes
+    # covers the longest accepted clip with headroom; a GPU host finishes in a fraction of this.
+    job_timeout = 1800
+    # Process one clip at a time. Each job loads YOLO + MediaPipe and runs its own executor thread,
+    # so arq's default concurrency of 10 oversubscribes the CPU and RAM (the container is CPU-only).
+    max_jobs = 1
     max_tries = 3              # 1 original attempt + 2 retries
     keep_result = 3600         # job result available for 1 hour

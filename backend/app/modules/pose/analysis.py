@@ -183,8 +183,13 @@ def _gaussian_nan(x: np.ndarray, sigma: float) -> np.ndarray:
     return out
 
 
-def clean_track(track: Track, movement_type: str | None = None) -> np.ndarray:
-    """Cleaned [G,33,3] landmarks (NaN = unusable). See module docstring for the rules."""
+def clean_track(track: Track, movement_type: str | None = None, despike: bool = True) -> np.ndarray:
+    """Cleaned [G,33,3] landmarks (NaN = unusable). See module docstring for the rules.
+
+    `despike=False` skips the Hampel pass. That pass clips the extremes of fast cyclic motion (a 0.5 m ankle swing
+    at 170 steps/min loses ~6 cm), so a metric read off a PEAK (stride length) takes its amplitude from a track
+    cleaned without it; the NaN pattern is identical either way. See docs/DECISIONS.md 2026-10-09.
+    """
     G = len(track.grid)
     xyz = track.xyz.copy()
     if track.has_visibility:
@@ -197,7 +202,7 @@ def clean_track(track: Track, movement_type: str | None = None) -> np.ndarray:
         flat[:, c] = _fill_short_gaps(flat[:, c], max_gap)
 
     half = max(1, int(round(HAMPEL_HALF_WINDOW_S * track.fps_eff)))
-    if G >= 2 * half + 1:
+    if despike and G >= 2 * half + 1:
         flat = _hampel(pd.DataFrame(flat), half).to_numpy()
 
     cutoff = SMOOTHING_CUTOFF_HZ.get(movement_type or "", DEFAULT_CUTOFF_HZ)
