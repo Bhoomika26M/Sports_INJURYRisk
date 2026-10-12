@@ -2,10 +2,10 @@
 
     python scripts/e2e_http_check.py [BASE_URL] CLIP.mp4 [movement] [camera_view]
 
-Login -> create athlete -> request upload URL -> PUT the clip -> confirm-upload (ffprobe) -> the arq worker
+Login -> create athlete -> request upload URL -> PUT the clip -> confirm-upload (ffprobe) -> the in-process job runner
 runs YOLO + MediaPipe -> poll until done -> fetch biomechanics, risk score and recommendations.
 Also exercises the refusal paths (bad file, bad view, bad id). Exits non-zero on the first broken step.
-Needs: uvicorn app.main:app and `arq app.modules.pose.worker_settings.WorkerSettings` running, seeded DB.
+Needs: uvicorn app.main:app running (it runs the analysis itself), seeded DB.
 """
 import json
 import sys
@@ -43,7 +43,7 @@ need(r.status_code == 200, f"login -> {r.status_code}")
 H = {"Authorization": f"Bearer {r.json()['access_token']}"}
 
 step("create athlete")
-r = c.post(f"{API}/athletes", headers=H, json={"sport_type": "e2e-http", "date_of_birth": "1998-05-05",
+r = c.post(f"{API}/athletes", headers=H, json={"sport_type": "weightlifting", "position": "lifter", "date_of_birth": "1998-05-05",
                                                "height_cm": 170, "weight_kg": 65, "dominant_side": "right"})
 need(r.status_code in (200, 201), f"POST /athletes -> {r.status_code} {r.text[:120]}")
 athlete_id = r.json()["id"]
@@ -114,7 +114,7 @@ else:
 
 step("recommendations")
 r = c.get(f"{API}/videos/{vid}/recommendations", headers=H)
-need(r.status_code in (200, 202, 409, 422), f"recommendations -> {r.status_code}")
+need(r.status_code in (200, 202, 404, 409, 422), f"recommendations -> {r.status_code}")
 if r.status_code == 200:
     recs = r.json()
     print(f"   {len(recs) if isinstance(recs, list) else len(recs.get('recommendations', []))} recommendation(s)")

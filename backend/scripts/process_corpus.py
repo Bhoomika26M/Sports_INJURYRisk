@@ -3,7 +3,7 @@ how many baseline videos and athletes exist against the 10-video / 3-athlete flo
 
     python backend/scripts/process_corpus.py [--base http://localhost:8000] [--email admin@demo.com] [--timeout 3600]
 
-Needs the stack up (backend + arq worker + postgres + redis), a seeded DB, and the clips in data/ and test-assets/.
+Needs the stack up (backend + postgres), a seeded DB, and the clips in data/ and test-assets/.
 Labels (movement, camera view, expected outcome) come from the catalogs verify_data_videos.py and
 verify_test_assets.py already use. Safe to re-run: a clip whose filename is already uploaded is not uploaded again,
 so a re-run cannot inflate a baseline. Counts come from the backend's own baseline recompute, never from this script.
