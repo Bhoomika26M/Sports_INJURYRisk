@@ -1,6 +1,7 @@
 """Sports Injury Risk Detection Platform — Backend API."""
 
 import logging
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,15 +14,24 @@ from app.modules.video.router import VIDEO_EXTENSIONS, router as videos_router
 from app.modules.risk_scoring.router import router as risk_scoring_router
 from app.modules.notifications.router import router as notifications_router
 from app.modules.analytics.router import router as analytics_router
+from app.modules.pose import jobs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    await jobs.start()   # video analysis runs in this process; see app/modules/pose/jobs.py
+    yield
+    await jobs.stop()
+
 
 app = FastAPI(
     title="Sports Injury Risk Detection API",
     version="1.0.0",
     docs_url="/docs",
     openapi_url="/openapi.json",
+    lifespan=lifespan,
 )
 
 app.add_middleware(

@@ -10,6 +10,7 @@ these rows are a reporting/inspection aid, not a cache the score depends on.
 """
 
 import logging
+import time
 
 import numpy as np
 from sqlalchemy import delete
@@ -67,15 +68,16 @@ async def recompute_movement_baselines(db: AsyncSession, movement_type: str) -> 
 
 
 RECOMPUTE_COOLDOWN_SECONDS = 60
+_last_recompute: dict[str, float] = {}   # ponytail: per-process; a shared store only if the API ever runs as several processes
 
 
-async def recompute_baseline_debounced(db: AsyncSession, redis, movement_type: str) -> dict:
-    lock_key = f"baseline_recompute:{movement_type}"
-    acquired = await redis.set(lock_key, "1", nx=True, ex=RECOMPUTE_COOLDOWN_SECONDS)
-    if not acquired:
+async def recompute_baseline_debounced(db: AsyncSession, movement_type: str) -> dict:
+    now = time.monotonic()
+    if now - _last_recompute.get(movement_type, -RECOMPUTE_COOLDOWN_SECONDS) < RECOMPUTE_COOLDOWN_SECONDS:
         from fastapi import HTTPException
         raise HTTPException(
             status_code=429,
             detail={"error": {"code": "RATE_LIMITED", "message": f"Baseline for '{movement_type}' was recomputed recently — try again shortly"}},
         )
+    _last_recompute[movement_type] = now
     return await recompute_movement_baselines(db, movement_type)

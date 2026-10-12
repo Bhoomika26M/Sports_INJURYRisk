@@ -1,13 +1,15 @@
-# Container-correct service URLs for the backend and the arq worker.
+# Default (`docker compose up -d`): ONLY Postgres. Run the backend and frontend on the host (see DEMO.md): no bind-mount
+# file watching, no multi-GB torch image, no second ML process. The video analysis runs inside the backend process,
+# so there is no Redis and no worker container.
+#
+# `docker compose --profile app up --build` also runs backend + frontend in containers (slower; for deploy checks).
 #
 # `environment:` takes precedence over `env_file:`. The repo .env is written for HOST-side runs
-# (DATABASE_URL=...@localhost:5433/..., REDIS_URL=redis://localhost:6379/...). Inside a container
-# `localhost` is the container itself, so without this override the backend cannot reach Postgres.
-# Host-side (non-Docker) runs are unaffected: they read .env directly and never see this file.
+# (DATABASE_URL=...@localhost:5432/...). Inside a container `localhost` is the container itself, so without this
+# override the backend cannot reach Postgres. Host-side (non-Docker) runs never see this file.
 x-container-env: &container-env
   DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD:-changeme_in_production}@postgres:5432/${POSTGRES_DB:-injury_detection}
   DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD:-changeme_in_production}@postgres:5432/${POSTGRES_DB:-injury_detection}
-  REDIS_URL: redis://redis:6379/0
   UPLOAD_DIR: /uploads
 
 services:
@@ -28,17 +30,8 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
   backend:
+    profiles: [app]
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -50,35 +43,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      redis:
-        condition: service_healthy
     volumes:
-      - ./backend:/app
-      - ./test-assets:/test-assets
       - uploads:/uploads
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-
-  arq_worker:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    env_file:
-      - .env
-    environment: *container-env
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      backend:
-        condition: service_started
-    volumes:
-      - ./backend:/app
-      - ./test-assets:/test-assets
-      - uploads:/uploads
-    command: arq app.modules.pose.worker_settings.WorkerSettings
 
   frontend:
+    profiles: [app]
     build:
       context: ./frontend
       dockerfile: Dockerfile
@@ -88,10 +57,6 @@ services:
       - .env
     depends_on:
       - backend
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - /app/.next
 
 volumes:
   pgdata:

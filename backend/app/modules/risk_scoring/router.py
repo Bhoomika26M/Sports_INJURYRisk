@@ -4,11 +4,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 from fastapi.responses import JSONResponse
-from redis.asyncio import Redis
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import UuidPath, get_current_user, get_redis, require_role
+from app.core.deps import UuidPath, get_current_user, require_role
 from app.core.errors import api_error
 from app.database import get_db
 from app.modules.athletes.models import Athlete
@@ -32,9 +31,8 @@ async def recompute_baselines_endpoint(
     request: BaselineRecomputeRequest,
     current_user: Annotated[User, Depends(require_role(UserRole.admin, UserRole.sports_scientist))],
     db: Annotated[AsyncSession, Depends(get_db)],
-    redis: Annotated[Redis, Depends(get_redis)],
 ):
-    result = await recompute_baseline_debounced(db, redis, request.movement_type)
+    result = await recompute_baseline_debounced(db, request.movement_type)
     return {"message": f"Recomputed baselines for {request.movement_type}", "details": result}
 
 

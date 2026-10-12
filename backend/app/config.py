@@ -12,9 +12,6 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://injury_user:changeme_in_production@postgres:5432/injury_detection"
     database_url_sync: str = ""  # derived from database_url when unset (see _derive_sync_url)
 
-    # Redis
-    redis_url: str = "redis://redis:6379/0"
-
     # JWT
     jwt_secret_key: str = "change-this-to-a-long-random-string-in-production"
     jwt_access_token_expire_minutes: int = 30
@@ -43,8 +40,8 @@ class Settings(BaseSettings):
     # Frontend
     next_public_api_url: str = "http://localhost:8000/api/v1"
 
-    # Storage. Local-disk stand-in for S3: API and arq worker must see the same directory.
-    # Docker sets UPLOAD_DIR=/uploads (the shared volume); a host run defaults to backend/uploads.
+    # Storage. Local-disk stand-in for S3.
+    # Docker sets UPLOAD_DIR=/uploads (a volume); a host run defaults to backend/uploads.
     upload_dir: str = str(Path(__file__).resolve().parents[1] / "uploads")
     use_s3_storage: bool = False
     s3_bucket: Optional[str] = None
@@ -60,6 +57,13 @@ class Settings(BaseSettings):
     # athlete's personal envelope, not a population baseline (a different athlete's normal technique
     # would read as "anomalous"). Counted over the videos actually in the baseline.
     min_baseline_athletes: int = 3
+
+    # Video analysis speed/accuracy knobs. They live here (not os.environ) so a host run honours them from .env.
+    # See .env.example for what each trades off.
+    yolo_imgsz: int = 384
+    yolo_track_fps: float = 15
+    yolo_tracker: str = "botsort.yaml"
+    pose_landmarker_variant: str = "full"
 
     # Email (SendGrid)
     sendgrid_api_key: Optional[str] = None

@@ -85,17 +85,3 @@ def require_role(*roles: UserRole):
         return current_user
 
     return role_checker
-
-
-import redis.asyncio as aioredis
-from app.config import settings
-
-_redis_pool: aioredis.Redis | None = None
-
-
-async def get_redis() -> aioredis.Redis:
-    """FastAPI dependency: returns an async Redis client."""
-    global _redis_pool
-    if _redis_pool is None:
-        _redis_pool = aioredis.from_url(settings.redis_url, encoding="utf-8", decode_responses=True)
-    return _redis_pool

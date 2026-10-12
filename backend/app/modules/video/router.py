@@ -48,16 +48,11 @@ async def _reject_upload(db, video, code: str, message: str, local_path: str):
             pass
     raise HTTPException(status_code=400, detail={"error": {"code": code, "message": message}})
 
-# Arq redis pool
-from arq import create_pool
-from app.modules.pose.worker_settings import redis_settings_from_env
+from app.modules.pose.jobs import enqueue
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
-
-async def get_arq_pool():
-    return await create_pool(redis_settings_from_env())
 
 def _can_access_athlete(user: User, athlete: Athlete) -> bool:
     if user.role in (UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist):
@@ -156,13 +151,16 @@ async def confirm_upload(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Confirm upload, validate via ffprobe, and enqueue for processing."""
+    """Confirm upload, validate via ffprobe, and queue it for processing."""
     video = await db.scalar(select(Video).where(Video.id == video_id))
     if not video:
         raise api_error(404, "NOT_FOUND", "Video not found")
 
     if video.uploaded_by != current_user.id:
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Must be the creator to confirm upload")
+
+    if video.processing_status != VideoProcessingStatus.pending_upload:   # a second confirm would queue (and store) the clip twice
+        raise api_error(409, "ALREADY_CONFIRMED", f"This upload is already {video.processing_status.value}")
 
     local_path = os.path.join(settings.upload_dir, video.storage_key)
     if not os.path.exists(local_path):
@@ -222,13 +220,10 @@ async def confirm_upload(
     video.fps = fps
     video.duration_seconds = duration
 
-    # Enqueue job first, then mark as processing
-    arq = await get_arq_pool()
-    job = await arq.enqueue_job("process_video", video_id)
-
+    # Commit BEFORE queueing: the job writes this row's status, and a write that lands first must not be overwritten.
     video.processing_status = VideoProcessingStatus.processing
-    video.job_id = job.job_id
     await db.commit()
+    enqueue(video_id)
 
     return {"status": "processing"}
 
