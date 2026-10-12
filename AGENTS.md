@@ -66,16 +66,13 @@ docker compose up --build
    # or for development: npm run dev
    ```
    *App available at `http://localhost:3000`.*
-6. **Async Pose Worker** (for video processing):
-   ```bash
-   cd backend && arq app.modules.pose.worker_settings.WorkerSettings
-   ```
+6. **Video processing** runs inside the backend process (`app/modules/pose/jobs.py`): there is no separate worker and no Redis.
 
 ## Key Verification Commands
 
 - **Backend Test Suite**:
   ```bash
-  cd backend && pytest   # 540 passed
+  cd backend && pytest   # 553 passed (needs Postgres on :5433 only)
   ```
 - **Frontend Type & Lint Check**:
   ```bash

@@ -17,7 +17,7 @@ Live status and the reusable Definition-of-Done checklist live in [`/docs/STATE.
 
 ## Highlights
 
-- **Backend**: FastAPI modular monolith, PostgreSQL 16 (SQLAlchemy 2.0 async + Alembic), Redis 7.
+- **Backend**: FastAPI modular monolith, PostgreSQL (SQLAlchemy 2.0 async + Alembic). Video analysis runs in the API process: no Redis, no worker.
 - **Frontend**: Next.js 16 (App Router), TypeScript, Tailwind CSS, TanStack Query, evolved neumorphic UI.
 - **Auth**: Argon2 password hashing, JWT access tokens with httpOnly refresh-token rotation.
 - **Athlete Management**: Full CRUD for athletes, injury history, and training loads.
@@ -35,9 +35,9 @@ Live status and the reusable Definition-of-Done checklist live in [`/docs/STATE.
 
 2. **Run the stack:**
    ```bash
-   docker compose up --build
+   docker compose up -d
    ```
-   Brings up Postgres, Redis, backend, and frontend together.
+   Starts Postgres only. Run the backend and frontend on the host: see [`DEMO.md`](DEMO.md) (much lighter than `docker compose --profile app up --build`, which runs everything in containers).
 
 3. **Initialize Database:**
    Wait for Postgres to be healthy, then run:
