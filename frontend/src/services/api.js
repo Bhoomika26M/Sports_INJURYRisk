@@ -38,6 +38,7 @@ export const authAPI = {
   register: (data) => api.post('/api/v1/auth/register', data),
   login: (data) => api.post('/api/v1/auth/login', data),
   getMe: () => api.get('/api/v1/auth/me'),
+  logout: () => api.post('/api/v1/auth/logout'),
 };
 
 export const athletesAPI = {
@@ -51,6 +52,24 @@ export const athletesAPI = {
 
 export const datasetsAPI = {
   getAll: () => api.get('/api/v1/datasets'),
+};
+
+export const videosAPI = {
+  upload: (formData) => api.post('/api/v1/videos', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  }),
+  getAll: (params) => api.get('/api/v1/videos', { params }),
+  getById: (id) => api.get(`/api/v1/videos/${id}`),
+  process: (id) => api.post(`/api/v1/videos/${id}/process`),
+  getAnalysis: (id) => api.get(`/api/v1/videos/${id}/analysis`),
+  generateAnnotatedVideo: (id) => api.post(`/api/v1/videos/${id}/annotated-video`),
+  getAnnotatedVideo: (id) => {
+    const token = localStorage.getItem('token');
+    return `${API_BASE_URL}/api/v1/videos/${id}/annotated-video?token=${token}`;
+  },
+  delete: (id) => api.delete(`/api/v1/videos/${id}`),
 };
 
 export default api;

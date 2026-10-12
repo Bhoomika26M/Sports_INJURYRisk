@@ -59,13 +59,6 @@ def get_all_athletes(db: Session, skip: int = 0, limit: int = 100) -> List[Athle
 def update_athlete(db: Session, athlete_id: int, athlete_data: AthleteUpdate, current_user: User) -> Athlete:
     athlete = get_athlete(db, athlete_id)
     
-    # Check permissions: athletes can only update their own profile
-    if current_user.role == "athlete" and athlete.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only update your own profile"
-        )
-    
     update_data = athlete_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(athlete, field, value)

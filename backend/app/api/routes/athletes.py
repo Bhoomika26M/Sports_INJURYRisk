@@ -90,7 +90,16 @@ def get_athlete_endpoint(
     
     Available to all authenticated users.
     """
-    return get_athlete(db, athlete_id)
+    athlete = get_athlete(db, athlete_id)
+    
+    # IDOR protection: Athletes can only view their own profile
+    if current_user.role == "athlete" and athlete.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only view your own profile"
+        )
+    
+    return athlete
 
 
 @router.put("/{athlete_id}", response_model=AthleteResponse)
@@ -114,6 +123,15 @@ def update_athlete_endpoint(
     - **injury_history**: Injury history
     - **training_load**: Training load information
     """
+    athlete = get_athlete(db, athlete_id)
+    
+    # IDOR protection: Athletes can only update their own profile
+    if current_user.role == "athlete" and athlete.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own profile"
+        )
+    
     return update_athlete(db, athlete_id, athlete_data, current_user)
 
 

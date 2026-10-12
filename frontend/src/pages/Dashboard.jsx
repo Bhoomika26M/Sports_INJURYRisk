@@ -1,27 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { athletesAPI, datasetsAPI } from '../services/api';
+import { athletesAPI, datasetsAPI, videosAPI } from '../services/api';
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [stats, setStats] = useState({
     totalAthletes: 0,
     datasetsReady: 0,
+    totalVideos: 0,
+    processedVideos: 0,
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const [athletesResponse, datasetsResponse] = await Promise.all([
+        const [athletesResponse, datasetsResponse, videosResponse] = await Promise.all([
           athletesAPI.getAll(),
           datasetsAPI.getAll(),
+          videosAPI.getAll().catch(() => ({ data: [] })),
         ]);
         
         setStats({
           totalAthletes: athletesResponse.data.length,
           datasetsReady: datasetsResponse.data.filter(d => d.status === 'sample_integrated').length,
+          totalVideos: videosResponse.data.length,
+          processedVideos: videosResponse.data.filter(v => v.processing_status === 'completed').length,
         });
       } catch (error) {
         console.error('Failed to load stats:', error);
@@ -39,6 +44,13 @@ const Dashboard = () => {
       description: 'Create and manage athlete profiles with sport-specific information',
       icon: '👥',
       link: '/athletes',
+      available: true,
+    },
+    {
+      title: 'Video Upload',
+      description: 'Upload sports movement videos for analysis',
+      icon: '📹',
+      link: '/videos/upload',
       available: true,
     },
     {
@@ -91,7 +103,7 @@ const Dashboard = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -116,15 +128,35 @@ const Dashboard = () => {
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <div className="text-3xl">📁</div>
+                <div className="text-3xl">�</div>
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">
-                    Datasets Integrated
+                    Total Videos
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {loading ? '...' : stats.datasetsReady}
+                    {loading ? '...' : stats.totalVideos}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white overflow-hidden shadow rounded-lg">
+          <div className="p-5">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="text-3xl">✅</div>
+              </div>
+              <div className="ml-5 w-0 flex-1">
+                <dl>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    Processed Videos
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {loading ? '...' : stats.processedVideos}
                   </dd>
                 </dl>
               </div>
@@ -144,7 +176,7 @@ const Dashboard = () => {
                     Current Milestone
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    1 - Foundation
+                    2 - Video Analysis
                   </dd>
                 </dl>
               </div>

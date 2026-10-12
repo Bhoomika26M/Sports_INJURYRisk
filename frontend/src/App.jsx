@@ -8,6 +8,8 @@ import Dashboard from './pages/Dashboard';
 import AthleteList from './pages/AthleteList';
 import AthleteProfile from './pages/AthleteProfile';
 import Profile from './pages/Profile';
+import VideoUpload from './pages/VideoUpload';
+import VideoAnalysis from './pages/VideoAnalysis';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -52,6 +54,8 @@ function AppRoutes() {
         <Route path="athletes" element={<AthleteList />} />
         <Route path="athletes/:id" element={<AthleteProfile />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="videos/upload" element={<VideoUpload />} />
+        <Route path="videos/:videoId" element={<VideoAnalysis />} />
       </Route>
     </Routes>
   );

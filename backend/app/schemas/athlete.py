@@ -12,6 +12,33 @@ class AthleteBase(BaseModel):
     injury_history: Optional[str] = None
     training_load: Optional[str] = None
     
+    @field_validator('sport_type', 'position')
+    @classmethod
+    def sanitize_string(cls, v):
+        if v is not None:
+            if len(v) > 100:
+                raise ValueError('Field too long (max 100 characters)')
+            return v.strip()
+        return v
+    
+    @field_validator('injury_history')
+    @classmethod
+    def sanitize_text(cls, v):
+        if v is not None:
+            if len(v) > 5000:
+                raise ValueError('Field too long (max 5000 characters)')
+            return v.strip()
+        return v
+    
+    @field_validator('training_load')
+    @classmethod
+    def sanitize_load(cls, v):
+        if v is not None:
+            if len(v) > 500:
+                raise ValueError('Field too long (max 500 characters)')
+            return v.strip()
+        return v
+    
     @field_validator('age')
     @classmethod
     def age_must_be_valid(cls, v):
@@ -24,12 +51,21 @@ class AthleteBase(BaseModel):
     def must_be_positive(cls, v):
         if v <= 0:
             raise ValueError('Value must be positive')
+        if v > 300:  # Reasonable limits
+            raise ValueError('Value exceeds reasonable limit')
         return v
 
 
 class AthleteCreate(AthleteBase):
     athlete_id: str
     user_id: Optional[int] = None
+    
+    @field_validator('athlete_id')
+    @classmethod
+    def athlete_id_format(cls, v):
+        if len(v) < 3 or len(v) > 50:
+            raise ValueError('Athlete ID must be between 3 and 50 characters')
+        return v.strip()
 
 
 class AthleteUpdate(BaseModel):
@@ -40,6 +76,51 @@ class AthleteUpdate(BaseModel):
     weight: Optional[float] = None
     injury_history: Optional[str] = None
     training_load: Optional[str] = None
+    
+    @field_validator('sport_type', 'position')
+    @classmethod
+    def sanitize_string(cls, v):
+        if v is not None:
+            if len(v) > 100:
+                raise ValueError('Field too long (max 100 characters)')
+            return v.strip()
+        return v
+    
+    @field_validator('injury_history')
+    @classmethod
+    def sanitize_text(cls, v):
+        if v is not None:
+            if len(v) > 5000:
+                raise ValueError('Field too long (max 5000 characters)')
+            return v.strip()
+        return v
+    
+    @field_validator('training_load')
+    @classmethod
+    def sanitize_load(cls, v):
+        if v is not None:
+            if len(v) > 500:
+                raise ValueError('Field too long (max 500 characters)')
+            return v.strip()
+        return v
+    
+    @field_validator('age')
+    @classmethod
+    def age_must_be_valid(cls, v):
+        if v is not None:
+            if v <= 0 or v >= 100:
+                raise ValueError('Age must be between 1 and 99')
+        return v
+    
+    @field_validator('height', 'weight')
+    @classmethod
+    def must_be_positive(cls, v):
+        if v is not None:
+            if v <= 0:
+                raise ValueError('Value must be positive')
+            if v > 300:
+                raise ValueError('Value exceeds reasonable limit')
+        return v
 
 
 class AthleteResponse(BaseModel):

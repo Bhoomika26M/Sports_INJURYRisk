@@ -57,6 +57,9 @@ dist-ssr/
 datasets/raw/
 datasets/processed/
 
+# Video uploads
+backend/uploads/
+
 # Test coverage
 htmlcov/
 .tox/
