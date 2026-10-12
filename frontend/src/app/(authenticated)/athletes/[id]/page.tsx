@@ -105,6 +105,7 @@ export default function AthleteDetailPage({ params }: { params: Promise<{ id: st
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Link href={`/videos/upload?athlete_id=${a.id}`} className="btn btn-primary"><Icon name="upload" className="h-4 w-4" /> Analyze video</Link>
+          <button onClick={() => { setTab("injuries"); setModal("injury"); }} className="btn btn-outline"><Icon name="plus" className="h-4 w-4" /> Log injury</button>
           {canManage && (
             <>
               <button onClick={() => setModal("edit")} className="btn btn-outline"><Icon name="edit" className="h-4 w-4" /> Edit</button>
@@ -117,7 +118,7 @@ export default function AthleteDetailPage({ params }: { params: Promise<{ id: st
       </section>
 
       {/* ---------- At a glance ---------- */}
-      <section className="grid gap-4 sm:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card-soft p-6">
           <p className="stat-label">Height</p>
           <span className="stat-value">{a.height_cm ? `${Math.round(a.height_cm)} cm` : "—"}</span>
@@ -137,6 +138,28 @@ export default function AthleteDetailPage({ params }: { params: Promise<{ id: st
             </>
           ) : (
             <p className="mt-2 text-sm text-ink-2">{acwr?.message ?? "Log a few weeks of sessions to see this."}</p>
+          )}
+        </div>
+        <div className="card-soft p-6">
+          <p className="stat-label">Prior injuries</p>
+          {injuriesQ.isPending ? (
+            <span className="stat-value text-ink-4">…</span>
+          ) : (
+            <>
+              <div className="flex items-baseline justify-between">
+                <span className="stat-value">{injuriesQ.data?.items.length ?? 0}</span>
+                {injuriesQ.data?.items.some((i) => !i.recovery_date) && (
+                  <Badge tone="warn">Active injury</Badge>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => { setTab("injuries"); setModal("injury"); }}
+                className="mt-2 flex items-center gap-1 text-xs font-semibold text-brand hover:underline"
+              >
+                <Icon name="plus" className="h-3 w-3" /> Log new injury
+              </button>
+            </>
           )}
         </div>
       </section>

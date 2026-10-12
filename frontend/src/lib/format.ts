@@ -106,14 +106,15 @@ export function classificationRows(
     ] as const
   ).map(([k, label, fmt, declared]): ClassificationRow => {
     const seen = c[k] && c[k] !== "unknown" ? c[k] : null;
-    // the classifier only fills agrees / suggested once it is at least half sure; an auto upload only completes when it was sure
-    const sure = auto || c.agrees?.[k] != null || c.suggested?.[k] != null;
+    // the classifier only fills agrees / suggested once it is at least half sure; an auto upload only completes when it was sure. Ignore suggestions below confidence threshold.
+    const hasConfidentSuggestion = c.suggested?.[k] != null && (c.confidence == null || c.confidence >= 0.35);
+    const sure = auto || c.agrees?.[k] != null || hasConfidentSuggestion;
     return {
       label,
       found: seen && sure ? fmt(seen) : null,
       labelled: auto ? null : fmt(declared),
       same: c.agrees?.[k] ?? null,
-      suggests: c.suggested?.[k] != null,
+      suggests: hasConfidentSuggestion,
     };
   });
   return rows.some((r) => r.found) ? { auto, rows } : null;
@@ -167,10 +168,12 @@ export function processingFailureHelp(code: string | null, fallback: string | nu
   }
 }
 
-/** Athlete names come from a linked user account; UI-created profiles have none, so fall back gracefully. */
-export function athleteName(a: { full_name: string | null; sport_type: string; age: number | null }): string {
+/** Athlete names come from a linked user account; unlinked profiles fall back gracefully. */
+export function athleteName(a: { full_name?: string | null; sport_type: string; age?: number | null; position?: string | null }): string {
   if (a.full_name) return a.full_name;
-  return `${humanize(a.sport_type)} athlete${a.age != null ? `, ${a.age}` : ""}`;
+  if (a.position && !a.position.startsWith("corpus:") && !a.position.startsWith("test:")) return humanize(a.position);
+  const sport = a.sport_type === "e2e-http" || a.sport_type === "mixed" ? "Athletics" : humanize(a.sport_type);
+  return `${sport} athlete${a.age != null ? `, ${a.age}` : ""}`;
 }
 
 /** Today as YYYY-MM-DD in the user's local timezone (for <input type="date"> max/defaults). */

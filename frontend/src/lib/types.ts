@@ -151,6 +151,7 @@ export interface VideoQuality { grade: "good" | "fair" | "poor" | "unknown"; war
 export interface VideoClassification {
   movement_type?: string | null;
   camera_view?: string | null;
+  confidence?: number | null;
   declared?: { movement_type?: string | null; camera_view?: string | null };
   agrees?: { movement_type?: boolean | null; camera_view?: boolean | null };
   suggested?: { movement_type?: string | null; camera_view?: string | null };

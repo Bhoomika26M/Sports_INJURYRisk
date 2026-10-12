@@ -303,12 +303,24 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
           </div>
           {Object.values(risk.risk.score_breakdown).some((b) => b.available) && (
             <ul className="w-full max-w-xs space-y-2.5 sm:w-72">
-              {Object.entries(risk.risk.score_breakdown).filter(([, b]) => b.available).sort((a, b) => b[1].max - a[1].max).map(([k, b]) => (
-                <li key={k}>
-                  <div className="flex justify-between text-sm"><span>{breakdownLabel(k)}</span><span className="font-semibold">{Math.round(b.points)}/{b.max}</span></div>
-                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/10"><span className="block h-full rounded-full bg-current opacity-60" style={{ width: `${b.max ? (b.points / b.max) * 100 : 0}%` }} /></div>
-                </li>
-              ))}
+                {Object.entries(risk.risk.score_breakdown).filter(([, b]) => b.available).sort((a, b) => b[1].max - a[1].max).map(([k, b]) => {
+                  const pts = Math.min(b.points, b.max);
+                  const isInt = b.max % 1 === 0;
+                  const ptsStr = isInt ? Math.round(pts).toString() : pts.toFixed(1);
+                  const maxStr = isInt ? b.max.toString() : b.max.toFixed(1);
+                  const pct = b.max ? Math.min(100, Math.max(0, (pts / b.max) * 100)) : 0;
+                  return (
+                    <li key={k}>
+                      <div className="flex justify-between text-sm">
+                        <span>{breakdownLabel(k)}</span>
+                        <span className="font-semibold">{ptsStr} / {maxStr}</span>
+                      </div>
+                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/10">
+                        <span className="block h-full rounded-full bg-current opacity-60" style={{ width: `${pct}%` }} />
+                      </div>
+                    </li>
+                  );
+                })}
             </ul>
           )}
         </section>
@@ -402,12 +414,40 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
 
       {/* ---------- Visual checks (qualitative only — no numbers by design) ---------- */}
       {qualitativeNames.length > 0 && (
-        <section className="card-soft flex flex-col gap-3 p-6 sm:p-8">
-          <h2 className="text-lg font-semibold text-ink">Visual checks</h2>
-          <p className="text-ink-2">
-            Knee alignment from the front view is best judged by eye. From a single camera it can only be flagged, not measured as an angle, so we don&apos;t show a number.
-          </p>
-          <Link href={`/videos/${id}`} className="btn btn-outline btn-sm w-fit"><Icon name="play" className="h-4 w-4" /> Watch the tracked video</Link>
+        <section className="card-soft flex flex-col gap-5 p-6 sm:p-8">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Visual checks &amp; Frontal alignment</h2>
+            <p className="mt-1 text-sm text-ink-2">
+              From a single front-on camera, knee valgus and hip adduction are tracked qualitatively across {bioQ.data?.frames?.length ?? "all"} frames. Parallax and depth foreshortening prevent measuring true joint angles from the front (see science constraints), so we provide qualitative tracking flags rather than uncalibrated numbers.
+            </p>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {qualitativeNames.map((name) => (
+              <div key={name} className="flex flex-col justify-between rounded-[12px] bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-ink">{metricLabel(name)}</span>
+                  <span className="badge badge-ok">Assessed</span>
+                </div>
+                <p className="mt-2 text-xs text-ink-3">
+                  {name.includes("valgus")
+                    ? "Frontal-plane medial knee displacement tracked frame-by-frame. Check the annotated video for inward knee collapse during directional changes."
+                    : "Frontal-plane lateral hip displacement tracked frame-by-frame."}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <Link href={`/videos/${id}`} className="btn btn-primary btn-sm">
+              <Icon name="play" className="h-4 w-4" /> Watch tracked video with skeleton overlay
+            </Link>
+            <DownloadButton path={`/videos/${id}/biomechanics/export.csv`} filename={`video-${id}.csv`} label="Download frame CSV" />
+          </div>
+
+          <div className="rounded-[10px] bg-sky-50/70 border border-sky-100 p-3.5 text-xs text-sky-800">
+            <b>Want numeric joint angles and baseline risk scoring?</b> Angle metrics like peak knee flexion, cut angle, and limb symmetry require a <b>side-on (sagittal)</b> camera perspective.
+          </div>
         </section>
       )}
 
