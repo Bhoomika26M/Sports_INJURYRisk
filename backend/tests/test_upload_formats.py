@@ -27,23 +27,12 @@ def _ffmpeg() -> str:
     return exe
 
 
-class _Job:
-    job_id = "test-job"
-
-
-class _Pool:
-    async def enqueue_job(self, name, video_id):
-        return _Job()
-
-
 @pytest.mark.parametrize("ext", ["mp4", "mov", "webm", "avi", "mkv", "m4v"])
 async def test_every_advertised_format_uploads_and_confirms(client, tmp_path, monkeypatch, ext):
     monkeypatch.setattr(settings, "upload_dir", str(tmp_path))
 
-    async def fake_pool():
-        return _Pool()
-
-    monkeypatch.setattr("app.modules.video.router.get_arq_pool", fake_pool)
+    queued = []
+    monkeypatch.setattr("app.modules.video.router.enqueue", queued.append)
     clip = tmp_path / f"src.{ext}"
     try:
         subprocess.run([_ffmpeg(), "-v", "error", "-y", "-f", "lavfi", "-i", "testsrc=duration=3:size=854x480:rate=30",
@@ -63,6 +52,6 @@ async def test_every_advertised_format_uploads_and_confirms(client, tmp_path, mo
     done = await client.post(f"/api/v1/videos/{body['video_id']}/confirm-upload", headers=H)
     assert done.status_code == 200, done.text  # was 400 invalid_format for WebM / Matroska (no stream duration)
     video = (await client.get(f"/api/v1/videos/{body['video_id']}", headers=H)).json()
-    assert video["processing_status"] == "processing"
+    assert video["processing_status"] == "processing" and queued == [body["video_id"]]
     assert video["duration_seconds"] == pytest.approx(3.0, abs=0.1)
     assert (video["resolution_width"], video["resolution_height"]) == (854, 480)

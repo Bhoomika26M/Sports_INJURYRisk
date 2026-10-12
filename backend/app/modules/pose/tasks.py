@@ -1,5 +1,6 @@
 """Video processing worker task — YOLO tracking + MediaPipe pose + biomechanics."""
 
+import asyncio
 import logging
 import os
 from datetime import datetime
@@ -15,6 +16,7 @@ from app.modules.risk_scoring.models import MovementBaseline, RiskScore
 from app.modules.recommendations.models import Recommendation
 from app.modules.pose.pipeline import (
     track_persons, run_mediapipe_full_pass, extract_thumbnail, compute_stride, probe_video,
+    detect_every, subject_boxes_for,
 )
 from app.modules.pose.coverage import assess_coverage, summarize_tracking
 from app.modules.pose.processing import analyze_frames, compute_biomechanics, identify_labels  # noqa: F401  (compute_biomechanics re-exported)
@@ -120,10 +122,9 @@ async def store_biomechanical_metrics(db, video_id: str, metrics: list[dict]):
 
 async def process_video(ctx: dict, video_id: str) -> dict:
     """
-    arq worker task. Enqueued automatically by confirm-upload on successful validation.
-    Timeout: WorkerSettings.job_timeout (30 min on the CPU-only image — arq marks it failed, it does not silently hang).
-    Retries: up to 2 on unhandled exceptions; VideoProcessingError is NOT retried
-    (it means the video itself is the problem, not a transient failure — retrying won't fix it).
+    Job body, run by app.modules.pose.jobs after confirm-upload validated the file. Every failure marks the video
+    `failed` with a code (nothing stays `processing`); there are no automatic retries, because re-running a
+    multi-minute pass cannot fix a bad clip or a missing model.
     """
     async with async_session_factory() as db:
         local_path = None
@@ -140,7 +141,31 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             # Slow-motion clips (>60 fps) are processed every Nth frame; tracking and pose
             # must use the same stride so subject boxes line up with processed frames.
             stride = compute_stride(fps)
-            tracking = track_persons(local_path, ctx.get("yolo_model"), stride=stride, fps=fps)
+
+            # Progress callbacks run on a worker thread while this coroutine awaits the executor, so they MUST NOT
+            # touch this job's `db` session (two coroutines on one AsyncSession raise IllegalStateChangeError):
+            # each write gets its own short-lived session. Tracking is 0-40 %, pose 40-95 %, storing the rest.
+            loop = asyncio.get_running_loop()
+
+            async def _progress(pct):
+                async with async_session_factory() as progress_db:
+                    await update_video_progress(progress_db, video_id, pct)
+
+            def progress_between(lo, hi):
+                last = [-1]
+
+                def report(pct):
+                    value = lo + (hi - lo) * min(pct, 100) // 100
+                    if value - last[0] >= 2:
+                        last[0] = value
+                        asyncio.run_coroutine_threadsafe(_progress(value), loop)
+                return report
+
+            # Blocking model work runs in a thread: on the API process an inline call would freeze every request.
+            every = detect_every(fps, stride)
+            tracking = await loop.run_in_executor(None, lambda: track_persons(
+                local_path, ctx.get("yolo_model"), stride=stride, fps=fps, every=every,
+                progress_callback=progress_between(0, 40)))
             person_counts = tracking["person_counts"]
             if tracking["max_persons"] == 0:
                 raise VideoProcessingError(
@@ -157,11 +182,11 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             subject_boxes: dict[int, tuple | None] | None = None
             if main_track_id is not None:
                 main_frames = tracking["tracks"][main_track_id]
-                subject_boxes = {i: main_frames.get(i) for i in range(tracking["frames_processed"])}
-                coverage = len(main_frames) / max(1, tracking["frames_processed"])
+                # YOLO ran every `step` frames: boxes for the frames in between are interpolated (see subject_boxes_for)
+                subject_boxes = subject_boxes_for(main_frames, tracking["frames_processed"], tracking.get("step", 1))
                 logger.info(
                     f"Tracking {tracking['max_persons']} person(s), main subject is track {main_track_id} "
-                    f"(present in {len(main_frames)}/{tracking['frames_processed']} frames, {coverage:.0%} coverage)"
+                    f"(followed in {summary.main_track_coverage:.0%} of {summary.frames_processed} tracked frames)"
                 )
             else:
                 logger.warning("No track IDs available — running untracked full-frame pose")
@@ -178,19 +203,6 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             annotated_filename = f"annotated_{video_id}.mp4"
             annotated_path = os.path.join(settings.upload_dir, annotated_filename)
 
-            # Progress callback for MediaPipe. It is scheduled from the worker thread while the main
-            # coroutine is suspended on run_in_executor, so it MUST NOT touch this job's `db` session:
-            # two coroutines sharing one AsyncSession raise IllegalStateChangeError ("_connection_for_bind()
-            # is already in progress"). Give each progress write its own short-lived session.
-            async def _progress(pct):
-                async with async_session_factory() as progress_db:
-                    await update_video_progress(progress_db, video_id, pct)
-
-            import asyncio
-            loop = asyncio.get_running_loop()
-            def sync_progress(pct):
-                asyncio.run_coroutine_threadsafe(_progress(pct), loop)
-
             # Step 2 — full MediaPipe pass, every frame, world landmarks only.
             # Frames with a tracked-subject box are cropped to the main athlete.
             diagnostics: dict = {}
@@ -199,7 +211,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 lambda: run_mediapipe_full_pass(
                     local_path,
                     annotate_output_path=annotated_path,
-                    progress_callback=sync_progress,
+                    progress_callback=progress_between(40, 95),
                     subject_boxes=subject_boxes,
                     diagnostics=diagnostics,
                     stride=stride,
@@ -244,7 +256,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 person_count_detected=max(person_counts),
                 detection_rate=detection_rate,
                 coverage_caveat=assessment.caveat,
-                annotated_video_key=annotated_path,
+                annotated_video_key=annotated_path if os.path.exists(annotated_path) else None,   # none when there was no encoder
                 analysis=analysis,
                 progress_pct=100
             )

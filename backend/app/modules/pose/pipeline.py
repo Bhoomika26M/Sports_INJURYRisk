@@ -7,14 +7,19 @@ Supports both MediaPipe APIs:
 """
 
 import contextlib
+import functools
 import logging
 import os
+import shutil
+import subprocess
 import urllib.request
 
 import cv2
 import numpy as np
 import mediapipe as mp
 from ultralytics import YOLO
+
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -29,7 +34,7 @@ else:
 # Tasks-API model variant: lite < full < heavy (accuracy, and cost). The old hard-coded
 # default was `lite`, the least accurate; `full` is the default now. Override with
 # POSE_LANDMARKER_VARIANT=lite|full|heavy. Legacy API: POSE_MODEL_COMPLEXITY=0|1|2.
-POSE_LANDMARKER_VARIANT = os.environ.get("POSE_LANDMARKER_VARIANT", "full")
+POSE_LANDMARKER_VARIANT = settings.pose_landmarker_variant
 POSE_MODEL_COMPLEXITY = int(os.environ.get("POSE_MODEL_COMPLEXITY", "1"))
 _BACKEND_ROOT = os.path.join(os.path.dirname(__file__), "..", "..", "..")
 
@@ -68,6 +73,21 @@ def _ensure_landmarker_model() -> str:
                 logger.warning(f"Could not download '{POSE_LANDMARKER_VARIANT}' model ({e}); using existing '{variant}' bundle")
                 return fallback
         raise
+
+
+YOLO_WEIGHTS = "yolov8n-pose.pt"
+
+
+def load_models():
+    """The YOLO model, with both model files present (downloaded on first use; `scripts/fetch_models.py` does it ahead of time).
+
+    Called before any frame is read, so an offline machine fails the video in seconds instead of after the
+    whole tracking pass. The weights live next to the MediaPipe bundle, not in whatever directory the server started in.
+    """
+    yolo = YOLO(os.path.join(os.path.abspath(_BACKEND_ROOT), YOLO_WEIGHTS))
+    if not _HAS_LEGACY_POSE:
+        _ensure_landmarker_model()
+    return yolo
 
 
 def extract_world_landmarks(pose_world_landmarks) -> dict:
@@ -159,7 +179,14 @@ def select_main_track(tracks: dict[int, dict[int, tuple]]) -> int | None:
 #: constant-velocity assumption — the failure that fragmented one lateral-moving athlete
 #: into several track IDs ("several people" when there was clearly one). Override with
 #: YOLO_TRACKER=bytetrack.yaml to get the old behaviour.
-YOLO_TRACKER = os.environ.get("YOLO_TRACKER", "botsort.yaml")
+YOLO_TRACKER = settings.yolo_tracker
+
+#: YOLO input size. Ultralytics' default is 640; the tracker only needs a box around a person who fills a good part of
+#: the frame, and cost grows with the square of this (384 is ~2.8x cheaper). Raise it (e.g. 640) for small / distant athletes.
+YOLO_IMGSZ = settings.yolo_imgsz
+#: Detections per second the tracker is fed. Pose runs on every frame; person boxes only need ~15 Hz and are
+#: interpolated in between (``subject_boxes_for``). 0 = detect on every frame (the old behaviour).
+YOLO_TRACK_FPS = settings.yolo_track_fps
 
 #: Max temporal gap (seconds) across which two track fragments may still be the same
 #: person. Longer gaps risk merging two DIFFERENT people who entered sequentially.
@@ -294,7 +321,38 @@ def _reset_tracker_state(model) -> None:
         logger.warning(f"YOLO tracker reset failed, IDs may carry over: {e}")
 
 
-def track_persons(video_path: str, model=None, stride: int = 1, fps: float = 30.0) -> dict:
+def detect_every(fps: float, stride: int = 1) -> int:
+    """Run YOLO on every Nth processed frame so the tracker sees ~YOLO_TRACK_FPS frames per second."""
+    if YOLO_TRACK_FPS <= 0:
+        return 1
+    return max(1, round(((fps or 30.0) / max(stride, 1)) / YOLO_TRACK_FPS))
+
+
+def subject_boxes_for(track: dict[int, tuple], n_frames: int, step: int) -> dict[int, tuple | None]:
+    """The athlete's box on EVERY frame, from detections taken every ``step`` frames.
+
+    Linear between two consecutive detections; the last box is held for the rest of its step. Across a missed
+    detection (the athlete was not found on a sampled frame) there is no box: a person is never invented.
+    """
+    out: dict[int, tuple | None] = dict.fromkeys(range(n_frames))
+    idx = sorted(i for i in track if i < n_frames)
+    for i in idx:
+        out[i] = track[i]
+    for a, b in zip(idx, idx[1:]):
+        if b - a != step:
+            continue
+        ba, bb = track[a], track[b]
+        for i in range(a + 1, min(b, n_frames)):
+            t = (i - a) / step
+            out[i] = tuple(x + (y - x) * t for x, y in zip(ba, bb))
+    if idx:
+        for i in range(idx[-1] + 1, min(idx[-1] + step, n_frames)):
+            out[i] = track[idx[-1]]
+    return out
+
+
+def track_persons(video_path: str, model=None, stride: int = 1, fps: float = 30.0, every: int = 1,
+                  progress_callback=None) -> dict:
     """Track every person across the video with persistent YOLO IDs.
 
     Returns {
@@ -309,11 +367,13 @@ def track_persons(video_path: str, model=None, stride: int = 1, fps: float = 30.
         "tracked": bool (False when the model has no .track or IDs came back empty,
                          meaning per-frame identity is unavailable),
     }
-    Frames are processed sequentially (stride=1) so tracker IDs stay consistent.
-    `fps` is the clip's frame rate, used only to express the fragment-merge gap in seconds.
+    Frames are read sequentially so tracker IDs stay consistent. YOLO runs on every ``stride * every``-th frame
+    (``every`` = detect_every(fps, stride)); the frames in between are only grabbed, not decoded to pixels.
+    `tracks` and `person_counts` therefore describe those sampled frames only (keys are raw frame indices); use
+    ``subject_boxes_for`` to get a box per frame. `fps` expresses the fragment-merge gap in seconds.
     """
     if model is None:
-        model = YOLO("yolov8n-pose.pt")
+        model = load_models()
     _reset_tracker_state(model)
     use_track = callable(getattr(model, "track", None))
 
@@ -324,29 +384,37 @@ def track_persons(video_path: str, model=None, stride: int = 1, fps: float = 30.
     person_counts: list[int] = []
     saw_ids = False
     frame_idx = 0
+    step = max(1, stride) * max(1, every)
+    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
     try:
         while True:
+            if frame_idx % step:
+                if not cap.grab():   # skipped frame: advance the decoder without converting pixels
+                    break
+                frame_idx += 1
+                continue
             ok, frame = cap.read()
             if not ok:
                 break
-            if frame_idx % stride == 0:
-                try:
-                    if use_track:
-                        result = model.track(frame, persist=True, verbose=False, tracker=YOLO_TRACKER)[0]
-                    else:
-                        result = model(frame, verbose=False)[0]
-                except Exception as e:
-                    logger.warning(f"YOLO inference failed on frame {frame_idx}, counting 0: {e}")
-                    person_counts.append(0)
-                    frame_idx += 1
+            if progress_callback and total > 0:
+                progress_callback(int(100 * frame_idx / total))
+            try:
+                if use_track:
+                    result = model.track(frame, persist=True, verbose=False, tracker=YOLO_TRACKER, imgsz=YOLO_IMGSZ)[0]
+                else:
+                    result = model(frame, verbose=False, imgsz=YOLO_IMGSZ)[0]
+            except Exception as e:
+                logger.warning(f"YOLO inference failed on frame {frame_idx}, counting 0: {e}")
+                person_counts.append(0)
+                frame_idx += 1
+                continue
+            dets = _extract_boxes_and_ids(result)
+            person_counts.append(len(dets))
+            for tid, box in dets:
+                if tid is None:
                     continue
-                dets = _extract_boxes_and_ids(result)
-                person_counts.append(len(dets))
-                for tid, box in dets:
-                    if tid is None:
-                        continue
-                    saw_ids = True
-                    tracks.setdefault(tid, {})[frame_idx] = box
+                saw_ids = True
+                tracks.setdefault(tid, {})[frame_idx] = box
             frame_idx += 1
     finally:
         cap.release()
@@ -369,6 +437,7 @@ def track_persons(video_path: str, model=None, stride: int = 1, fps: float = 30.
         "main_track_id": main_track_id,
         "max_persons": max(person_counts, default=0),
         "frames_processed": frame_idx,
+        "step": step,
         "tracked": saw_ids,
         "frame_width": frame_width,
         "frame_height": frame_height,
@@ -552,6 +621,83 @@ def _tasks_detector():
 
 
 # --------------------------------------------------------------------------- #
+# Annotated output video
+# --------------------------------------------------------------------------- #
+
+ANNOTATED_MAX_HEIGHT = 720
+
+
+@functools.lru_cache(maxsize=1)
+def ffmpeg_bin() -> str | None:
+    """System ffmpeg, else the static-ffmpeg bundle (downloaded once), else None."""
+    exe = shutil.which("ffmpeg")
+    if exe is None:
+        try:
+            from static_ffmpeg.run import get_or_fetch_platform_executables_else_raise
+            exe = get_or_fetch_platform_executables_else_raise()[0]
+        except Exception as e:  # noqa: BLE001 — no ffmpeg just means no annotated video
+            logger.warning(f"no ffmpeg available, annotated video will be skipped: {e}")
+    return exe
+
+
+class _H264Writer:
+    """``cv2.VideoWriter`` look-alike that pipes BGR frames to ffmpeg and produces an H.264 mp4.
+
+    OpenCV's own 'mp4v' is MPEG-4 Part 2, which Chrome, Edge and Firefox cannot play: the tracked video used to
+    open as a blank player. Frames above ANNOTATED_MAX_HEIGHT are scaled down (cheaper to encode and to stream).
+    A dead encoder never fails the analysis: later writes are dropped and release() removes the broken file.
+    """
+
+    def __init__(self, path: str, fps: float, size: tuple[int, int], exe: str):
+        w, h = size
+        scale = min(1.0, ANNOTATED_MAX_HEIGHT / h)
+        self.size = (max(2, int(w * scale) // 2 * 2), max(2, int(h * scale) // 2 * 2))   # x264 needs even sides
+        self.path, self.ok = path, True
+        self.proc = subprocess.Popen(
+            [exe, "-v", "error", "-y", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", f"{self.size[0]}x{self.size[1]}",
+             "-r", f"{fps:.3f}", "-i", "-", "-an", "-c:v", "libx264", "-preset", "ultrafast", "-crf", "28",
+             "-pix_fmt", "yuv420p", "-movflags", "+faststart", path],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        )
+
+    def write(self, frame) -> None:
+        if not self.ok:
+            return
+        if (frame.shape[1], frame.shape[0]) != self.size:
+            frame = cv2.resize(frame, self.size, interpolation=cv2.INTER_AREA)
+        try:
+            self.proc.stdin.write(np.ascontiguousarray(frame).tobytes())
+        except (BrokenPipeError, OSError):
+            self.ok = False
+
+    def release(self) -> None:
+        try:
+            self.proc.stdin.close()
+        except OSError:
+            pass
+        try:
+            code = self.proc.wait(timeout=120)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            code = -1
+        if code != 0 or not self.ok:
+            logger.warning(f"annotated video encoder failed (exit {code}); dropping {self.path}")
+            with contextlib.suppress(OSError):
+                os.remove(self.path)
+
+
+def _open_annotated_writer(path: str, fps: float, size: tuple[int, int]):
+    exe = ffmpeg_bin()
+    if exe is None:
+        return None
+    try:
+        return _H264Writer(path, fps, size, exe)
+    except OSError as e:
+        logger.warning(f"could not start ffmpeg, annotated video skipped: {e}")
+        return None
+
+
+# --------------------------------------------------------------------------- #
 # The single frame loop
 # --------------------------------------------------------------------------- #
 
@@ -586,9 +732,9 @@ def _run_pass(cap, detect, fps, total_frames, annotate_output_path, progress_cal
             processed += 1
             full_h, full_w = frame.shape[:2]
             if annotate_output_path and writer is None:
-                writer = cv2.VideoWriter(
-                    annotate_output_path, cv2.VideoWriter_fourcc(*"mp4v"), max(fps / stride, 1.0), (full_w, full_h)
-                )
+                writer = _open_annotated_writer(annotate_output_path, max(fps / stride, 1.0), (full_w, full_h))
+                if writer is None:
+                    annotate_output_path = None   # no encoder: skip the overlay video, never the analysis
 
             timestamp_ms = max(last_ts + 1, int(round(frame_idx * 1000.0 / fps)))
             last_ts = timestamp_ms
@@ -626,7 +772,7 @@ def _run_pass(cap, detect, fps, total_frames, annotate_output_path, progress_cal
                     cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 writer.write(frame)
 
-            if progress_callback and total_frames > 0 and frame_idx % max(1, total_frames // 10) == 0:
+            if progress_callback and total_frames > 0 and frame_idx % max(1, total_frames // 50) == 0:
                 progress_callback(int(100 * frame_idx / total_frames))
     finally:
         if writer is not None:

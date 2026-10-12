@@ -1,9 +1,8 @@
-"""Liveness vs readiness. Readiness must fail when Postgres or Redis cannot be reached."""
+"""Liveness vs readiness. Readiness must fail when Postgres cannot be reached."""
 
 import pytest
 from httpx import AsyncClient
 
-from app.config import settings
 from app.core import health
 from tests.conftest import test_engine
 
@@ -22,18 +21,10 @@ async def test_liveness_is_static(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_readiness_ok_when_database_and_redis_are_reachable(client: AsyncClient):
+async def test_readiness_ok_when_database_is_reachable(client: AsyncClient):
     resp = await client.get("/health/ready")
     assert resp.status_code == 200
-    assert resp.json() == {"status": "ready", "database": "ok", "redis": "ok"}
-
-
-@pytest.mark.asyncio
-async def test_readiness_503_when_redis_is_unreachable(client: AsyncClient, monkeypatch):
-    monkeypatch.setattr(settings, "redis_url", "redis://127.0.0.1:1/0")
-    resp = await client.get("/health/ready")
-    assert resp.status_code == 503
-    assert resp.json() == {"status": "not_ready", "database": "ok", "redis": "unreachable"}
+    assert resp.json() == {"status": "ready", "database": "ok"}
 
 
 @pytest.mark.asyncio
