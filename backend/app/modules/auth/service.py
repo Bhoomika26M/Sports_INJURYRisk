@@ -25,6 +25,15 @@ async def register_user(db: AsyncSession, email: str, password: str, full_name: 
     """Register a new user."""
     existing = await db.scalar(select(User).where(User.email == email))
     if existing:
+        if existing.password_hash == "" and not existing.google_id:
+            existing.password_hash = hash_password(password)
+            if full_name and full_name.strip():
+                existing.full_name = full_name.strip()
+            if role:
+                existing.role = UserRole(role)
+            await db.commit()
+            await db.refresh(existing)
+            return existing
         raise ValueError("Email already registered")
 
     user = User(
@@ -173,7 +182,9 @@ async def exchange_google_code(code: str, redirect_uri: str) -> str:
         raise OAuthError("oauth_provider_unavailable", "Could not reach Google") from e
 
 
-async def handle_google_callback(db: AsyncSession, code: str, redirect_uri: str) -> tuple[User, str, str]:
+async def handle_google_callback(
+    db: AsyncSession, code: str, redirect_uri: str, role: str | None = None
+) -> tuple[User, str, str]:
     """Exchange Google auth code, find/link/create the user, return user + token pair.
 
     Account linking is unchanged (google_id first, then email), with three guards that an
@@ -201,14 +212,26 @@ async def handle_google_callback(db: AsyncSession, code: str, redirect_uri: str)
         if not user.google_id:
             user.google_id = google_user.sub
             user.avatar_url = google_user.picture
+            if google_user.name and (not user.full_name or user.full_name == "Athlete"):
+                user.full_name = google_user.name
             await db.commit()
             await db.refresh(user)
     else:
+        target_role = UserRole.athlete
+        if role:
+            try:
+                candidate = UserRole(role.strip().lower())
+                # Disallow assigning admin via OAuth self-service registration
+                if candidate != UserRole.admin:
+                    target_role = candidate
+            except ValueError:
+                pass
+
         user = User(
             email=google_user.email,
             password_hash="",
             full_name=google_user.name or google_user.email.split("@")[0],
-            role=UserRole.athlete,
+            role=target_role,
             google_id=google_user.sub,
             avatar_url=google_user.picture,
         )

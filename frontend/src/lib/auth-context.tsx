@@ -15,6 +15,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<User>;
   signUp: (input: { email: string; password: string; full_name: string; role: Role }) => Promise<User>;
   logout: () => Promise<void>;
+  restore: () => Promise<User | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -99,9 +100,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     router.replace("/login");
   }, [resetCache, router]);
 
+  const restore = useCallback(async (): Promise<User | null> => {
+    const token = await apiClient.refresh();
+    if (!token) {
+      setSessionHint(false);
+      resetCache(null);
+      return null;
+    }
+    try {
+      const user = await api.get<User>("/auth/me");
+      setSessionHint(true);
+      resetCache(user);
+      return user;
+    } catch {
+      setSessionHint(false);
+      resetCache(null);
+      return null;
+    }
+  }, [resetCache]);
+
   const value = useMemo<AuthContextType>(
-    () => ({ user: session.data ?? null, loading: session.isPending, signIn, signUp, logout }),
-    [session.data, session.isPending, signIn, signUp, logout],
+    () => ({ user: session.data ?? null, loading: session.isPending, signIn, signUp, logout, restore }),
+    [session.data, session.isPending, signIn, signUp, logout, restore],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

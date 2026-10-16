@@ -10,13 +10,29 @@ import { Spinner } from "@/components/feedback";
 // in-memory access token (POST /auth/refresh) and loads /auth/me; this page just waits for the result.
 // No token is ever in the URL, and nothing is written to localStorage.
 export default function OAuthCallbackPage() {
-  const { user, loading } = useAuth();
+  const { restore } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
-    router.replace(user ? "/dashboard" : "/login?error=oauth_session_failed");
-  }, [loading, user, router]);
+    let active = true;
+    (async () => {
+      try {
+        const user = await restore();
+        if (!active) return;
+        if (user) {
+          router.replace("/dashboard");
+        } else {
+          router.replace("/login?error=oauth_session_failed");
+        }
+      } catch {
+        if (!active) return;
+        router.replace("/login?error=oauth_session_failed");
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [restore, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-wash px-4">

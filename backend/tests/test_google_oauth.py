@@ -319,3 +319,51 @@ async def test_password_login_refresh_cookie_is_httponly_secure_samesite_lax(cli
     cookie = refresh_cookie(resp)
     assert cookie and "HttpOnly" in cookie and "Secure" in cookie and "SameSite=lax" in cookie
     assert "refresh_token" not in resp.text
+
+
+# ---- role assignment on signup ------------------------------------------------------------------
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("chosen_role", ["coach", "physiotherapist", "sports_scientist"])
+async def test_google_signup_with_selected_role_assigns_role(client, db_session, monkeypatch, chosen_role):
+    fake_google(monkeypatch, email=f"{chosen_role}@example.com", sub=f"g-sub-{chosen_role}")
+    # 1. User starts oauth from register page with ?role=...
+    start_resp = await client.get("/api/v1/auth/google", params={"role": chosen_role}, follow_redirects=False)
+    assert start_resp.status_code == 302
+    state_cookie = start_resp.cookies.get("oauth_state")
+    role_cookie = start_resp.cookies.get("oauth_role")
+    assert state_cookie is not None
+    assert role_cookie == chosen_role
+
+    # 2. Callback receives state and code with the cookies
+    cb_resp = await client.get(
+        CALLBACK,
+        params={"code": "auth-code", "state": state_cookie},
+        cookies={"oauth_state": state_cookie, "oauth_role": role_cookie},
+        follow_redirects=False,
+    )
+    assert cb_resp.status_code == 302
+    user = await db_session.scalar(select(User).where(User.email == f"{chosen_role}@example.com"))
+    assert user is not None
+    assert user.role.value == chosen_role
+
+
+@pytest.mark.asyncio
+async def test_google_signup_admin_role_rejected_to_athlete(client, db_session, monkeypatch):
+    fake_google(monkeypatch, email="badadmin@example.com", sub="g-sub-badadmin")
+    start_resp = await client.get("/api/v1/auth/google", params={"role": "admin"}, follow_redirects=False)
+    assert start_resp.status_code == 302
+    state_cookie = start_resp.cookies.get("oauth_state")
+    role_cookie = start_resp.cookies.get("oauth_role")
+
+    cb_resp = await client.get(
+        CALLBACK,
+        params={"code": "auth-code", "state": state_cookie},
+        cookies={"oauth_state": state_cookie, "oauth_role": role_cookie},
+        follow_redirects=False,
+    )
+    assert cb_resp.status_code == 302
+    user = await db_session.scalar(select(User).where(User.email == "badadmin@example.com"))
+    assert user is not None
+    assert user.role.value == "athlete"
+

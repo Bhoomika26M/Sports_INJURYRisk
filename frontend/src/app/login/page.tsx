@@ -8,9 +8,10 @@ import { useHydrated } from "@/lib/hooks";
 import { API_BASE_URL } from "@/lib/api-client";
 import { safeNext } from "@/lib/nav";
 import { Field } from "@/components/field";
-import { Icon } from "@/components/icons";
+import { GoogleIcon, Icon } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { Notice, Spinner } from "@/components/feedback";
+import { oauthErrorMessage } from "@/lib/oauth-errors";
 
 const DEMO_PASSWORD = "demo123";
 const DEMO_ACCOUNTS = [
@@ -21,12 +22,13 @@ const DEMO_ACCOUNTS = [
   { label: "Admin", email: "admin@demo.com" },
 ];
 const SHOW_DEMO = process.env.NODE_ENV !== "production";
-const SHOW_GOOGLE = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN === "true";
+const SHOW_GOOGLE = process.env.NEXT_PUBLIC_ENABLE_GOOGLE_LOGIN !== "false";
 
 function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
+  const oauthError = oauthErrorMessage(params.get("error"));
   const { user, signIn } = useAuth();
   const hydrated = useHydrated();
 
@@ -65,7 +67,7 @@ function LoginForm() {
         </div>
 
         <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
-          {error && <Notice tone="danger">{error}</Notice>}
+          {(error || oauthError) && <Notice tone="danger">{error || oauthError}</Notice>}
 
           <Field label="Email">
             {(p) => (
@@ -98,7 +100,13 @@ function LoginForm() {
             <div className="my-6 flex items-center gap-3 text-sm text-ink-3">
               <span className="h-px flex-1 bg-hair" /> or <span className="h-px flex-1 bg-hair" />
             </div>
-            <a href={`${API_BASE_URL}/auth/google`} className="btn btn-outline w-full">Continue with Google</a>
+            <a
+              href={`${API_BASE_URL}/auth/google`}
+              className="btn btn-outline flex w-full items-center justify-center gap-2.5 !py-2.5 font-medium shadow-xs"
+            >
+              <GoogleIcon className="h-5 w-5 shrink-0" />
+              <span>Sign in with Google</span>
+            </a>
           </>
         )}
 

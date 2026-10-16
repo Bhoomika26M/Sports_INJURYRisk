@@ -21,10 +21,14 @@ from app.modules.auth.schemas import (
     UserResponse,
 )
 from app.modules.auth.cookies import (
+    clear_oauth_role_cookie,
     clear_oauth_state_cookie,
     clear_refresh_cookie,
+    clear_session_hint_cookie,
+    set_oauth_role_cookie,
     set_oauth_state_cookie,
     set_refresh_cookie,
+    set_session_hint_cookie,
 )
 from app.modules.auth.service import (
     OAuthError,
@@ -106,6 +110,7 @@ async def logout(
         await revoke_refresh_token(db, refresh_token)
 
     clear_refresh_cookie(response)
+    clear_session_hint_cookie(response)
     return MessageResponse(message="Logged out successfully")
 
 
@@ -125,14 +130,20 @@ def _login_error_redirect(code: str) -> RedirectResponse:
     logger.warning("google oauth rejected: %s", code)
     resp = RedirectResponse(f"{settings.frontend_url}/login?{urlencode({'error': code})}", status_code=status.HTTP_302_FOUND)
     clear_oauth_state_cookie(resp)
+    clear_oauth_role_cookie(resp)
+    clear_session_hint_cookie(resp)
     return resp
 
 
 @router.get("/google", response_class=RedirectResponse, status_code=status.HTTP_302_FOUND)
-async def google_login():
+async def google_login(
+    role: Annotated[str | None, Query(max_length=50)] = None,
+):
     """Start Google sign-in: 302 to Google's consent screen with a fresh CSRF ``state``.
 
     ``state`` is also set as a short-lived httpOnly cookie; the callback only proceeds when the two match.
+    If a self-service signup role was selected (e.g. coach, athlete, physio), it is held in a short-lived
+    httpOnly cookie so newly provisioned accounts take that role.
     """
     if not settings.google_client_id or not settings.google_client_secret:
         raise api_error(503, "OAUTH_NOT_CONFIGURED", "Google sign-in is not configured on this server")
@@ -148,6 +159,10 @@ async def google_login():
     }
     resp = RedirectResponse(f"{GOOGLE_AUTH_URL}?{urlencode(params)}", status_code=status.HTTP_302_FOUND)
     set_oauth_state_cookie(resp, state)
+    if role:
+        set_oauth_role_cookie(resp, role)
+    else:
+        clear_oauth_role_cookie(resp)
     return resp
 
 
@@ -158,6 +173,7 @@ async def google_callback(
     state: Annotated[str | None, Query(max_length=512)] = None,
     error: Annotated[str | None, Query(max_length=256)] = None,
     oauth_state: Annotated[str | None, Cookie()] = None,
+    oauth_role: Annotated[str | None, Cookie()] = None,
 ):
     """Google redirects the BROWSER here with ``?code=...&state=...`` (authorization-code flow).
 
@@ -174,13 +190,17 @@ async def google_callback(
         return _login_error_redirect("oauth_missing_code")
 
     try:
-        _user, _access_token, refresh_token = await handle_google_callback(db, code, settings.google_redirect_uri)
+        _user, _access_token, refresh_token = await handle_google_callback(
+            db, code, settings.google_redirect_uri, role=oauth_role
+        )
     except OAuthError as e:
         return _login_error_redirect(e.code)
 
     resp = RedirectResponse(f"{settings.frontend_url}/auth/callback", status_code=status.HTTP_302_FOUND)
     set_refresh_cookie(resp, refresh_token)
+    set_session_hint_cookie(resp)
     clear_oauth_state_cookie(resp)
+    clear_oauth_role_cookie(resp)
     return resp
 
 
