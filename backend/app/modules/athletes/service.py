@@ -7,14 +7,16 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import uuid
 from app.modules.athletes.models import Athlete, InjuryHistory, TrainingLoadEntry
+from app.modules.users.models import NotificationPreference, User, UserRole
 
 logger = logging.getLogger(__name__)
 
 
 async def create_athlete(
     db: AsyncSession,
-    coach_id: str,
+    coach_id: Optional[str],
     sport_type: str,
     date_of_birth: date,
     height_cm: Optional[float] = None,
@@ -22,11 +24,84 @@ async def create_athlete(
     dominant_side: Optional[str] = None,
     position: Optional[str] = None,
     user_id: Optional[str] = None,
+    full_name: Optional[str] = None,
+    email: Optional[str] = None,
 ) -> Athlete:
-    """Create a new athlete profile."""
+    """Create a new athlete profile and link/create their user profile."""
+    clean_email = email.strip().lower() if email and email.strip() else None
+    clean_name = full_name.strip() if full_name and full_name.strip() else None
+
+    linked_user_id = user_id
+
+    if clean_email:
+        # Check if a user with this email already exists
+        existing_user = await db.scalar(select(User).where(User.email == clean_email))
+        if existing_user:
+            # Check if this user already has an athlete profile
+            existing_athlete = await db.scalar(select(Athlete).where(Athlete.user_id == existing_user.id))
+            if existing_athlete:
+                if existing_athlete.coach_id and coach_id and existing_athlete.coach_id != coach_id:
+                    raise ValueError("An athlete with this email is already registered with another coach.")
+                # Update existing athlete profile and coach link
+                if coach_id:
+                    existing_athlete.coach_id = coach_id
+                existing_athlete.sport_type = sport_type
+                existing_athlete.position = position
+                existing_athlete.date_of_birth = date_of_birth
+                if height_cm is not None:
+                    existing_athlete.height_cm = height_cm
+                if weight_kg is not None:
+                    existing_athlete.weight_kg = weight_kg
+                if dominant_side is not None:
+                    existing_athlete.dominant_side = dominant_side
+                if clean_name:
+                    existing_user.full_name = clean_name
+                await db.commit()
+                await db.refresh(existing_athlete)
+                return existing_athlete
+            else:
+                if clean_name and (not existing_user.full_name or existing_user.full_name == "Athlete"):
+                    existing_user.full_name = clean_name
+                linked_user_id = existing_user.id
+        else:
+            # Create a user placeholder for this email
+            user_full_name = clean_name or clean_email.split("@")[0]
+            new_user = User(
+                email=clean_email,
+                password_hash="",
+                full_name=user_full_name,
+                role=UserRole.athlete,
+                is_active=True,
+            )
+            db.add(new_user)
+            await db.flush()
+            for ntype in ["high_risk_flag", "insufficient_baseline", "processing_failed", "training_load_spike", "assessment_due"]:
+                db.add(NotificationPreference(user_id=new_user.id, notification_type=ntype))
+            linked_user_id = new_user.id
+    elif not linked_user_id:
+        # No email provided: create local placeholder user so full_name resolves everywhere
+        placeholder_name = clean_name or "Athlete"
+        placeholder_email = f"athlete_{uuid.uuid4().hex[:12]}@local.athlete"
+        new_user = User(
+            email=placeholder_email,
+            password_hash="",
+            full_name=placeholder_name,
+            role=UserRole.athlete,
+            is_active=True,
+        )
+        db.add(new_user)
+        await db.flush()
+        for ntype in ["high_risk_flag", "insufficient_baseline", "processing_failed", "training_load_spike", "assessment_due"]:
+            db.add(NotificationPreference(user_id=new_user.id, notification_type=ntype))
+        linked_user_id = new_user.id
+    elif linked_user_id and clean_name:
+        u = await db.get(User, linked_user_id)
+        if u:
+            u.full_name = clean_name
+
     athlete = Athlete(
         coach_id=coach_id,
-        user_id=user_id,
+        user_id=linked_user_id,
         sport_type=sport_type,
         position=position,
         date_of_birth=date_of_birth,
@@ -49,6 +124,8 @@ async def update_athlete(
     height_cm: Optional[float] = None,
     weight_kg: Optional[float] = None,
     dominant_side: Optional[str] = None,
+    full_name: Optional[str] = None,
+    email: Optional[str] = None,
 ) -> Optional[Athlete]:
     """Update an athlete profile."""
     athlete = await db.get(Athlete, athlete_id)
@@ -67,6 +144,58 @@ async def update_athlete(
         athlete.weight_kg = weight_kg
     if dominant_side is not None:
         athlete.dominant_side = dominant_side
+
+    clean_name = full_name.strip() if full_name is not None and full_name.strip() else None
+    clean_email = email.strip().lower() if email is not None and email.strip() else None
+
+    # Handle full_name update
+    if clean_name:
+        if athlete.user:
+            athlete.user.full_name = clean_name
+        else:
+            placeholder_email = f"athlete_{uuid.uuid4().hex[:12]}@local.athlete"
+            new_user = User(
+                email=placeholder_email,
+                password_hash="",
+                full_name=clean_name,
+                role=UserRole.athlete,
+                is_active=True,
+            )
+            db.add(new_user)
+            await db.flush()
+            athlete.user_id = new_user.id
+
+    # Handle email update
+    if email is not None:
+        if clean_email:
+            existing_user = await db.scalar(select(User).where(User.email == clean_email))
+            if existing_user and existing_user.id != athlete.user_id:
+                existing_athlete = await db.scalar(select(Athlete).where(Athlete.user_id == existing_user.id))
+                if existing_athlete and existing_athlete.id != athlete.id:
+                    raise ValueError("Another athlete profile is already linked to this email address.")
+                old_user = athlete.user
+                athlete.user_id = existing_user.id
+                if clean_name:
+                    existing_user.full_name = clean_name
+                if old_user and old_user.email.endswith("@local.athlete"):
+                    await db.delete(old_user)
+            elif athlete.user:
+                athlete.user.email = clean_email
+            else:
+                user_name = clean_name or clean_email.split("@")[0]
+                new_user = User(
+                    email=clean_email,
+                    password_hash="",
+                    full_name=user_name,
+                    role=UserRole.athlete,
+                    is_active=True,
+                )
+                db.add(new_user)
+                await db.flush()
+                athlete.user_id = new_user.id
+        elif athlete.user and not athlete.user.email.endswith("@local.athlete"):
+            # Email cleared by user: switch back to a local placeholder
+            athlete.user.email = f"athlete_{uuid.uuid4().hex[:12]}@local.athlete"
 
     await db.commit()
     await db.refresh(athlete)

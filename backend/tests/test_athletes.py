@@ -80,3 +80,59 @@ async def test_training_load_and_acwr(client: AsyncClient):
     acwr = await client.get(f"/api/v1/athletes/{athlete['id']}/acwr", headers=auth_header(token))
     assert acwr.status_code == 200
     assert "acwr" in acwr.json()
+
+
+@pytest.mark.asyncio
+async def test_create_and_update_athlete_name_and_email(client: AsyncClient):
+    token = await _coach(client)
+    # 1. Create with name and email
+    resp = await client.post("/api/v1/athletes", json={
+        "full_name": "Marcus Rashford",
+        "email": "marcus@england.com",
+        "sport_type": "soccer",
+        "date_of_birth": "1997-10-31",
+    }, headers=auth_header(token))
+    assert resp.status_code == 201
+    data = resp.json()
+    assert data["full_name"] == "Marcus Rashford"
+    assert data["email"] == "marcus@england.com"
+    athlete_id = data["id"]
+
+    # 2. Update name and email
+    update_resp = await client.put(f"/api/v1/athletes/{athlete_id}", json={
+        "full_name": "Marcus Rashford MBE",
+        "email": "rashford@manutd.com",
+    }, headers=auth_header(token))
+    assert update_resp.status_code == 200
+    up_data = update_resp.json()
+    assert up_data["full_name"] == "Marcus Rashford MBE"
+    assert up_data["email"] == "rashford@manutd.com"
+
+    # 3. Get athlete profile confirms updated properties
+    get_resp = await client.get(f"/api/v1/athletes/{athlete_id}", headers=auth_header(token))
+    assert get_resp.status_code == 200
+    assert get_resp.json()["full_name"] == "Marcus Rashford MBE"
+    assert get_resp.json()["email"] == "rashford@manutd.com"
+
+
+@pytest.mark.asyncio
+async def test_link_existing_user_athlete(client: AsyncClient):
+    # Athlete signs up first
+    athlete_token = await register_and_login(client, "pro.runner@track.com", "athlete")
+    coach_token = await _coach(client)
+
+    # Coach adds athlete with that email
+    resp = await client.post("/api/v1/athletes", json={
+        "full_name": "Pro Runner",
+        "email": "pro.runner@track.com",
+        "sport_type": "track",
+        "date_of_birth": "1999-04-12",
+    }, headers=auth_header(coach_token))
+    assert resp.status_code == 201
+    athlete_id = resp.json()["id"]
+
+    # The athlete can now see their linked profile
+    my_profile = await client.get(f"/api/v1/athletes/{athlete_id}", headers=auth_header(athlete_token))
+    assert my_profile.status_code == 200
+    assert my_profile.json()["email"] == "pro.runner@track.com"
+

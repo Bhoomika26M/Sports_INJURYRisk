@@ -16,10 +16,13 @@ class AthleteBase(BaseModel):
 
 
 class AthleteCreate(AthleteBase):
-    pass
+    full_name: Optional[str] = Field(default=None, max_length=255)
+    email: Optional[str] = Field(default=None, max_length=255)
 
 
 class AthleteUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, max_length=255)
+    email: Optional[str] = Field(default=None, max_length=255)
     sport_type: Optional[str] = Field(default=None, min_length=1, max_length=100)
     position: Optional[str] = Field(default=None, max_length=100)
     date_of_birth: Optional[date] = None
@@ -33,6 +36,7 @@ class AthleteResponse(AthleteBase):
     user_id: Optional[str] = None
     coach_id: Optional[str] = None
     full_name: Optional[str] = None
+    email: Optional[str] = None
     age: Optional[int] = None
     created_at: datetime
     updated_at: datetime

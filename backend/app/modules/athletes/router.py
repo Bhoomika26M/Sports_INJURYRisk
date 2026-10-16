@@ -63,16 +63,21 @@ async def create_athlete_endpoint(
     """Create a new athlete profile. Coaches create for themselves; admins can specify coach_id."""
     coach_id = current_user.id if current_user.role == UserRole.coach else None
     # Admin can optionally specify a different coach via query param in future
-    athlete = await create_athlete(
-        db=db,
-        coach_id=coach_id,
-        sport_type=data.sport_type,
-        date_of_birth=data.date_of_birth,
-        height_cm=data.height_cm,
-        weight_kg=data.weight_kg,
-        dominant_side=data.dominant_side,
-        position=data.position,
-    )
+    try:
+        athlete = await create_athlete(
+            db=db,
+            coach_id=coach_id,
+            sport_type=data.sport_type,
+            date_of_birth=data.date_of_birth,
+            height_cm=data.height_cm,
+            weight_kg=data.weight_kg,
+            dominant_side=data.dominant_side,
+            position=data.position,
+            full_name=data.full_name,
+            email=data.email,
+        )
+    except ValueError as e:
+        raise api_error(400, "BAD_REQUEST", str(e))
     return athlete
 
 
@@ -130,16 +135,21 @@ async def update_athlete_endpoint(
     if current_user.role == UserRole.coach and athlete.coach_id != current_user.id:
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
-    updated = await update_athlete(
-        db=db,
-        athlete_id=athlete_id,
-        sport_type=data.sport_type,
-        position=data.position,
-        date_of_birth=data.date_of_birth,
-        height_cm=data.height_cm,
-        weight_kg=data.weight_kg,
-        dominant_side=data.dominant_side,
-    )
+    try:
+        updated = await update_athlete(
+            db=db,
+            athlete_id=athlete_id,
+            sport_type=data.sport_type,
+            position=data.position,
+            date_of_birth=data.date_of_birth,
+            height_cm=data.height_cm,
+            weight_kg=data.weight_kg,
+            dominant_side=data.dominant_side,
+            full_name=data.full_name,
+            email=data.email,
+        )
+    except ValueError as e:
+        raise api_error(400, "BAD_REQUEST", str(e))
     return updated
 
 

@@ -23,6 +23,7 @@ export interface Athlete {
   user_id: string | null;
   coach_id: string | null;
   full_name: string | null;
+  email?: string | null;
   sport_type: string;
   position: string | null;
   date_of_birth: string;

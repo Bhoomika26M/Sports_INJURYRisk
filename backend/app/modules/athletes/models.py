@@ -64,6 +64,12 @@ class Athlete(Base):
         return self.user.full_name if self.user else None
 
     @property
+    def email(self) -> str | None:
+        if self.user and self.user.email and not self.user.email.endswith("@local.athlete"):
+            return self.user.email
+        return None
+
+    @property
     def age(self) -> int | None:
         if self.date_of_birth:
             today = date.today()

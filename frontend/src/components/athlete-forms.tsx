@@ -36,6 +36,8 @@ export function AthleteForm({
   onSubmit: (body: Record<string, unknown>) => Promise<void>;
   onCancel?: () => void;
 }) {
+  const [fullName, setFullName] = useState(initial?.full_name ?? "");
+  const [email, setEmail] = useState(initial?.email ?? "");
   const [sport, setSport] = useState(initial?.sport_type ?? "");
   const [position, setPosition] = useState(initial?.position ?? "");
   const [dob, setDob] = useState(initial?.date_of_birth ?? "");
@@ -54,6 +56,8 @@ export function AthleteForm({
     setBusy(true);
     try {
       await onSubmit({
+        full_name: fullName.trim() || null,
+        email: email.trim().toLowerCase() || null,
         sport_type: sport,
         position: position.trim() || null,
         date_of_birth: dob,
@@ -71,6 +75,37 @@ export function AthleteForm({
     <form onSubmit={submit} className="flex flex-col gap-5">
       {error && <Notice tone="danger">{error}</Notice>}
       <div className="grid gap-5 sm:grid-cols-2">
+        <Field label="Athlete name">
+          {(p) => (
+            <input
+              {...p}
+              type="text"
+              required
+              maxLength={255}
+              className="input"
+              placeholder="e.g. Marcus Chen"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field
+          label="Email"
+          optional
+          hint="Links to their user account so they can view their assessments."
+        >
+          {(p) => (
+            <input
+              {...p}
+              type="email"
+              maxLength={255}
+              className="input"
+              placeholder="athlete@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          )}
+        </Field>
         <Field label="Sport">
           {(p) => (
             <select {...p} required className="input" value={sport} onChange={(e) => setSport(e.target.value)}>

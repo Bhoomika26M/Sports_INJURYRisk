@@ -95,6 +95,17 @@ export default function AthleteDetailPage({ params }: { params: Promise<{ id: st
           <Avatar text={initials(name)} size={64} />
           <div className="min-w-0">
             <h1 className="truncate text-[28px] font-bold leading-tight tracking-tight text-ink">{name}</h1>
+            {a.email ? (
+              <p className="mt-1 flex items-center gap-2 text-sm text-ink-3">
+                <Icon name="mail" className="h-4 w-4 text-ink-3" />
+                <span>{a.email}</span>
+                <span className="inline-flex items-center rounded-full bg-ok/10 px-2 py-0.5 text-xs font-medium text-ok">
+                  Profile linked
+                </span>
+              </p>
+            ) : canManage ? (
+              <p className="mt-1 text-sm text-ink-4">No email linked · click Edit to add athlete&apos;s email</p>
+            ) : null}
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge tone="ok">{humanize(a.sport_type)}</Badge>
               {a.position && <Badge>{a.position}</Badge>}

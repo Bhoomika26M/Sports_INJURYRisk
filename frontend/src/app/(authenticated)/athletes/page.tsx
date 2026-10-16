@@ -59,7 +59,14 @@ export default function AthletesPage() {
                 <Link href={`/athletes/${a.id}`} className="row">
                   <Avatar text={initials(athleteName(a))} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-ink">{athleteName(a)}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-semibold text-ink">{athleteName(a)}</p>
+                      {a.email && (
+                        <span className="hidden sm:inline-flex items-center rounded-full bg-surface-2 px-2 py-0.5 text-xs text-ink-3">
+                          {a.email}
+                        </span>
+                      )}
+                    </div>
                     <p className="truncate text-sm text-ink-3">
                       {humanize(a.sport_type)}{a.position ? ` · ${a.position}` : ""}{a.age != null ? ` · ${a.age} years` : ""}
                     </p>
