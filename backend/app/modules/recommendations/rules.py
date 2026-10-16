@@ -119,10 +119,13 @@ def generate_recommendations(assessment: dict, movement_type: str) -> list[dict]
     # --- asymmetry ---------------------------------------------------------------------
     asym = breakdown.get("movement_asymmetry", {})
     if asym.get("available") and asym["score"] >= 30:
-        d = asym["detail"]
+        d = asym.get("detail", {})
+        l_peak = d.get("left_peak_deg")
+        r_peak = d.get("right_peak_deg")
+        lsi = d.get("lsi_pct", 0)
+        deg_str = f" (left {l_peak:.0f}°, right {r_peak:.0f}°; LSI {lsi:.0f}%)" if (l_peak is not None and r_peak is not None) else f" (LSI {lsi:.0f}%)"
         add("strengthening", 2 if asym["score"] >= 60 else 3, "Address left/right asymmetry",
-            f"Peak knee flexion differs between sides (left {d['left_peak_deg']:.0f}°, right {d['right_peak_deg']:.0f}°; "
-            f"LSI {d['lsi_pct']:.0f}%). Add unilateral work (split squats, single-leg RDLs, step-ups) biased to the weaker side. "
+            f"Movement mechanics differ between sides{deg_str}. Add unilateral work (split squats, single-leg RDLs, step-ups) biased to the weaker side. "
             "The 90% LSI convention has documented limits, so use this as a re-test target, not a pass/fail.")
 
     # --- fatigue / drift ---------------------------------------------------------------
