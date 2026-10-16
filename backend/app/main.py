@@ -60,13 +60,14 @@ async def health_check():
 import aiofiles
 import os
 import re
-from fastapi import Request, Depends, HTTPException
+from fastapi import Request, Depends
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from app.database import get_db
 from app.core.deps import get_current_user
+from app.core.errors import api_error
 from app.modules.users.models import User
 from app.modules.video.models import Video, VideoProcessingStatus
 
@@ -83,15 +84,15 @@ async def upload_local_file(
 ):
     """Mock local-disk stand-in for a real presigned upload. Dev only — see docs/DECISIONS.md."""
     if not STORAGE_KEY_PATTERN.match(key):
-        raise HTTPException(status_code=400, detail={"error": {"code": "invalid_key", "message": "Invalid storage key"}})
+        raise api_error(400, "invalid_key", "Invalid storage key")
 
     video = await db.scalar(
         select(Video).where(Video.storage_key == key, Video.processing_status == VideoProcessingStatus.pending_upload)
     )
     if not video:
-        raise HTTPException(status_code=404, detail={"error": {"code": "NOT_FOUND", "message": "No matching pending upload"}})
+        raise api_error(404, "NOT_FOUND", "No matching pending upload")
     if video.uploaded_by != current_user.id:
-        raise HTTPException(status_code=403, detail={"error": {"code": "INSUFFICIENT_PERMISSIONS", "message": "Not the owner of this upload"}})
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Not the owner of this upload")
 
     filepath = os.path.join(settings.upload_dir, key)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
