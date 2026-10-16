@@ -9,13 +9,14 @@ import json
 import subprocess
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from fastapi.responses import StreamingResponse, FileResponse
 from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.deps import get_current_user, require_role
+from app.core.access import can_access_athlete as _can_access_athlete
+from app.core.deps import UuidPath, get_current_user, require_role
 from app.core.errors import api_error
 from app.database import get_db
 from app.modules.users.models import User, UserRole
@@ -46,7 +47,7 @@ async def _reject_upload(db, video, code: str, message: str, local_path: str):
             os.remove(local_path)
         except OSError:
             pass
-    raise HTTPException(status_code=400, detail={"error": {"code": code, "message": message}})
+    raise api_error(400, code, message)
 
 from app.modules.pose.jobs import enqueue
 
@@ -54,14 +55,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/videos", tags=["videos"])
 
-def _can_access_athlete(user: User, athlete: Athlete) -> bool:
-    if user.role in (UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist):
-        return True
-    if user.role == UserRole.coach and athlete.coach_id == user.id:
-        return True
-    if user.role == UserRole.athlete and athlete.user_id == user.id:
-        return True
-    return False
+
+def _ensure_uuid_or_422(value: str | None, field: str = "athlete_id") -> None:
+    """Query-param UUIDs reach Postgres raw: a malformed value must be 422, never a 500 DBAPIError."""
+    if value is None:
+        return
+    try:
+        uuid.UUID(value)
+    except (ValueError, AttributeError, TypeError):
+        raise api_error(422, "VALIDATION_ERROR", f"Invalid {field}: not a UUID")
 
 @router.get("/movement-types")
 async def list_movement_types(
@@ -147,7 +149,7 @@ async def create_upload_url(
 
 @router.post("/{video_id}/confirm-upload")
 async def confirm_upload(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -230,7 +232,7 @@ async def confirm_upload(
 
 @router.get("/{video_id}", response_model=VideoResponse)
 async def get_video_endpoint(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -239,6 +241,8 @@ async def get_video_endpoint(
         raise api_error(404, "NOT_FOUND", "Video not found")
 
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
@@ -247,7 +251,7 @@ async def get_video_endpoint(
  
 @router.post("/{video_id}/ai-observe")
 async def ai_observe_video(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     fps: float = Query(4.0, ge=0.1, le=30.0),
@@ -261,6 +265,8 @@ async def ai_observe_video(
         raise api_error(404, "NOT_FOUND", "Video not found")
 
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
@@ -268,7 +274,7 @@ async def ai_observe_video(
     if not os.path.exists(local_path):
         raise api_error(400, "NOT_FOUND", "Video file not found in storage")
 
-    mod_name = "".join(["scripts.", "gem", "ini_video"])
+    mod_name = "scripts.gemini_video"
     try:
         mod = importlib.import_module(mod_name)
     except Exception as e:
@@ -297,7 +303,7 @@ async def ai_observe_video(
         raise api_error(502, "OBSERVATION_FAILED", str(e))
 
     current_analysis = dict(video.analysis or {})
-    obs_key = "".join(["gem", "ini_observation"])
+    obs_key = "gemini_observation"
     current_analysis[obs_key] = observation
     video.analysis = current_analysis
     await db.execute(update(Video).where(Video.id == video_id).values(analysis=current_analysis))
@@ -310,7 +316,7 @@ async def ai_observe_video(
 
 @router.get("/{video_id}/file")
 async def get_video_file(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -318,6 +324,8 @@ async def get_video_file(
     if not video:
         raise api_error(404, "NOT_FOUND", "Video not found")
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
     path = os.path.join(settings.upload_dir, video.storage_key)
@@ -328,7 +336,7 @@ async def get_video_file(
 
 @router.get("/{video_id}/thumbnail")
 async def get_video_thumbnail(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -336,6 +344,8 @@ async def get_video_thumbnail(
     if not video or not video.thumbnail_key:
         raise api_error(404, "NOT_FOUND", "Not found")
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
     if not os.path.exists(video.thumbnail_key):
@@ -345,7 +355,7 @@ async def get_video_thumbnail(
 
 @router.get("/{video_id}/annotated")
 async def get_annotated_video(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -353,6 +363,8 @@ async def get_annotated_video(
     if not video:
         raise api_error(404, "NOT_FOUND", "Video not found")
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
     if not video.annotated_video_key or not os.path.exists(video.annotated_video_key):
@@ -368,6 +380,7 @@ async def list_videos(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
+    _ensure_uuid_or_422(athlete_id)
     query = select(Video).order_by(desc(Video.created_at))
     count_query = select(func.count()).select_from(Video)
 
@@ -391,7 +404,7 @@ async def list_videos(
 
 @router.delete("/{video_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_video(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(require_role(UserRole.admin, UserRole.coach))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -400,12 +413,14 @@ async def delete_video(
         raise api_error(404, "NOT_FOUND", "Video not found")
 
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if current_user.role == UserRole.coach and athlete.coach_id != current_user.id:
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
-    # Clean up local storage files
+    # Clean up local storage files (storage_key is bare; thumbnail/annotated are absolute paths)
     for key in filter(None, [video.storage_key, video.thumbnail_key, video.annotated_video_key]):
-        path = os.path.join(settings.upload_dir, os.path.basename(key))
+        path = key if os.path.isabs(key) else os.path.join(settings.upload_dir, os.path.basename(key))
         if os.path.exists(path):
             try:
                 os.remove(path)
@@ -418,7 +433,7 @@ async def delete_video(
 
 @router.get("/{video_id}/biomechanics", response_model=BiomechanicsResponse)
 async def get_biomechanics(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -427,6 +442,8 @@ async def get_biomechanics(
         raise api_error(404, "NOT_FOUND", "Video not found")
 
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
@@ -479,7 +496,7 @@ async def get_biomechanics(
 
 @router.get("/{video_id}/biomechanics/export.csv")
 async def export_csv(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -488,6 +505,8 @@ async def export_csv(
         raise api_error(404, "NOT_FOUND", "Video not found")
 
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 

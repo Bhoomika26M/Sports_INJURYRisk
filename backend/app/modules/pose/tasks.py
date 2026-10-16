@@ -253,7 +253,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             # Step 4 — Run AI Multimodal Observation automatically if API key is present
             try:
                 import importlib
-                _mod_name = "".join(["scripts.", "gem", "ini_video"])
+                _mod_name = "scripts.gemini_video"
                 ai_mod = importlib.import_module(_mod_name)
                 ai_key = getattr(ai_mod, "get_key")()
                 if ai_key:
@@ -294,7 +294,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                             )
                     ai_obs = await loop.run_in_executor(None, _call_ai)
                     if ai_obs:
-                        _obs_key = "".join(["gem", "ini_observation"])
+                        _obs_key = "gemini_observation"
                         analysis[_obs_key] = ai_obs
             except Exception as e:
                 logger.warning(f"Automatic multimodal video observation failed for {video_id}: {e}")
