@@ -325,19 +325,21 @@ function UploadFlow() {
       <form onSubmit={start} noValidate className="card flex flex-col gap-9 p-6 sm:p-9">
         {phase.name === "failed" && <Notice tone="danger">{phase.message}</Notice>}
 
-        <section id="section-athlete" className="flex flex-col gap-2">
-          <Field label="Who is this video for?" error={errors.athlete}>
-            {(p) => (
-              <select {...p} className="input" value={athleteId}
-                onChange={(e) => { setAthleteChoice(e.target.value); setErrors((x) => ({ ...x, athlete: undefined })); }}>
-                <option value="">Choose an athlete…</option>
-                {athletes.map((a) => (
-                  <option key={a.id} value={a.id}>{athleteName(a)}</option>
-                ))}
-              </select>
-            )}
-          </Field>
-        </section>
+        {user?.role !== "athlete" && (
+          <section id="section-athlete" className="flex flex-col gap-2">
+            <Field label="Who is this video for?" error={errors.athlete}>
+              {(p) => (
+                <select {...p} className="input" value={athleteId}
+                  onChange={(e) => { setAthleteChoice(e.target.value); setErrors((x) => ({ ...x, athlete: undefined })); }}>
+                  <option value="">Choose an athlete…</option>
+                  {athletes.map((a) => (
+                    <option key={a.id} value={a.id}>{athleteName(a)}</option>
+                  ))}
+                </select>
+              )}
+            </Field>
+          </section>
+        )}
 
         <section id="section-movement">
           <fieldset>
