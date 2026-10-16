@@ -6,7 +6,6 @@ from typing import Optional
 
 import jwt
 from argon2 import PasswordHasher
-from argon2.exceptions import VerificationError
 
 from app.config import settings
 
@@ -19,11 +18,13 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(password: str, password_hash: str) -> bool:
-    """Verify a password against its hash."""
+    """Verify a password against its hash. Never raises: unknown/empty hashes mean no match."""
+    if not password_hash:
+        return False
     try:
         ph.verify(password_hash, password)
         return True
-    except VerificationError:
+    except Exception:
         return False
 
 
