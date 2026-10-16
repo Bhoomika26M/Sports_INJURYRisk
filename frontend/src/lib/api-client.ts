@@ -169,16 +169,29 @@ export async function downloadFile(path: string, fallbackName: string): Promise<
 
   const disposition = res.headers.get("Content-Disposition") ?? "";
   const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
-  const filename = match ? decodeURIComponent(match[1]) : fallbackName;
+  let filename = match ? decodeURIComponent(match[1].trim()) : fallbackName;
 
-  const url = URL.createObjectURL(await res.blob());
+  if (!filename.includes(".") && fallbackName.includes(".")) {
+    const ext = fallbackName.slice(fallbackName.lastIndexOf("."));
+    filename += ext;
+  }
+
+  const rawBlob = await res.blob();
+  const contentType = res.headers.get("content-type") || "application/octet-stream";
+  const typedBlob = new Blob([rawBlob], { type: contentType });
+  const url = URL.createObjectURL(typedBlob);
+
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
+  a.style.display = "none";
   document.body.appendChild(a);
   a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+  setTimeout(() => {
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 1000);
 }
 
 export type UploadOptions = {

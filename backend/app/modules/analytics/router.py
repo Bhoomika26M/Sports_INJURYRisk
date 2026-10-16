@@ -130,7 +130,7 @@ async def export_risk_pdf(
     return StreamingResponse(
         buf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename=risk_report_{video_id}.pdf"},
+        headers={"Content-Disposition": f'attachment; filename="risk_report_{video_id}.pdf"'},
     )
 
 
@@ -168,5 +168,5 @@ async def export_risk_excel(
     return StreamingResponse(
         buf,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f"attachment; filename=risk_report_{video_id}.xlsx"},
+        headers={"Content-Disposition": f'attachment; filename="risk_report_{video_id}.xlsx"'},
     )
