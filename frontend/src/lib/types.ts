@@ -156,7 +156,68 @@ export interface VideoClassification {
   agrees?: { movement_type?: boolean | null; camera_view?: boolean | null };
   suggested?: { movement_type?: string | null; camera_view?: string | null };
 }
-export interface VideoAnalysis { quality?: VideoQuality; classification?: VideoClassification | null }
+export interface GeminiJoint {
+  joint: string;
+  side: string;
+  visible: boolean;
+  note?: string;
+}
+
+export interface GeminiFlag {
+  level: "none" | "mild" | "marked" | "not_assessable" | string;
+  note?: string;
+}
+
+export interface GeminiChunkAnalysis {
+  camera_view?: string;
+  movement?: string;
+  reps_seen?: number | null;
+  joints?: GeminiJoint[];
+  knee_valgus?: GeminiFlag;
+  trunk_lean?: GeminiFlag;
+  asymmetry?: GeminiFlag;
+  quality?: string;
+  limitations?: string[];
+  summary?: string;
+}
+
+export interface GeminiChunk {
+  window?: [number, number] | null;
+  analysis?: GeminiChunkAnalysis | null;
+  error?: string | null;
+}
+
+export interface GeminiOverall {
+  quality?: string;
+  knee_valgus?: string;
+  trunk_lean?: string;
+  asymmetry?: string;
+  chunks_ok?: number;
+  chunks_total?: number;
+}
+
+export interface GeminiObservation {
+  method: string;
+  confidence: "qualitative" | string;
+  model: string;
+  source: string;
+  settings?: {
+    height?: number;
+    fps?: number;
+    media_resolution?: string;
+    chunk_seconds?: number | null;
+  };
+  chunks: GeminiChunk[];
+  overall?: GeminiOverall | null;
+  disclaimer: string;
+}
+
+export interface VideoAnalysis {
+  quality?: VideoQuality;
+  classification?: VideoClassification | null;
+  movement?: { reps?: RepAnalysis | null; gait?: GaitAnalysis | null };
+  gemini_observation?: GeminiObservation | null;
+}
 
 /** One of the five weighted components. `available:false` means "no data", which is NOT a zero. */
 export interface RiskComponent {

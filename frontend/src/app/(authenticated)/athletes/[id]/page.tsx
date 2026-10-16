@@ -186,7 +186,12 @@ export default function AthleteDetailPage({ params }: { params: Promise<{ id: st
                   <Link href={`/videos/${v.id}`} className="row">
                     <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-ink-2"><Icon name="film" /></span>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate font-semibold text-ink">{movementLabel(v.movement_type)}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-semibold text-ink">{movementLabel(v.movement_type)}</p>
+                        {v.analysis?.gemini_observation && (
+                          <span className="badge badge-info text-[10px] py-0.5 px-2">Gemini AI</span>
+                        )}
+                      </div>
                       <p className="text-sm text-ink-3">{formatDateTime(v.created_at)}</p>
                     </div>
                     <StatusBadge status={v.processing_status} />

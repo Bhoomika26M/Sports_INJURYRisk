@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/dialog";
 import { Icon } from "@/components/icons";
 import { ErrorState, PageSkeleton, Spinner } from "@/components/feedback";
 import { useToast } from "@/components/toast";
+import { GeminiObservationCard } from "@/components/gemini-observation-card";
 
 export default function VideoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -137,6 +138,8 @@ export default function VideoDetailPage({ params }: { params: Promise<{ id: stri
           ))}
         </dl>
       </section>
+ 
+      {v.processing_status === "completed" && <GeminiObservationCard video={v} />}
 
       <ConfirmDialog
         open={confirmDelete}

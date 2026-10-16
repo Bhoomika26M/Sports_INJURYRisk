@@ -70,9 +70,14 @@ export default function VideosPage() {
                         <Icon name={st.tone === "danger" ? "alert" : "film"} />
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-semibold text-ink">
-                          {movementLabel(v.movement_type)} · {names.get(v.athlete_id) ?? "Athlete"}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-semibold text-ink">
+                            {movementLabel(v.movement_type)} · {names.get(v.athlete_id) ?? "Athlete"}
+                          </p>
+                          {v.analysis?.gemini_observation && (
+                            <span className="badge badge-info text-[10px] py-0.5 px-2">Gemini AI</span>
+                          )}
+                        </div>
                         <p className="truncate text-sm text-ink-3">
                           {cameraLabel(v.camera_view)} · {formatDateTime(v.created_at)}
                         </p>
