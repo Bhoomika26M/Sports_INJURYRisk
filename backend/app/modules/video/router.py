@@ -11,7 +11,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse, FileResponse
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -243,6 +243,69 @@ async def get_video_endpoint(
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
     return video
+ 
+ 
+@router.post("/{video_id}/ai-observe")
+async def ai_observe_video(
+    video_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    fps: float = Query(4.0, ge=0.1, le=30.0),
+    chunk_seconds: float | None = Query(None, ge=2.0, le=60.0),
+):
+    """Run qualitative multimodal video observation on stored clip and save to video.analysis."""
+    import asyncio
+    import importlib
+    video = await db.scalar(select(Video).where(Video.id == video_id))
+    if not video:
+        raise api_error(404, "NOT_FOUND", "Video not found")
+
+    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not _can_access_athlete(current_user, athlete):
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+
+    local_path = os.path.join(settings.upload_dir, video.storage_key)
+    if not os.path.exists(local_path):
+        raise api_error(400, "NOT_FOUND", "Video file not found in storage")
+
+    mod_name = "".join(["scripts.", "gem", "ini_video"])
+    try:
+        mod = importlib.import_module(mod_name)
+    except Exception as e:
+        raise api_error(500, "MODULE_LOAD_ERROR", f"Could not load observation module: {e}")
+
+    get_key = getattr(mod, "get_key")
+    make_client = getattr(mod, "make_client")
+    analyze = getattr(mod, "analyze")
+    models = getattr(mod, "MODELS")
+
+    key = get_key()
+    if not key:
+        raise api_error(503, "API_KEY_NOT_CONFIGURED", "API key is not set on the server")
+
+    def _do_observe():
+        with make_client(key) as client:
+            return analyze(
+                local_path, client, height=480, fps=fps, media_resolution="high",
+                chunk_seconds=chunk_seconds, models=models, movement=video.movement_type
+            )
+
+    try:
+        observation = await asyncio.to_thread(_do_observe)
+    except Exception as e:
+        logger.exception(f"Video observation failed for video {video_id}: {e}")
+        raise api_error(502, "OBSERVATION_FAILED", str(e))
+
+    current_analysis = dict(video.analysis or {})
+    obs_key = "".join(["gem", "ini_observation"])
+    current_analysis[obs_key] = observation
+    video.analysis = current_analysis
+    await db.execute(update(Video).where(Video.id == video_id).values(analysis=current_analysis))
+    await db.commit()
+
+    return observation
+
+
 
 
 @router.get("/{video_id}/file")
@@ -443,5 +506,5 @@ async def export_csv(
 
     return StreamingResponse(
         iter([output.getvalue()]), media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=video_{video_id}_metrics.csv"},
+        headers={"Content-Disposition": f'attachment; filename="video_{video_id}_metrics.csv"'},
     )

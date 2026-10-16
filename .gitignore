@@ -52,3 +52,6 @@ dist/
 /archive/
 *.log
 /data/
+/backend/gemini_out/
+/gemini_out/
+gemini_out/
