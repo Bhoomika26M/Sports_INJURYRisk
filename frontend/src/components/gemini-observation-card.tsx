@@ -46,7 +46,7 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
   return (
     <section className={`card p-6 flex flex-col gap-5 ${className}`}>
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-subtle pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-1">
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
             <Icon name="film" className="h-5 w-5" />
@@ -91,7 +91,7 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
       </div>
 
       {!obs ? (
-        <div className="rounded-xl border border-dashed border-subtle p-6 text-center">
+        <div className="rounded-2xl bg-surface p-6 text-center">
           <p className="text-sm text-ink-2">
             No qualitative Gemini observation has been generated for this video yet.
           </p>
@@ -117,7 +117,7 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
             </h4>
             <div className="grid gap-3 sm:grid-cols-3">
               {/* Knee Valgus */}
-              <div className="rounded-xl bg-surface p-4 flex flex-col justify-between border border-subtle">
+              <div className="rounded-2xl bg-surface p-4 flex flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs font-medium text-ink-2">Frontal Knee Valgus</span>
                   <span className={`badge badge-${LEVEL_TONE[overall?.knee_valgus ?? primaryChunk?.knee_valgus?.level ?? "muted"]}`}>
@@ -132,7 +132,7 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
               </div>
 
               {/* Trunk Lean */}
-              <div className="rounded-xl bg-surface p-4 flex flex-col justify-between border border-subtle">
+              <div className="rounded-2xl bg-surface p-4 flex flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs font-medium text-ink-2">Forward/Lateral Lean</span>
                   <span className={`badge badge-${LEVEL_TONE[overall?.trunk_lean ?? primaryChunk?.trunk_lean?.level ?? "muted"]}`}>
@@ -147,7 +147,7 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
               </div>
 
               {/* Bilateral Asymmetry */}
-              <div className="rounded-xl bg-surface p-4 flex flex-col justify-between border border-subtle">
+              <div className="rounded-2xl bg-surface p-4 flex flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
                   <span className="text-xs font-medium text-ink-2">Bilateral Asymmetry</span>
                   <span className={`badge badge-${LEVEL_TONE[overall?.asymmetry ?? primaryChunk?.asymmetry?.level ?? "muted"]}`}>
@@ -165,19 +165,19 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
 
           {/* Observations Overview */}
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl bg-surface p-3 border border-subtle">
+            <div className="rounded-2xl bg-surface p-3.5">
               <span className="text-[11px] text-ink-3">Recognized Movement</span>
               <p className="text-sm font-semibold text-ink capitalize mt-0.5">
                 {primaryChunk?.movement || "Unknown"}
               </p>
             </div>
-            <div className="rounded-xl bg-surface p-3 border border-subtle">
+            <div className="rounded-2xl bg-surface p-3.5">
               <span className="text-[11px] text-ink-3">Camera View</span>
               <p className="text-sm font-semibold text-ink capitalize mt-0.5">
                 {primaryChunk?.camera_view || "Unknown"}
               </p>
             </div>
-            <div className="rounded-xl bg-surface p-3 border border-subtle">
+            <div className="rounded-2xl bg-surface p-3.5">
               <span className="text-[11px] text-ink-3">Observed Repetitions</span>
               <p className="text-sm font-semibold text-ink mt-0.5">
                 {primaryChunk?.reps_seen != null ? `${primaryChunk.reps_seen} reps` : "—"}
@@ -187,11 +187,11 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
 
           {/* Summary & Limitations */}
           {primaryChunk?.summary && (
-            <div className="rounded-xl bg-surface-raised p-4 border border-subtle">
+            <div className="rounded-2xl bg-surface p-5">
               <p className="text-xs font-semibold text-ink mb-1">Visual Observation Summary</p>
               <p className="text-xs text-ink-2 leading-relaxed">{primaryChunk.summary}</p>
               {primaryChunk?.limitations && primaryChunk.limitations.length > 0 && (
-                <div className="mt-3 pt-3 border-t border-subtle">
+                <div className="mt-3 pt-3 border-t border-hair/40">
                   <p className="text-[11px] font-semibold text-ink-3 mb-1">Observation Limitations</p>
                   <ul className="text-xs text-ink-3 space-y-0.5 list-disc list-inside">
                     {primaryChunk.limitations.map((lim, idx) => (
@@ -216,25 +216,25 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
               </button>
 
               {showJoints && (
-                <div className="mt-2.5 overflow-hidden rounded-xl border border-subtle">
+                <div className="mt-2.5 overflow-hidden rounded-2xl bg-surface">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-surface text-ink-3 border-b border-subtle">
+                    <thead className="bg-surface-hover text-ink-3">
                       <tr>
-                        <th className="py-2 px-3 font-semibold">Joint</th>
-                        <th className="py-2 px-3 font-semibold">Side</th>
-                        <th className="py-2 px-3 font-semibold">Tracked</th>
-                        <th className="py-2 px-3 font-semibold">Qualitative Observation</th>
+                        <th className="py-2.5 px-3.5 font-semibold">Joint</th>
+                        <th className="py-2.5 px-3.5 font-semibold">Side</th>
+                        <th className="py-2.5 px-3.5 font-semibold">Tracked</th>
+                        <th className="py-2.5 px-3.5 font-semibold">Qualitative Observation</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-subtle bg-white">
+                    <tbody className="divide-y divide-faint bg-white">
                       {primaryChunk.joints.map((j, i) => (
                         <tr key={i} className="hover:bg-surface-tint">
-                          <td className="py-2 px-3 font-medium capitalize text-ink">{j.joint}</td>
-                          <td className="py-2 px-3 text-ink-3 capitalize">{j.side}</td>
-                          <td className="py-2 px-3">
+                          <td className="py-2.5 px-3.5 font-medium capitalize text-ink">{j.joint}</td>
+                          <td className="py-2.5 px-3.5 text-ink-3 capitalize">{j.side}</td>
+                          <td className="py-2.5 px-3.5">
                             <span className={`inline-block h-2 w-2 rounded-full ${j.visible ? "bg-ok" : "bg-danger"}`} />
                           </td>
-                          <td className="py-2 px-3 text-ink-2">{j.note}</td>
+                          <td className="py-2.5 px-3.5 text-ink-2">{j.note}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -245,7 +245,7 @@ export function GeminiObservationCard({ video, className = "" }: GeminiObservati
           )}
 
           {/* Science Constraints Disclaimer */}
-          <div className="rounded-xl bg-surface p-3 border border-subtle flex items-start gap-2 text-ink-3 text-[11px]">
+          <div className="rounded-2xl bg-surface p-3.5 flex items-start gap-2.5 text-ink-3 text-[11px]">
             <Icon name="info" className="h-4 w-4 shrink-0 text-ink-3 mt-0.5" />
             <p>
               {obs.disclaimer || "Qualitative observations by an AI model watching a downscaled video. Not measurements, not a diagnosis, not an injury prediction. Knee valgus is a visual flag only. Kept apart from the platform's pose pipeline: do not feed this into baselines or risk scores."}
