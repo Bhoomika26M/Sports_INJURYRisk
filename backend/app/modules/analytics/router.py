@@ -8,7 +8,8 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_role
+from app.core.access import can_access_athlete as _can_access_athlete
+from app.core.deps import UuidPath, get_current_user, require_role
 from app.core.errors import api_error
 from app.database import get_db
 from app.modules.analytics.schemas import AthleteTrendResponse, MovementAnalyticsResponse, RiskTrendPoint, TeamOverviewResponse
@@ -25,16 +26,6 @@ COMPONENT_KEYS = tuple(WEIGHTS)  # the five spec components, in spec order
 router = APIRouter(prefix="/api/v1", tags=["analytics"])
 
 
-def _can_access_athlete(user: User, athlete: Athlete) -> bool:
-    if user.role in (UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist):
-        return True
-    if user.role == UserRole.coach and athlete.coach_id == user.id:
-        return True
-    if user.role == UserRole.athlete and athlete.user_id == user.id:
-        return True
-    return False
-
-
 @router.get("/analytics/team-overview", response_model=TeamOverviewResponse)
 async def get_team_overview(
     current_user: Annotated[User, Depends(get_current_user)],
@@ -45,7 +36,7 @@ async def get_team_overview(
 
 @router.get("/analytics/athletes/{athlete_id}/trends", response_model=AthleteTrendResponse)
 async def get_athlete_trends(
-    athlete_id: str,
+    athlete_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -63,6 +54,11 @@ async def get_movement_analytics(
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
+    from app.modules.video.models import MovementType
+
+    known = await db.scalar(select(MovementType).where(MovementType.code == movement_type))
+    if not known:
+        raise api_error(404, "NOT_FOUND", f"Unknown movement type: {movement_type}")
     return await movement_type_analytics(db, current_user, movement_type)
 
 
@@ -80,6 +76,8 @@ async def _load_report_context(db: AsyncSession, video_id: str, user: User) -> d
     if not video:
         raise api_error(404, "NOT_FOUND", "Video not found")
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
     risk = await db.scalar(select(RiskScore).where(RiskScore.video_id == video_id))
@@ -94,7 +92,7 @@ async def _load_report_context(db: AsyncSession, video_id: str, user: User) -> d
 
 @router.get("/videos/{video_id}/report.pdf")
 async def export_risk_pdf(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
@@ -136,7 +134,7 @@ async def export_risk_pdf(
 
 @router.get("/videos/{video_id}/report.xlsx")
 async def export_risk_excel(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):

@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.access import can_access_athlete as _can_access_athlete
 from app.core.deps import UuidPath, get_current_user, require_role
 from app.core.errors import api_error
 from app.database import get_db
@@ -36,21 +37,13 @@ async def recompute_baselines_endpoint(
     return {"message": f"Recomputed baselines for {request.movement_type}", "details": result}
 
 
-def _can_access_athlete(user: User, athlete: Athlete) -> bool:
-    if user.role in (UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist):
-        return True
-    if user.role == UserRole.coach and athlete.coach_id == user.id:
-        return True
-    if user.role == UserRole.athlete and athlete.user_id == user.id:
-        return True
-    return False
-
-
 async def _load_video_and_athlete(db: AsyncSession, video_id: str, user: User) -> tuple[Video, Athlete]:
     video = await db.scalar(select(Video).where(Video.id == video_id))
     if not video:
         raise api_error(404, "NOT_FOUND", "Video not found")
     athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
     if not _can_access_athlete(user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
     return video, athlete

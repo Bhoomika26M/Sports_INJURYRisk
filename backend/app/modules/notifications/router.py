@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user
+from app.core.deps import UuidPath, get_current_user
 from app.core.errors import api_error
 from app.database import get_db
 from app.modules.notifications.models import Notification
@@ -43,7 +43,7 @@ async def list_notifications(
 
 @router.post("/{notification_id}/read", response_model=NotificationResponse)
 async def mark_read(
-    notification_id: str,
+    notification_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
