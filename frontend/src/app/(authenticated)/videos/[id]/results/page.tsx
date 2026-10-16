@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/page-header";
 import { DownloadButton } from "@/components/download-button";
 import { Icon } from "@/components/icons";
 import { ErrorState, Notice, PageSkeleton } from "@/components/feedback";
+import { AuthVideo } from "@/components/auth-media";
 
 type RiskResult =
   | { kind: "scored"; risk: RiskScore }
@@ -23,23 +24,39 @@ const SERIES_COLORS = ["#163300", "#6bbf3a", "#2563eb", "#9333ea", "#ea580c", "#
 
 const GRADE_TONE: Record<string, "ok" | "warn" | "danger" | "info"> = { good: "ok", fair: "warn", poor: "danger", unknown: "info" };
 
-/** What the pipeline could actually measure on this clip. A score is never shown as more certain than that. */
+/** What the pipeline could actually measure on this clip. Clean, non-intrusive metadata strip. */
 function QualityNotes({ video, quality, caveat, baseline }: { video: Video; quality?: VideoQuality; caveat?: string | null; baseline?: RiskScore["baseline"] }) {
+  const [open, setOpen] = useState(false);
   const q = quality ?? video.analysis?.quality;
   const cav = caveat ?? video.coverage_caveat;
   const warns = q?.warnings ?? [];
   if (!cav && !warns.length && !baseline?.provisional && (!q || q.grade === "good")) return null;
+  const totalNotes = (baseline?.provisional ? 1 : 0) + (cav ? 1 : 0) + warns.length;
   return (
-    <section className="card-soft flex flex-col gap-3 p-6">
-      <div className="flex flex-wrap items-center gap-2">
-        {q && q.grade !== "unknown" && <span className={`badge badge-${GRADE_TONE[q.grade]}`}>Video quality: {q.grade}</span>}
-        {video.detection_rate != null && <span className="badge badge-muted">Athlete tracked in {Math.round(video.detection_rate * 100)}% of frames</span>}
-        {(video.person_count_detected ?? 0) > 1 && <span className="badge badge-muted">{video.person_count_detected} people in frame</span>}
+    <section className={`bg-surface px-5 py-2.5 text-xs text-ink-2 transition-all ${open ? "rounded-2xl" : "rounded-full"}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {q && q.grade !== "unknown" && <span className={`badge badge-${GRADE_TONE[q.grade]} text-[11px]`}>Quality: {q.grade}</span>}
+          {video.detection_rate != null && <span className="badge badge-muted text-[11px]">{Math.round(video.detection_rate * 100)}% tracked</span>}
+          {baseline?.provisional && <span className="badge badge-warn text-[11px]">Provisional</span>}
+        </div>
+        {totalNotes > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            className="text-[11px] text-ink-3 hover:text-ink font-medium underline underline-offset-2 transition-colors cursor-pointer"
+          >
+            {open ? "Hide capture notes" : `${totalNotes} capture note${totalNotes === 1 ? "" : "s"}`}
+          </button>
+        )}
       </div>
-      {baseline?.provisional && <p className="text-sm text-ink-2">Compared against {baseline.videos} other videos. That is a small comparison group, so treat this score as provisional: it gets steadier as more videos are added.</p>}
-      {cav && <p className="text-sm text-ink-2">{cav}</p>}
-      {warns.length > 0 && <ul className="space-y-1 text-sm text-ink-2">{warns.map((w) => <li key={w.code}>• {w.message}</li>)}</ul>}
-      {(q?.grade === "poor" || cav) && <p className="text-xs text-ink-3">Treat any score on this clip as provisional.</p>}
+      {open && (
+        <div className="mt-2 space-y-1 border-t border-black/5 pt-2 text-[11px] text-ink-3">
+          {baseline?.provisional && <p>Compared against {baseline.videos} baseline clips. Score stabilizes as more clips are added.</p>}
+          {cav && <p>{cav}</p>}
+          {warns.map((w) => <p key={w.code}>• {w.message}</p>)}
+        </div>
+      )}
     </section>
   );
 }
@@ -160,6 +177,20 @@ function MovementSummary({ risk }: { risk: RiskScore }) {
     </section>
   );
 }
+function visualLevelTone(level?: string | null): "ok" | "warn" | "danger" | "muted" {
+  if (level === "none" || level === "optimal") return "ok";
+  if (level === "mild") return "warn";
+  if (level === "marked") return "danger";
+  return "muted";
+}
+
+function visualLevelLabel(level: string | undefined | null, noneLabel: string): string {
+  if (level === "none" || level === "optimal") return noneLabel;
+  if (level === "mild") return "Mild";
+  if (level === "marked") return "Marked";
+  if (!level || level === "not_assessable") return "Not assessed";
+  return humanize(level);
+}
 
 export default function ResultsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -197,6 +228,9 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
   });
 
   const [picked, setPicked] = useState<string[] | null>(null);
+  const [showJointDetails, setShowJointDetails] = useState(false);
+  const [showVideo, setShowVideo] = useState(false);
+  const [videoSource, setVideoSource] = useState<"annotated" | "original">("annotated");
   const fps = videoQ.data?.fps ?? null;
 
   const { validatedNames, qualitativeNames, chartData } = useMemo(() => {
@@ -232,6 +266,13 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
   }
   const video = videoQ.data;
   const back = <BackLink href={`/videos/${id}`}>Video</BackLink>;
+  const geminiObs = video.analysis?.gemini_observation;
+  const geminiOverall = geminiObs?.overall;
+  const geminiChunk = geminiObs?.chunks?.[0]?.analysis;
+  const geminiSummary = geminiChunk?.summary;
+  const geminiMovement = geminiChunk?.movement;
+  const geminiReps = geminiChunk?.reps_seen;
+  const geminiJoints = geminiChunk?.joints ?? [];
 
   if (!completed) {
     return (
@@ -268,6 +309,9 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
       ? { low: "hero--green", moderate: "hero--blue", high: "hero--yellow", critical: "" }[risk.risk.risk_category]
       : "hero--blue";
 
+  const hasAnnotated = !!video.annotated_video_key;
+  const effectiveVideoSource = hasAnnotated ? videoSource : "original";
+
   return (
     <>
       <PageHeader
@@ -286,42 +330,109 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         }
       />
 
+      {/* ---------- Video playback with tracking overlay ---------- */}
+      {video.processing_status === "completed" && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setShowVideo(!showVideo)}
+              className={`btn btn-sm ${showVideo ? "btn-soft" : "btn-outline"} inline-flex items-center gap-2`}
+            >
+              <Icon name={showVideo ? "chevron-down" : "video"} className="h-4 w-4" />
+              <span>{showVideo ? "Hide tracked video" : "Watch tracked video"}</span>
+            </button>
+
+            {showVideo && hasAnnotated && (
+              <div className="tabs text-xs" role="tablist" aria-label="Video version">
+                <button
+                  role="tab"
+                  className="tab text-xs py-1 px-3"
+                  aria-selected={videoSource === "annotated"}
+                  onClick={() => setVideoSource("annotated")}
+                >
+                  With tracking
+                </button>
+                <button
+                  role="tab"
+                  className="tab text-xs py-1 px-3"
+                  aria-selected={videoSource === "original"}
+                  onClick={() => setVideoSource("original")}
+                >
+                  Original
+                </button>
+              </div>
+            )}
+          </div>
+
+          {showVideo && (
+            <div className="card-soft p-3 overflow-hidden rounded-2xl">
+              <AuthVideo
+                key={effectiveVideoSource}
+                path={effectiveVideoSource === "annotated" ? `/videos/${video.id}/annotated` : `/videos/${video.id}/file`}
+                label={effectiveVideoSource === "annotated" ? "Video with body tracking overlay" : "Original video"}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ---------- Score ---------- */}
       {risk.kind === "scored" ? (
         <section
           className={`hero ${hero}`}
           style={risk.risk.risk_category === "critical" ? { background: "var(--danger-bg)", color: "var(--danger-fg)" } : undefined}
         >
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Movement pattern score</p>
-            <p className="mt-1 text-5xl font-bold tracking-tight">
-              {Math.round(risk.risk.overall_score)}<span className="text-2xl font-semibold opacity-70"> / 100</span>
-            </p>
-            <p className="mt-2 max-w-md opacity-90">
-              {`${RISK[risk.risk.risk_category].label} risk pattern. This flags movement worth a closer look — it isn't a prediction of injury.`}
-            </p>
+          <div className="flex flex-col justify-between sm:flex-row sm:items-start gap-6 flex-1 min-w-0">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Movement pattern score</p>
+              <p className="mt-1 text-5xl font-bold tracking-tight">
+                {Math.round(risk.risk.overall_score)}<span className="text-2xl font-semibold opacity-70"> / 100</span>
+              </p>
+              <p className="mt-2 max-w-md opacity-90">
+                {`${RISK[risk.risk.risk_category].label} risk pattern. This flags movement worth a closer look — it isn't a prediction of injury.`}
+              </p>
+            </div>
+            {Object.values(risk.risk.score_breakdown).some((b) => b.available) && (
+              <ul className="w-full max-w-xs space-y-2.5 sm:w-64">
+                  {Object.entries(risk.risk.score_breakdown).filter(([, b]) => b.available).sort((a, b) => b[1].max - a[1].max).map(([k, b]) => {
+                    const pts = Math.min(b.points, b.max);
+                    const isInt = b.max % 1 === 0;
+                    const ptsStr = isInt ? Math.round(pts).toString() : pts.toFixed(1);
+                    const maxStr = isInt ? b.max.toString() : b.max.toFixed(1);
+                    const pct = b.max ? Math.min(100, Math.max(0, (pts / b.max) * 100)) : 0;
+                    return (
+                      <li key={k}>
+                        <div className="flex justify-between text-sm">
+                          <span>{breakdownLabel(k)}</span>
+                          <span className="font-semibold">{ptsStr} / {maxStr}</span>
+                        </div>
+                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/10">
+                          <span className="block h-full rounded-full bg-current opacity-60" style={{ width: `${pct}%` }} />
+                        </div>
+                      </li>
+                    );
+                  })}
+              </ul>
+            )}
           </div>
-          {Object.values(risk.risk.score_breakdown).some((b) => b.available) && (
-            <ul className="w-full max-w-xs space-y-2.5 sm:w-72">
-                {Object.entries(risk.risk.score_breakdown).filter(([, b]) => b.available).sort((a, b) => b[1].max - a[1].max).map(([k, b]) => {
-                  const pts = Math.min(b.points, b.max);
-                  const isInt = b.max % 1 === 0;
-                  const ptsStr = isInt ? Math.round(pts).toString() : pts.toFixed(1);
-                  const maxStr = isInt ? b.max.toString() : b.max.toFixed(1);
-                  const pct = b.max ? Math.min(100, Math.max(0, (pts / b.max) * 100)) : 0;
-                  return (
-                    <li key={k}>
-                      <div className="flex justify-between text-sm">
-                        <span>{breakdownLabel(k)}</span>
-                        <span className="font-semibold">{ptsStr} / {maxStr}</span>
-                      </div>
-                      <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/10">
-                        <span className="block h-full rounded-full bg-current opacity-60" style={{ width: `${pct}%` }} />
-                      </div>
-                    </li>
-                  );
-                })}
-            </ul>
+
+          {geminiSummary && (
+            <div className="w-full sm:w-[280px] shrink-0 rounded-2xl bg-black/[0.04] p-4 border border-black/5 flex flex-col gap-2 text-xs self-start">
+              <div className="flex items-center justify-between gap-1.5">
+                <span className="badge badge-ok text-[11px]">
+                  Movement insight
+                </span>
+                {geminiOverall?.quality && (
+                  <span className="text-[11px] font-medium opacity-80 capitalize">
+                    {geminiOverall.quality} form
+                  </span>
+                )}
+              </div>
+              <p className="text-xs opacity-90 leading-relaxed font-normal line-clamp-3">
+                {geminiSummary}
+              </p>
+            </div>
           )}
         </section>
       ) : risk.kind === "insufficient" ? (
@@ -343,6 +454,101 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         caveat={risk.kind === "scored" ? risk.risk.data_quality?.caveat : undefined}
         baseline={risk.kind === "scored" ? risk.risk.baseline : undefined}
       />
+
+      {/* ---------- Visual Movement Screening ---------- */}
+      {geminiOverall && (
+        <section className="flex flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Visual movement screening</h2>
+            <p className="mt-0.5 text-sm text-ink-3">
+              Video-based qualitative screening of knee tracking, trunk control, and limb symmetry.
+            </p>
+          </div>
+
+          <ul className="grid gap-3 md:grid-cols-3">
+            <li className="card-soft p-5 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-ink">Frontal knee valgus</h3>
+                    <p className="text-xs text-ink-3 mt-0.5">Front view · Dynamic alignment</p>
+                  </div>
+                  <span className={`badge badge-${visualLevelTone(geminiOverall.knee_valgus)}`}>
+                    {visualLevelLabel(geminiOverall.knee_valgus, "Aligned")}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-ink-2 leading-relaxed">
+                  {geminiChunk?.knee_valgus?.note || "Qualitative knee tracking for medial collapse during loading."}
+                </p>
+              </div>
+            </li>
+
+            <li className="card-soft p-5 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-ink">Trunk lean &amp; flexion</h3>
+                    <p className="text-xs text-ink-3 mt-0.5">Spinal posture &amp; tilt</p>
+                  </div>
+                  <span className={`badge badge-${visualLevelTone(geminiOverall.trunk_lean)}`}>
+                    {visualLevelLabel(geminiOverall.trunk_lean, "Upright")}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-ink-2 leading-relaxed">
+                  {geminiChunk?.trunk_lean?.note || "Evaluation of forward trunk flexion and lateral tilt."}
+                </p>
+              </div>
+            </li>
+
+            <li className="card-soft p-5 flex flex-col justify-between gap-3">
+              <div>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-ink">Bilateral balance</h3>
+                    <p className="text-xs text-ink-3 mt-0.5">Left vs right excursion</p>
+                  </div>
+                  <span className={`badge badge-${visualLevelTone(geminiOverall.asymmetry)}`}>
+                    {visualLevelLabel(geminiOverall.asymmetry, "Symmetric")}
+                  </span>
+                </div>
+                <p className="mt-3 text-sm text-ink-2 leading-relaxed">
+                  {geminiChunk?.asymmetry?.note || "Left vs right weight distribution and joint excursion."}
+                </p>
+              </div>
+            </li>
+          </ul>
+
+          {geminiJoints.length > 0 && (
+            <div>
+              <button
+                type="button"
+                onClick={() => setShowJointDetails(!showJointDetails)}
+                className="text-xs font-semibold text-ink-3 hover:text-ink flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Icon name={showJointDetails ? "chevron-down" : "chevron-right"} className="h-3.5 w-3.5" />
+                <span>{showJointDetails ? "Hide joint mobility notes" : `View joint mobility notes (${geminiJoints.length} joints)`}</span>
+              </button>
+
+              {showJointDetails && (
+                <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                  {geminiJoints.map((j, i) => (
+                    <div key={i} className="card-soft px-4 py-3 flex flex-col justify-between gap-1.5">
+                      <div className="flex items-center justify-between text-xs font-semibold text-ink capitalize">
+                        <span>{j.side} {j.joint}</span>
+                        <span className={`badge ${j.visible ? "badge-ok" : "badge-warn"} text-[10px]`}>
+                          {j.visible ? "Tracked" : "Occluded"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-ink-3 leading-relaxed mt-0.5">{j.note}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
       {risk.kind === "scored" && <SubScores risk={risk.risk} />}
 
       {/* ---------- Key numbers ---------- */}
