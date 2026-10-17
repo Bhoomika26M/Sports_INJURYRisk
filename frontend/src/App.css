@@ -1168,3 +1168,335 @@ button {
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* =========================================================
+   MILESTONE 3: INJURY RISK PREDICTION & RECOMMENDATIONS
+========================================================= */
+
+.prediction-section {
+  margin-top: 35px;
+  background: rgba(14, 18, 26, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 32px;
+  backdrop-filter: blur(16px);
+  position: relative;
+  overflow: hidden;
+}
+
+.prediction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.prediction-header h2 {
+  margin: 6px 0 0;
+  font-size: 26px;
+  letter-spacing: -0.5px;
+}
+
+.prediction-header p {
+  color: #798393;
+  font-size: 13px;
+  margin: 6px 0 0;
+  max-width: 650px;
+}
+
+.risk-level-badge {
+  display: inline-block;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  border-radius: 2px;
+}
+
+.risk-level-LOW {
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid #10b981;
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+}
+
+.risk-level-MODERATE {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+  border: 1px solid #f59e0b;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.risk-level-HIGH {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.35);
+}
+
+.risk-overview-grid {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 25px;
+  margin-bottom: 30px;
+}
+
+.overall-risk-hero {
+  background: rgba(8, 11, 16, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.risk-gauge-circle {
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  border: 4px solid #ff4242;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 35px rgba(255, 50, 50, 0.25);
+  margin-bottom: 15px;
+}
+
+.risk-gauge-circle strong {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+}
+
+.risk-gauge-circle span {
+  font-size: 10px;
+  color: #8c97a7;
+  letter-spacing: 1.5px;
+}
+
+.breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.injury-card-metric {
+  background: rgba(10, 13, 19, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.injury-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.injury-card-top span {
+  font-size: 11px;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.injury-card-top strong {
+  font-size: 20px;
+  color: #f1f5f9;
+}
+
+.injury-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.injury-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bar-low {
+  background: #10b981;
+}
+
+.bar-mid {
+  background: #f59e0b;
+}
+
+.bar-high {
+  background: #ef4444;
+}
+
+.injury-card-desc {
+  font-size: 10px;
+  color: #717d8e;
+}
+
+.warnings-container {
+  margin-bottom: 30px;
+}
+
+.warning-item-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  border-radius: 2px;
+}
+
+.warning-CRITICAL {
+  background: rgba(239, 68, 68, 0.12);
+  border-left: 4px solid #ef4444;
+  border-right: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.warning-WARNING {
+  background: rgba(245, 158, 11, 0.12);
+  border-left: 4px solid #f59e0b;
+  border-right: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.warning-INFO {
+  background: rgba(16, 185, 129, 0.08);
+  border-left: 4px solid #10b981;
+  border-right: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.warning-text h5 {
+  margin: 0 0 4px;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.warning-text p {
+  margin: 0;
+  font-size: 11px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.exercises-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-bottom: 30px;
+}
+
+.exercise-card {
+  background: rgba(10, 13, 19, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.exercise-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 60, 60, 0.3);
+}
+
+.exercise-card h4 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  color: #f8fafc;
+}
+
+.ex-tag {
+  display: inline-block;
+  font-size: 9px;
+  color: #ff5252;
+  letter-spacing: 1px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.ex-target {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 6px;
+}
+
+.ex-freq {
+  font-size: 11px;
+  color: #38bdf8;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.ex-purpose {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 10px;
+}
+
+.load-protocol-box {
+  background: rgba(10, 13, 19, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 24px;
+}
+
+.load-protocol-box h4 {
+  margin: 0 0 12px;
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: #e2e8f0;
+}
+
+.protocol-action {
+  font-size: 13px;
+  color: #f59e0b;
+  font-weight: 600;
+  padding: 12px 16px;
+  background: rgba(245, 158, 11, 0.08);
+  border-left: 3px solid #f59e0b;
+  margin-bottom: 15px;
+}
+
+.guidelines-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.guidelines-list li {
+  padding: 8px 0;
+  font-size: 12px;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.guidelines-list li span {
+  color: #10b981;
+}
+
+@media (max-width: 900px) {
+  .risk-overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .breakdown-grid {
+    grid-template-columns: 1fr;
+  }
+  .exercises-grid {
+    grid-template-columns: 1fr;
+  }
+}

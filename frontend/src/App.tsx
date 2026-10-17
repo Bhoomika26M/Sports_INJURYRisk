@@ -66,6 +66,47 @@ type VideoAnalysisResponse = {
   sampled_frames: FrameSample[];
 };
 
+type EarlyWarningItem = {
+  severity: "CRITICAL" | "WARNING" | "INFO";
+  title: string;
+  message: string;
+};
+
+type RiskBreakdown = {
+  acl_risk: number;
+  hamstring_risk: number;
+  ankle_risk: number;
+  patellar_risk: number;
+};
+
+type CorrectiveExerciseItem = {
+  name: string;
+  category: string;
+  target: string;
+  frequency: string;
+  purpose: string;
+  difficulty: string;
+};
+
+type RecommendationPlan = {
+  prescribed_exercises: CorrectiveExerciseItem[];
+  training_load_recommendation: string;
+  recovery_status: string;
+  recovery_guidelines: string[];
+};
+
+type InjuryAssessmentResponse = {
+  id?: number;
+  athlete_id?: string | null;
+  movement_type: string;
+  overall_risk_score: number;
+  risk_level: "LOW" | "MODERATE" | "HIGH";
+  risk_breakdown: RiskBreakdown;
+  early_warnings: EarlyWarningItem[];
+  recommendations: RecommendationPlan;
+  created_at?: string;
+};
+
 function App() {
   /* =========================
      LOGIN / SIGNUP STATE
@@ -110,6 +151,12 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState<VideoAnalysisResponse | null>(null);
   const [analysisError, setAnalysisError] = useState<string>("");
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
+
+  /* =========================
+     MILESTONE 3: INJURY RISK & RECOMMENDATION STATE
+  ========================= */
+  const [predictionResult, setPredictionResult] = useState<InjuryAssessmentResponse | null>(null);
+  const [predictionLoading, setPredictionLoading] = useState<boolean>(false);
 
   /* =========================
      LOAD ATHLETE
@@ -360,6 +407,40 @@ function App() {
      BIOMECHANICS ANALYSIS HANDLERS
   ========================= */
 
+  const handleAssessInjuryRisk = async (customBiotech?: QualityReport) => {
+    setPredictionLoading(true);
+    try {
+      const payload: any = {
+        athlete_id: athlete?.athlete_id || null,
+        movement_type: selectedMovement
+      };
+      const biotechData = customBiotech || analysisResult?.quality_report;
+      if (biotechData) {
+        payload.biomechanics = {
+          overall_score: biotechData.overall_score,
+          metrics_summary: biotechData.metrics_summary,
+          anomalies: biotechData.anomalies
+        };
+      }
+
+      const res = await fetch("http://127.0.0.1:8000/prediction/assess", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to assess injury risk");
+      }
+      const data: InjuryAssessmentResponse = await res.json();
+      setPredictionResult(data);
+    } catch (err: any) {
+      console.error(err);
+    } finally {
+      setPredictionLoading(false);
+    }
+  };
+
   const handleRunDemo = async (movement: string) => {
     setAnalysisLoading(true);
     setAnalysisError("");
@@ -374,6 +455,7 @@ function App() {
       const data: VideoAnalysisResponse = await res.json();
       setAnalysisResult(data);
       setCurrentFrameIndex(0);
+      handleAssessInjuryRisk(data.quality_report);
     } catch (err: any) {
       setAnalysisError(err.message || "Failed to run analysis");
     } finally {
@@ -406,6 +488,7 @@ function App() {
       const data: VideoAnalysisResponse = await res.json();
       setAnalysisResult(data);
       setCurrentFrameIndex(0);
+      handleAssessInjuryRisk(data.quality_report);
     } catch (err: any) {
       setAnalysisError(err.message || "Failed to upload and analyze video");
     } finally {
@@ -1222,6 +1305,175 @@ function App() {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+        </section>
+
+        {/* ================= MILESTONE 3: AI INJURY PREDICTION & RECOMMENDATIONS STUDIO ================= */}
+
+        <section className="prediction-section">
+          <div className="prediction-header">
+            <div>
+              <span className="online-label">
+                MILESTONE 3 • INJURY INTELLIGENCE & RECOMMENDATION ENGINE
+              </span>
+              <h2>INJURY RISK PREDICTION & RECOVERY WORKFLOWS</h2>
+              <p>
+                Multi-factor predictive ML engine analyzing biomechanical indicators, historical injuries, and training loads to deliver real-time risk scores and personalized corrective exercise prescriptions.
+              </p>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <button
+                type="button"
+                className="btn-primary-action"
+                disabled={predictionLoading}
+                onClick={() => handleAssessInjuryRisk()}
+              >
+                {predictionLoading ? "CALCULATING RISK..." : "ASSESS INJURY RISK"}
+              </button>
+            </div>
+          </div>
+
+          {predictionResult && (
+            <div>
+              {/* COMPOSITE RISK OVERVIEW */}
+              <div className="risk-overview-grid">
+                <div className="overall-risk-hero">
+                  <div className="risk-gauge-circle">
+                    <strong>{predictionResult.overall_risk_score}%</strong>
+                    <span>OVERALL RISK</span>
+                  </div>
+                  <span className={`risk-level-badge risk-level-${predictionResult.risk_level}`}>
+                    {predictionResult.risk_level} RISK LEVEL
+                  </span>
+                  <p style={{ fontSize: "11px", color: "#8c97a7", marginTop: "12px" }}>
+                    Composite AI Injury Risk Probability
+                  </p>
+                </div>
+
+                {/* BREAKDOWN OF SPECIFIC INJURIES */}
+                <div className="breakdown-grid">
+                  <div className="injury-card-metric">
+                    <div className="injury-card-top">
+                      <span>ACL LIGAMENT STRAIN</span>
+                      <strong>{predictionResult.risk_breakdown.acl_risk}%</strong>
+                    </div>
+                    <div className="injury-bar-bg">
+                      <div
+                        className={`injury-bar-fill ${predictionResult.risk_breakdown.acl_risk >= 70 ? 'bar-high' : predictionResult.risk_breakdown.acl_risk >= 35 ? 'bar-mid' : 'bar-low'}`}
+                        style={{ width: `${predictionResult.risk_breakdown.acl_risk}%` }}
+                      ></div>
+                    </div>
+                    <div className="injury-card-desc">
+                      Correlated with Dynamic Knee Valgus and landing stiffness.
+                    </div>
+                  </div>
+
+                  <div className="injury-card-metric">
+                    <div className="injury-card-top">
+                      <span>HAMSTRING STRAIN</span>
+                      <strong>{predictionResult.risk_breakdown.hamstring_risk}%</strong>
+                    </div>
+                    <div className="injury-bar-bg">
+                      <div
+                        className={`injury-bar-fill ${predictionResult.risk_breakdown.hamstring_risk >= 70 ? 'bar-high' : predictionResult.risk_breakdown.hamstring_risk >= 35 ? 'bar-mid' : 'bar-low'}`}
+                        style={{ width: `${predictionResult.risk_breakdown.hamstring_risk}%` }}
+                      ></div>
+                    </div>
+                    <div className="injury-card-desc">
+                      Driven by bilateral asymmetry & high-velocity eccentric loads.
+                    </div>
+                  </div>
+
+                  <div className="injury-card-metric">
+                    <div className="injury-card-top">
+                      <span>ANKLE INVERSION / SPRAIN</span>
+                      <strong>{predictionResult.risk_breakdown.ankle_risk}%</strong>
+                    </div>
+                    <div className="injury-bar-bg">
+                      <div
+                        className={`injury-bar-fill ${predictionResult.risk_breakdown.ankle_risk >= 70 ? 'bar-high' : predictionResult.risk_breakdown.ankle_risk >= 35 ? 'bar-mid' : 'bar-low'}`}
+                        style={{ width: `${predictionResult.risk_breakdown.ankle_risk}%` }}
+                      ></div>
+                    </div>
+                    <div className="injury-card-desc">
+                      Influenced by lateral postural sway and prior ankle history.
+                    </div>
+                  </div>
+
+                  <div className="injury-card-metric">
+                    <div className="injury-card-top">
+                      <span>PATELLAR TENDONITIS</span>
+                      <strong>{predictionResult.risk_breakdown.patellar_risk}%</strong>
+                    </div>
+                    <div className="injury-bar-bg">
+                      <div
+                        className={`injury-bar-fill ${predictionResult.risk_breakdown.patellar_risk >= 70 ? 'bar-high' : predictionResult.risk_breakdown.patellar_risk >= 35 ? 'bar-mid' : 'bar-low'}`}
+                        style={{ width: `${predictionResult.risk_breakdown.patellar_risk}%` }}
+                      ></div>
+                    </div>
+                    <div className="injury-card-desc">
+                      Triggered by repetitive high impact & training overload.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* EARLY WARNING ALERTS */}
+              <div className="warnings-container">
+                <h4 style={{ fontSize: "12px", letterSpacing: "1.5px", margin: "0 0 12px", color: "#e2e8f0" }}>
+                  EARLY WARNING SYSTEM ALERTS
+                </h4>
+                {predictionResult.early_warnings.map((w, idx) => (
+                  <div key={idx} className={`warning-item-card warning-${w.severity}`}>
+                    <span style={{ fontSize: "16px" }}>
+                      {w.severity === "CRITICAL" ? "🚨" : w.severity === "WARNING" ? "⚠" : "ℹ"}
+                    </span>
+                    <div className="warning-text">
+                      <h5>{w.title}</h5>
+                      <p>{w.message}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* CORRECTIVE RECOMMENDATIONS */}
+              <div style={{ marginBottom: "25px" }}>
+                <h4 style={{ fontSize: "12px", letterSpacing: "1.5px", margin: "0 0 16px", color: "#e2e8f0" }}>
+                  PRESCRIPTIVE CORRECTIVE EXERCISE PROTOCOL
+                </h4>
+                <div className="exercises-grid">
+                  {predictionResult.recommendations.prescribed_exercises.map((ex, idx) => (
+                    <div key={idx} className="exercise-card">
+                      <div>
+                        <h4>{ex.name}</h4>
+                        <span className="ex-tag">{ex.category.toUpperCase()} • {ex.difficulty.toUpperCase()}</span>
+                        <div className="ex-target"><strong>Target:</strong> {ex.target}</div>
+                        <div className="ex-freq"><strong>Dose:</strong> {ex.frequency}</div>
+                      </div>
+                      <div className="ex-purpose">
+                        {ex.purpose}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* LOAD MANAGEMENT & RECOVERY PROTOCOL */}
+              <div className="load-protocol-box">
+                <h4>TRAINING LOAD & RECOVERY MANAGEMENT</h4>
+                <div className="protocol-action">
+                  {predictionResult.recommendations.training_load_recommendation}
+                </div>
+                <ul className="guidelines-list">
+                  {predictionResult.recommendations.recovery_guidelines.map((g, idx) => (
+                    <li key={idx}>
+                      <span>✓</span> {g}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           )}
         </section>
