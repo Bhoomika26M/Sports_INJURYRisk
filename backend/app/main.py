@@ -5,9 +5,11 @@ from app.database import Base, engine
 
 from app.models.user import User
 from app.models.athlete import Athlete
+from app.models.analysis import AnalysisRecord
 
 from app.routes.auth import router as auth_router
 from app.routes.athletes import router as athlete_router
+from app.routes.analysis import router as analysis_router
 
 
 # Create database tables
@@ -34,9 +36,10 @@ app.add_middleware(
 )
 
 
-# Authentication routes
+# Authentication & Analysis routes
 app.include_router(auth_router)
 app.include_router(athlete_router)
+app.include_router(analysis_router)
 
 
 @app.get("/")
