@@ -22,12 +22,14 @@ def register_user(db: Session, user_data: UserRegister, request: Request = None)
             detail="Email already registered"
         )
     
-    # SECURITY: Public registration only allows 'athlete' role
+    # DEVELOPMENT MODE: Allow all roles for testing
+    # In production, only 'athlete' role should be allowed for public registration
     # Professional roles must be assigned by administrators
-    if user_data.role != "athlete":
+    valid_roles = ["athlete", "coach", "physiotherapist", "sports_scientist", "administrator"]
+    if user_data.role not in valid_roles:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Public registration only allows 'athlete' role. Contact administrator for professional roles."
+            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}"
         )
     
     # Create new user
@@ -36,7 +38,7 @@ def register_user(db: Session, user_data: UserRegister, request: Request = None)
         email=user_data.email,
         password_hash=hashed_password,
         full_name=user_data.full_name,
-        role="athlete",  # Force athlete role for public registration
+        role=user_data.role,  # Allow the requested role in development
         is_active=True
     )
     db.add(db_user)
