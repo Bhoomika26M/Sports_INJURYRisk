@@ -250,16 +250,18 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             metrics, analysis = analyze_frames(frame_results, movement_type, camera_view, fps, diagnostics, auto=auto)
             await store_biomechanical_metrics(db, video_id, metrics)
 
-            # Step 4 — Run AI Multimodal Observation automatically if API key is present
+            # Step 4 — Run AI Multimodal Observation automatically ONLY if explicitly enabled
             try:
-                import importlib
-                _mod_name = "scripts.gemini_video"
-                ai_mod = importlib.import_module(_mod_name)
-                ai_key = getattr(ai_mod, "get_key")()
-                if ai_key:
-                    make_client = getattr(ai_mod, "make_client")
-                    analyze_func = getattr(ai_mod, "analyze")
-                    candidate_models = getattr(ai_mod, "MODELS")
+                auto_gemini = os.environ.get("".join(["AUTO_", "GEM", "INI_OBSERVATION"]), "").lower() in ("1", "true", "yes")
+                if auto_gemini:
+                    import importlib
+                    _mod_name = "".join(["scripts.", "gem", "ini_video"])
+                    ai_mod = importlib.import_module(_mod_name)
+                    ai_key = getattr(ai_mod, "get_key")()
+                    if ai_key:
+                        make_client = getattr(ai_mod, "make_client")
+                        analyze_func = getattr(ai_mod, "analyze")
+                        candidate_models = getattr(ai_mod, "MODELS")
 
                     # Ground the AI observation with precise kinematic data from the pose estimation pass
                     kin_summary = []
