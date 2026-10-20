@@ -1,0 +1,55 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: kinematix-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kinematix
+      POSTGRES_USER: kinematix
+      POSTGRES_PASSWORD: kinematix_secret_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kinematix -d kinematix"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: kinematix-backend
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgresql://kinematix:kinematix_secret_password@db:5432/kinematix
+      - SECRET_KEY=kinematix-production-secret-key-change-me
+      - FRONTEND_URL=http://localhost:3000
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads_data:/app/uploads
+      - samples_data:/app/samples
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: kinematix-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads_data:
+  samples_data:

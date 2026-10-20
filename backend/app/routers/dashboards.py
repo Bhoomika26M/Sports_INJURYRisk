@@ -139,3 +139,71 @@ def get_sports_scientist_dashboard(db: Session = Depends(get_db)):
             }
         ]
     }
+
+@router.get("/admin")
+def get_admin_dashboard(db: Session = Depends(get_db)):
+    import os
+    from app.models.user import User
+    from app.config import UPLOAD_DIR, SAMPLE_DIR, settings
+
+    users = db.query(User).all()
+    athletes = db.query(Athlete).all()
+    videos = db.query(VideoRecord).all()
+    analyses = db.query(BiomechanicalAnalysis).all()
+    assessments = db.query(InjuryRiskAssessment).all()
+
+    # User role distribution
+    role_counts = {
+        "athlete": sum(1 for u in users if u.role == "athlete"),
+        "coach": sum(1 for u in users if u.role == "coach"),
+        "physiotherapist": sum(1 for u in users if u.role == "physiotherapist"),
+        "sports_scientist": sum(1 for u in users if u.role == "sports_scientist"),
+        "administrator": sum(1 for u in users if u.role == "administrator")
+    }
+
+    # Calculate storage footprint
+    storage_bytes = 0
+    for folder in [UPLOAD_DIR, SAMPLE_DIR]:
+        if folder.exists():
+            for f in folder.iterdir():
+                if f.is_file():
+                    storage_bytes += f.stat().st_size
+    storage_mb = round(storage_bytes / (1024 * 1024), 2)
+
+    # Recent activity log
+    recent_videos = db.query(VideoRecord).order_by(VideoRecord.id.desc()).limit(5).all()
+    audit_logs = [
+        {
+            "id": v.id,
+            "action": f"Video analyzed: '{v.title}'",
+            "athlete_id": v.athlete_id,
+            "status": v.status,
+            "created_at": v.created_at.strftime("%Y-%m-%d %H:%M UTC") if v.created_at else "Recent"
+        }
+        for v in recent_videos
+    ]
+
+    return {
+        "system_metrics": {
+            "total_registered_users": len(users),
+            "total_athletes": len(athletes),
+            "total_video_records": len(videos),
+            "total_biomechanical_analyses": len(analyses),
+            "storage_usage_mb": storage_mb,
+            "database_engine": "PostgreSQL Ready" if "postgres" in settings.DATABASE_URL else "SQLite (Local Dev)",
+            "cv_runtime": "MediaPipe Pose Tasks v1.1.0"
+        },
+        "role_breakdown": role_counts,
+        "users": [
+            {
+                "id": u.id,
+                "email": u.email,
+                "full_name": u.full_name,
+                "role": u.role,
+                "created_at": u.created_at.strftime("%Y-%m-%d") if u.created_at else "2026-10-20"
+            }
+            for u in users
+        ],
+        "audit_logs": audit_logs,
+        "methodology_notice": "Kinematix uses transparent, deterministic mathematical formulas calibrated against sports science literature. No opaque black-box clinical claims are made."
+    }

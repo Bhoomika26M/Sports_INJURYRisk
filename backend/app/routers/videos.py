@@ -32,8 +32,12 @@ async def upload_video(
     db: Session = Depends(get_db)
 ):
     ext = Path(file.filename).suffix.lower()
-    if ext not in [".mp4", ".mov", ".avi", ".webm", ".mkv"]:
-        raise HTTPException(status_code=400, detail="Unsupported video format. Please upload MP4, MOV, or WebM.")
+    allowed_extensions = [".mp4", ".mov", ".avi", ".webm", ".mkv"]
+    if ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported video format '{ext}'. Supported formats: {', '.join(allowed_extensions)}"
+        )
 
     unique_filename = f"{uuid.uuid4().hex}_{file.filename}"
     file_path = UPLOAD_DIR / unique_filename
@@ -42,13 +46,35 @@ async def upload_video(
         shutil.copyfileobj(file.file, buffer)
 
     file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=400, detail="Uploaded file is empty (0 bytes).")
 
-    # Extract video properties via OpenCV
+    MAX_SIZE = 250 * 1024 * 1024  # 250 MB
+    if file_size > MAX_SIZE:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=400, detail=f"File exceeds maximum allowed size of 250 MB ({round(file_size/(1024*1024), 1)} MB uploaded).")
+
+    # Verify video properties and stream integrity via OpenCV
     cap = cv2.VideoCapture(str(file_path))
+    if not cap.isOpened():
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=400, detail="Could not open video stream. Please ensure file contains valid video data.")
+
+    ret, first_frame = cap.read()
+    if not ret or first_frame is None:
+        cap.release()
+        if os.path.exists(file_path):
+            os.remove(file_path)
+        raise HTTPException(status_code=400, detail="Video stream contains unreadable or corrupt frames.")
+
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
-    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
-    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or first_frame.shape[1]
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or first_frame.shape[0]
     duration = round(frame_count / fps, 2) if fps > 0 else 0.0
     cap.release()
 

@@ -7,12 +7,18 @@ import RecommendationsView from './components/RecommendationsView';
 import RoleDashboards from './components/RoleDashboards';
 import AthleteManagement from './components/AthleteManagement';
 import DatasetsView from './components/DatasetsView';
+import AuthModal from './components/AuthModal';
 import { api } from './api/client';
 import { Activity, Sparkles, CheckCircle2 } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('video_studio');
   const [activeRole, setActiveRole] = useState('athlete');
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+  const [authResetToken, setAuthResetToken] = useState('');
+
   const [athletes, setAthletes] = useState([]);
   const [selectedAthleteId, setSelectedAthleteId] = useState(1);
   const [videos, setVideos] = useState([]);
@@ -20,12 +26,43 @@ export default function App() {
   const [biomechanics, setBiomechanics] = useState(null);
   const [injuryRisk, setInjuryRisk] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [systemNotice, setSystemNotice] = useState('System initialized: Milestone 1, 2, and 3 operational.');
+  const [systemNotice, setSystemNotice] = useState('Kinematix operational: Computer vision pose tracking and risk engine ready.');
 
-  // Load athletes and videos on mount
+  // Check authentication and load athletes/videos on mount
   useEffect(() => {
+    checkCurrentUser();
+    checkForResetToken();
     loadInitialData();
   }, []);
+
+  const checkCurrentUser = async () => {
+    try {
+      const user = await api.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        setActiveRole(user.role);
+      }
+    } catch {
+      // User is not signed in
+    }
+  };
+
+  const checkForResetToken = () => {
+    // Check URL query param or hash for reset token
+    const urlParams = new URLSearchParams(window.location.search);
+    let token = urlParams.get('reset_token') || urlParams.get('token');
+    
+    if (!token && window.location.hash.includes('token=')) {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1]);
+      token = hashParams.get('token');
+    }
+
+    if (token) {
+      setAuthResetToken(token);
+      setAuthMode('reset');
+      setIsAuthOpen(true);
+    }
+  };
 
   const loadInitialData = async () => {
     try {
@@ -96,7 +133,7 @@ export default function App() {
       const vidList = await api.getVideos();
       setVideos(vidList);
       setCurrentVideo(newVid);
-      setSystemNotice('Sample video generated. Running AI Pose Estimation...');
+      setSystemNotice('Sample video generated. Running pose estimation...');
       await handleRunAnalysis(newVid.id);
     } catch (err) {
       alert(err.message || 'Sample generation failed');
@@ -114,30 +151,51 @@ export default function App() {
     await handleRunAnalysis(newVid.id);
   };
 
+  const handleOpenAuth = (mode = 'login') => {
+    setAuthMode(mode);
+    setIsAuthOpen(true);
+  };
+
+  const handleLogout = async () => {
+    await api.logout();
+    setCurrentUser(null);
+    setSystemNotice('User session ended. Signed out successfully.');
+  };
+
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    if (user?.role) {
+      setActiveRole(user.role);
+    }
+    setSystemNotice(`Welcome back, ${user.full_name} (${user.role}).`);
+  };
+
   const selectedAthlete = athletes.find(a => a.id === selectedAthleteId) || athletes[0];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/30 selection:text-cyan-200">
+    <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-sans">
       {/* Top Navigation */}
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         activeRole={activeRole}
         setActiveRole={setActiveRole}
-        athletes={athletes}
+        currentUser={currentUser}
+        onOpenAuth={handleOpenAuth}
+        onLogout={handleLogout}
       />
 
       {/* Main Container */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* System Status Notification Strip */}
-        <div className="flex items-center justify-between bg-slate-900/50 px-4 py-2 rounded-xl border border-slate-800 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-xs text-xs">
           <div className="flex items-center space-x-2">
-            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
-            <span className="text-slate-400">{systemNotice}</span>
+            <span className="w-2 h-2 rounded-full bg-teal-600"></span>
+            <span className="text-slate-700 font-medium">{systemNotice}</span>
           </div>
-          <div className="flex items-center space-x-3 text-[11px] font-mono text-slate-400">
-            <span>FastAPI Backend: <strong className="text-emerald-400">Online</strong></span>
-            <span>MediaPipe Pose: <strong className="text-cyan-400">v1.1.0 Ready</strong></span>
+          <div className="flex items-center space-x-3 text-[11px] font-mono text-slate-500">
+            <span>FastAPI Backend: <strong className="text-teal-700 font-semibold">Online</strong></span>
+            <span>MediaPipe Pose: <strong className="text-slate-700 font-semibold">v1.1.0 Ready</strong></span>
           </div>
         </div>
 
@@ -167,6 +225,7 @@ export default function App() {
           <InjuryRiskView
             injuryRisk={injuryRisk}
             athlete={selectedAthlete}
+            currentVideo={currentVideo}
           />
         )}
 
@@ -198,9 +257,18 @@ export default function App() {
         )}
       </main>
 
+      {/* Authentication Modal */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
+        initialMode={authMode}
+        initialToken={authResetToken}
+      />
+
       {/* Footer */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-4 text-center text-xs text-slate-500 font-mono">
-        Sports Injury Risk Detection Platform • Developed through Milestone 3 (Pose Estimation, Biomechanics & Injury Prediction Engine)
+      <footer className="border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500 font-mono">
+        Kinematix • Sports Movement Biomechanics &amp; Injury Risk Intelligence Platform
       </footer>
     </div>
   );

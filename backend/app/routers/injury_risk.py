@@ -19,3 +19,29 @@ def get_latest_athlete_risk(athlete_id: int, db: Session = Depends(get_db)):
     if not assessment:
         raise HTTPException(status_code=404, detail="No injury assessment recorded for this athlete")
     return assessment
+
+@router.get("/athlete/{athlete_id}/trends")
+def get_athlete_risk_trends(athlete_id: int, db: Session = Depends(get_db)):
+    assessments = db.query(InjuryRiskAssessment).filter(
+        InjuryRiskAssessment.athlete_id == athlete_id
+    ).order_by(InjuryRiskAssessment.id.asc()).all()
+
+    trends = []
+    for idx, a in enumerate(assessments):
+        trends.append({
+            "session_index": idx + 1,
+            "assessment_id": a.id,
+            "video_id": a.video_id,
+            "overall_injury_risk_score": a.overall_injury_risk_score,
+            "risk_category": a.risk_category,
+            "movement_quality_score": a.movement_quality_score,
+            "biomechanical_deviation_score": a.biomechanical_deviation_score,
+            "movement_asymmetry_score": a.movement_asymmetry_score,
+            "created_at": a.created_at.strftime("%Y-%m-%d %H:%M") if a.created_at else f"Session {idx + 1}"
+        })
+
+    return {
+        "athlete_id": athlete_id,
+        "total_sessions": len(trends),
+        "trends": trends
+    }

@@ -1,15 +1,16 @@
 import React from 'react';
-import { Activity, ShieldCheck, AlertCircle, Compass, Scale, Gauge, Zap, TrendingUp, BarChart2 } from 'lucide-react';
+import { Activity, ShieldCheck, AlertCircle, Compass, Scale, Gauge, Zap, TrendingUp, BarChart2, FileText, FileSpreadsheet } from 'lucide-react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, Legend, AreaChart, Area } from 'recharts';
+import { api } from '../api/client';
 
 export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }) {
   if (!biomechanics) {
     return (
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-12 text-center space-y-3">
-        <Activity className="w-12 h-12 text-slate-600 mx-auto animate-pulse" />
-        <h3 className="text-base font-bold text-white">No Biomechanical Analysis Run Yet</h3>
-        <p className="text-xs text-slate-400 max-w-md mx-auto">
-          Please navigate to the Video & Pose Tracker tab and click "Run Biomechanical Analysis & Predictions" on a selected movement video.
+      <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3 shadow-xs">
+        <Activity className="w-12 h-12 text-slate-400 mx-auto" />
+        <h3 className="text-base font-bold text-slate-900">No Biomechanical Analysis Run Yet</h3>
+        <p className="text-xs text-slate-500 max-w-md mx-auto">
+          Please navigate to the Video &amp; Pose Tracker tab and click &quot;Run Biomechanical Analysis &amp; Predictions&quot; on a selected movement video.
         </p>
       </div>
     );
@@ -105,20 +106,49 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
   return (
     <div className="space-y-6">
       {/* Header Overview */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-900/60 p-4 rounded-2xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <BarChart2 className="w-5 h-5 text-cyan-400" />
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <BarChart2 className="w-5 h-5 text-teal-700" />
             Biomechanical Assessment Studio
           </h2>
-          <p className="text-xs text-slate-400">
-            Session: <span className="text-slate-200 font-semibold">{currentVideo?.title || 'Movement Test'}</span> | Frames Analyzed: {biomechanics.total_frames_analyzed} at {biomechanics.mean_fps} FPS
+          <p className="text-xs text-slate-500">
+            Session: <span className="text-slate-800 font-semibold">{currentVideo?.title || 'Movement Test'}</span> | Frames Analyzed: {biomechanics.total_frames_analyzed} at {biomechanics.mean_fps} FPS
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs">
-          <span className="text-slate-400">Overall Symmetry:</span>
-          <span className="font-bold text-cyan-400">{m.movement_symmetry_score}%</span>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 text-xs">
+            <span className="text-slate-500">Overall Symmetry:</span>
+            <span className="font-bold text-teal-800">{m.movement_symmetry_score}%</span>
+          </div>
+
+          {currentVideo?.id && (
+            <div className="flex items-center gap-1.5">
+              <a
+                href={api.getPdfReportUrl(currentVideo.id)}
+                target="_blank"
+                rel="noreferrer"
+                download
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 hover:bg-teal-100 text-teal-800 border border-teal-200 text-xs font-semibold transition-colors"
+                title="Download Biomechanical Assessment PDF Report"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                <span>PDF Report</span>
+              </a>
+              <a
+                href={api.getExcelReportUrl(currentVideo.id)}
+                target="_blank"
+                rel="noreferrer"
+                download
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-xs font-semibold transition-colors"
+                title="Download Biomechanical Kinematics Excel Spreadsheet"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" />
+                <span>Excel Data</span>
+              </a>
+            </div>
+          )}
         </div>
       </div>
 
@@ -127,30 +157,30 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
         {metricsGrid.map((metric, i) => (
           <div
             key={i}
-            className="bg-slate-900/70 p-3.5 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all space-y-2 relative overflow-hidden"
+            className="bg-white p-3.5 rounded-xl border border-slate-200 hover:border-slate-300 shadow-xs transition-colors space-y-2 relative overflow-hidden"
           >
             <div className="flex items-center justify-between">
-              <span className="text-[11px] font-semibold text-slate-400 truncate pr-1">{metric.label}</span>
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
+              <span className="text-[11px] font-semibold text-slate-600 truncate pr-1">{metric.label}</span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
                 metric.status === 'Critical'
-                  ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+                  ? 'bg-rose-50 text-rose-800 border border-rose-200'
                   : metric.status === 'Warning'
-                  ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                  : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                  : 'bg-emerald-50 text-emerald-800 border border-emerald-200'
               }`}>
                 {metric.status}
               </span>
             </div>
 
             <div>
-              <p className="text-lg font-black text-white font-mono tracking-tight">{metric.value}</p>
-              {metric.sub && <p className="text-[10px] text-slate-400 font-mono">{metric.sub}</p>}
+              <p className="text-xl font-bold text-slate-900 font-mono tracking-tight">{metric.value}</p>
+              {metric.sub && <p className="text-[11px] text-slate-500 font-mono">{metric.sub}</p>}
             </div>
 
-            <div className="pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+            <div className="pt-1.5 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-500">
               <span>Norm: {metric.benchmark}</span>
             </div>
-            <p className="text-[10px] text-slate-400 line-clamp-1">{metric.description}</p>
+            <p className="text-[10px] text-slate-500 line-clamp-1">{metric.description}</p>
           </div>
         ))}
       </div>
@@ -158,14 +188,14 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
       {/* Kinematics Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Dynamic Knee Valgus Chart */}
-        <div className="bg-slate-900/70 p-5 rounded-2xl border border-slate-800 space-y-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-rose-400" />
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-rose-700" />
                 Dynamic Knee Valgus Angle (Frontal Plane FPPA)
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Red dotted line denotes the 15.0° clinical threshold for non-contact ACL rupture risk.
               </p>
             </div>
@@ -174,30 +204,30 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={timeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 10 }} unit="s" />
-                <YAxis stroke="#64748b" tick={{ fontSize: 10 }} unit="°" domain={[0, 25]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 10, fill: '#64748b' }} unit="s" />
+                <YAxis stroke="#64748b" tick={{ fontSize: 10, fill: '#64748b' }} unit="°" domain={[0, 25]} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '8px', fontSize: '11px', color: '#0f172a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <ReferenceLine y={15} stroke="#f43f5e" strokeDasharray="4 4" label={{ value: '15° High ACL Risk Threshold', fill: '#f43f5e', fontSize: 10, position: 'top' }} />
-                <Line type="monotone" dataKey="valgus_l" stroke="#06b6d4" strokeWidth={2} dot={false} name="Left Valgus (°)" />
-                <Line type="monotone" dataKey="valgus_r" stroke="#f43f5e" strokeWidth={2.5} dot={false} name="Right Valgus (°)" />
+                <ReferenceLine y={15} stroke="#b91c1c" strokeDasharray="4 4" label={{ value: '15° High ACL Risk Threshold', fill: '#b91c1c', fontSize: 10, position: 'top' }} />
+                <Line type="monotone" dataKey="valgus_l" stroke="#0f766e" strokeWidth={2} dot={false} connectNulls={false} name="Left Valgus (°)" />
+                <Line type="monotone" dataKey="valgus_r" stroke="#b91c1c" strokeWidth={2.5} dot={false} connectNulls={false} name="Right Valgus (°)" />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Knee Flexion Angle & Landing Deceleration */}
-        <div className="bg-slate-900/70 p-5 rounded-2xl border border-slate-800 space-y-4">
+        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <Compass className="w-4 h-4 text-cyan-400" />
+              <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                <Compass className="w-4 h-4 text-teal-700" />
                 Knee Flexion Range of Motion (Landing Cushion)
               </h3>
-              <p className="text-[11px] text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 Lower degrees represent deeper knee bend. Stiff landing (&gt; 130°) amplifies impact strain.
               </p>
             </div>
@@ -208,19 +238,19 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
               <AreaChart data={timeSeries} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="kneeFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.0}/>
+                    <stop offset="5%" stopColor="#0f766e" stopOpacity={0.15}/>
+                    <stop offset="95%" stopColor="#0f766e" stopOpacity={0.0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 10 }} unit="s" />
-                <YAxis stroke="#64748b" tick={{ fontSize: 10 }} unit="°" domain={[40, 180]} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="time" stroke="#64748b" tick={{ fontSize: 10, fill: '#64748b' }} unit="s" />
+                <YAxis stroke="#64748b" tick={{ fontSize: 10, fill: '#64748b' }} unit="°" domain={[40, 180]} />
                 <Tooltip
-                  contentStyle={{ backgroundColor: '#090d16', borderColor: '#334155', borderRadius: '8px', fontSize: '11px' }}
+                  contentStyle={{ backgroundColor: '#ffffff', borderColor: '#cbd5e1', borderRadius: '8px', fontSize: '11px', color: '#0f172a', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }}
                 />
                 <Legend wrapperStyle={{ fontSize: '11px', paddingTop: '8px' }} />
-                <Area type="monotone" dataKey="knee_l" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#kneeFill)" name="Left Knee Flexion (°)" />
-                <Line type="monotone" dataKey="knee_r" stroke="#a855f7" strokeWidth={2} dot={false} name="Right Knee Flexion (°)" />
+                <Area type="monotone" dataKey="knee_l" stroke="#0f766e" strokeWidth={2} fillOpacity={1} fill="url(#kneeFill)" connectNulls={false} name="Left Knee Flexion (°)" />
+                <Line type="monotone" dataKey="knee_r" stroke="#334155" strokeWidth={2} dot={false} connectNulls={false} name="Right Knee Flexion (°)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>

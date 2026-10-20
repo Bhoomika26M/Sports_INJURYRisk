@@ -22,14 +22,17 @@ class AnomalyDetectionEngine:
         events = []
         n_frames = len(time_series)
 
-        # 1. Check frame-by-frame threshold breaches
+        # 1. Check frame-by-frame threshold breaches on detected frames only
         for idx, f in enumerate(time_series):
+            if not f.get("detected"):
+                continue
+
             frame_num = f.get("frame", idx)
             t_sec = f.get("time", round(idx / 30.0, 2))
-            valgus_l = f.get("knee_valgus_l", 0.0)
-            valgus_r = f.get("knee_valgus_r", 0.0)
-            trunk_lat = f.get("trunk_lateral_lean", 0.0)
-            asym = f.get("bilateral_asymmetry", 0.0)
+            valgus_l = f.get("knee_valgus_l") or 0.0
+            valgus_r = f.get("knee_valgus_r") or 0.0
+            trunk_lat = f.get("trunk_lateral_lean") or 0.0
+            asym = f.get("bilateral_asymmetry") or 0.0
 
             # Severe Knee Valgus spike
             if valgus_l >= 15.0 or valgus_r >= 15.0:
@@ -77,23 +80,28 @@ class AnomalyDetectionEngine:
                 filtered_events.append(ev)
                 last_t = ev["timestamp_sec"]
 
-        # 2. Fatigue Drift Monitoring: compare first 30% of frames vs last 30%
-        first_third = time_series[:max(1, int(n_frames * 0.3))]
-        last_third = time_series[int(n_frames * 0.7):]
+        # 2. Fatigue Drift Monitoring: compare detected frames in first 30% vs last 30%
+        detected_frames = [f for f in time_series if f.get("detected") and f.get("knee_valgus_l") is not None]
+        n_det = len(detected_frames)
 
         fatigue_drift_pct = 0.0
-        if first_third and last_third:
-            early_valgus = np.mean([max(f.get("knee_valgus_l", 0), f.get("knee_valgus_r", 0)) for f in first_third])
-            late_valgus = np.mean([max(f.get("knee_valgus_l", 0), f.get("knee_valgus_r", 0)) for f in last_third])
+        if n_det >= 10:
+            first_third = detected_frames[:max(1, int(n_det * 0.3))]
+            last_third = detected_frames[int(n_det * 0.7):]
+            early_valgus = np.mean([max(f.get("knee_valgus_l") or 0.0, f.get("knee_valgus_r") or 0.0) for f in first_third])
+            late_valgus = np.mean([max(f.get("knee_valgus_l") or 0.0, f.get("knee_valgus_r") or 0.0) for f in last_third])
             
             if early_valgus > 0:
                 drift = ((late_valgus - early_valgus) / early_valgus) * 100.0
                 fatigue_drift_pct = max(0.0, round(float(drift), 1))
 
-        # 3. Motion Consistency Analysis
-        valgus_all = [max(f.get("knee_valgus_l", 0), f.get("knee_valgus_r", 0)) for f in time_series]
-        variance = float(np.var(valgus_all)) if valgus_all else 1.0
-        consistency_score = max(30.0, min(100.0, round(100.0 - variance * 3.5, 1)))
+        # 3. Motion Consistency Analysis on detected frames
+        if detected_frames:
+            valgus_all = [max(f.get("knee_valgus_l") or 0.0, f.get("knee_valgus_r") or 0.0) for f in detected_frames]
+            variance = float(np.var(valgus_all))
+            consistency_score = max(30.0, min(100.0, round(100.0 - variance * 3.5, 1)))
+        else:
+            consistency_score = 90.0
 
         return {
             "events": filtered_events[:10], # Top anomaly events

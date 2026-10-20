@@ -12,7 +12,8 @@ from app.routers import (
     biomechanics,
     injury_risk,
     datasets,
-    dashboards
+    dashboards,
+    reports
 )
 
 # Initialize database schema immediately
@@ -38,7 +39,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.PROJECT_VERSION,
-    description="AI-Powered Sports Injury Risk Detection Platform (FastAPI + MediaPipe + React)",
+    description="Sports Movement Biomechanics & Injury Risk Detection Platform (FastAPI + MediaPipe + React)",
     lifespan=lifespan
 )
 
@@ -63,6 +64,7 @@ app.include_router(biomechanics.router, prefix=settings.API_V1_STR)
 app.include_router(injury_risk.router, prefix=settings.API_V1_STR)
 app.include_router(datasets.router, prefix=settings.API_V1_STR)
 app.include_router(dashboards.router, prefix=settings.API_V1_STR)
+app.include_router(reports.router, prefix=settings.API_V1_STR)
 
 @app.get("/api/health")
 def health_check():

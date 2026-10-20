@@ -143,25 +143,25 @@ class PoseEstimationEngine:
     ) -> Dict[str, Any]:
         """
         Calculates joint angles and biomechanical metrics from frame keypoints.
+        Never fabricates measurements for undetected or occluded frames.
         """
-        # Default fallback values if athlete is momentarily occluded
         default_metrics = {
             "frame": frame_idx,
             "time": timestamp,
             "detected": False,
-            "knee_angle_l": 165.0,
-            "knee_angle_r": 165.0,
-            "knee_valgus_l": 4.5,
-            "knee_valgus_r": 4.0,
-            "hip_angle_l": 160.0,
-            "hip_angle_r": 160.0,
-            "elbow_angle_l": 140.0,
-            "elbow_angle_r": 140.0,
-            "trunk_lateral_lean": 2.5,
-            "trunk_forward_lean": 8.0,
-            "pelvic_drop": 1.5,
-            "bilateral_asymmetry": 6.2,
-            "anomaly_score": 0.15
+            "knee_angle_l": None,
+            "knee_angle_r": None,
+            "knee_valgus_l": None,
+            "knee_valgus_r": None,
+            "hip_angle_l": None,
+            "hip_angle_r": None,
+            "elbow_angle_l": None,
+            "elbow_angle_r": None,
+            "trunk_lateral_lean": None,
+            "trunk_forward_lean": None,
+            "pelvic_drop": None,
+            "bilateral_asymmetry": None,
+            "anomaly_score": None
         }
 
         if not landmarks or len(landmarks) < 33:
@@ -248,6 +248,7 @@ class PoseEstimationEngine:
     ) -> np.ndarray:
         """
         Draws visual skeleton landmarks, angle callouts, and HUD dashboard overlay.
+        Handles missed detections safely without showing made-up data.
         """
         img = frame.copy()
 
@@ -256,13 +257,29 @@ class PoseEstimationEngine:
         cv2.rectangle(img, (0, 0), (width, hud_h), (12, 17, 29), -1)
         cv2.line(img, (0, hud_h), (width, hud_h), (30, 41, 59), 2)
 
-        # Telemetry Text
-        valgus_l = metrics.get("knee_valgus_l", 0.0)
-        valgus_r = metrics.get("knee_valgus_r", 0.0)
+        cv2.putText(img, "KINEMATIX BIOMECHANICS POSE TRACKER", (20, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (220, 220, 230), 2)
+        cv2.putText(img, f"Frame: {frame_idx:04d} | Time: {metrics.get('time', 0.0):.2f}s | FPS: {fps:.1f}", (20, 56), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1)
+
+        is_detected = metrics.get("detected", False)
+
+        if not is_detected:
+            # Handle missed detection cleanly
+            status_text = "NO SUBJECT / OCCLUDED"
+            status_color = (120, 120, 130)
+            cv2.putText(img, "Pose Detection: Pending / Landmark Occlusion", (width // 2 - 160, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (148, 163, 184), 1)
+            cv2.rectangle(img, (width - 310, 14), (width - 20, 60), status_color, 2)
+            cv2.putText(img, status_text, (width - 295, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.50, status_color, 2)
+            return img
+
+        # Telemetry Text for genuine detection
+        valgus_l = metrics.get("knee_valgus_l") or 0.0
+        valgus_r = metrics.get("knee_valgus_r") or 0.0
         max_valgus = max(valgus_l, valgus_r)
+        trunk_lat = metrics.get("trunk_lateral_lean") or 0.0
+        asym = metrics.get("bilateral_asymmetry") or 0.0
         
         # Color code risk indicator: Green <10°, Yellow 10°-15°, Red >15°
-        if max_valgus >= 15.0 or metrics.get("trunk_lateral_lean", 0) > 12.0:
+        if max_valgus >= 15.0 or trunk_lat > 12.0:
             status_text = "HIGH RISK ALERT"
             status_color = (40, 40, 235) # Red
         elif max_valgus >= 10.0:
@@ -272,14 +289,11 @@ class PoseEstimationEngine:
             status_text = "NORMAL BIOMECHANICS"
             status_color = (60, 220, 80) # Green
 
-        cv2.putText(img, "SPORTS BIOMECHANICS POSE TRACKER", (20, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (220, 220, 230), 2)
-        cv2.putText(img, f"Frame: {frame_idx:04d} | Time: {metrics.get('time', 0.0):.2f}s | FPS: {fps:.1f}", (20, 56), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (148, 163, 184), 1)
-
         cv2.putText(img, f"L-Valgus: {valgus_l:.1f}deg", (width // 2 - 200, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
         cv2.putText(img, f"R-Valgus: {valgus_r:.1f}deg", (width // 2 - 200, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
 
-        cv2.putText(img, f"Trunk Lean: {metrics.get('trunk_lateral_lean', 0):.1f}deg", (width // 2 + 30, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
-        cv2.putText(img, f"Asymmetry: {metrics.get('bilateral_asymmetry', 0):.1f}%", (width // 2 + 30, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        cv2.putText(img, f"Trunk Lean: {trunk_lat:.1f}deg", (width // 2 + 30, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
+        cv2.putText(img, f"Asymmetry: {asym:.1f}%", (width // 2 + 30, 58), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1)
 
         # Status badge on upper right
         cv2.rectangle(img, (width - 270, 14), (width - 20, 60), status_color, 2)

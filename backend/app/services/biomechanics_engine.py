@@ -19,28 +19,54 @@ class BiomechanicsEngine:
             return self._get_fallback_summary()
 
         n = len(time_series)
+        detected_frames = [f for f in time_series if f.get("detected") and f.get("knee_valgus_l") is not None]
+        detection_rate = round(len(detected_frames) / max(1, n) * 100.0, 1)
+
+        # Handle complete missed detection safely without fabricating numbers
+        if not detected_frames:
+            return {
+                "knee_valgus_left_max": 0.0,
+                "knee_valgus_right_max": 0.0,
+                "knee_valgus_avg": 0.0,
+                "hip_stability_score": 0.0,
+                "pelvic_drop_deg": 0.0,
+                "trunk_lean_lateral_max": 0.0,
+                "trunk_lean_forward_max": 0.0,
+                "landing_mechanics_score": 0.0,
+                "initial_contact_knee_flexion_deg": 0.0,
+                "stride_length_est": 0.0,
+                "joint_alignment_score": 0.0,
+                "balance_stability_index": 0.0,
+                "movement_symmetry_score": 0.0,
+                "range_of_motion_score": 0.0,
+                "force_impact_estimation_g": 0.0,
+                "detection_rate_pct": 0.0,
+                "detected_frames": 0,
+                "total_frames": n,
+                "tracking_status": "No athlete landmarks detected"
+            }
         
-        # Extract series
-        valgus_l_arr = [f.get("knee_valgus_l", 0.0) for f in time_series]
-        valgus_r_arr = [f.get("knee_valgus_r", 0.0) for f in time_series]
-        knee_l_arr = [f.get("knee_angle_l", 170.0) for f in time_series]
-        knee_r_arr = [f.get("knee_angle_r", 170.0) for f in time_series]
-        trunk_lat_arr = [f.get("trunk_lateral_lean", 0.0) for f in time_series]
-        trunk_fwd_arr = [f.get("trunk_forward_lean", 0.0) for f in time_series]
-        pelvic_drop_arr = [f.get("pelvic_drop", 0.0) for f in time_series]
-        asymmetry_arr = [f.get("bilateral_asymmetry", 0.0) for f in time_series]
+        # Extract series strictly from detected frames
+        valgus_l_arr = [f["knee_valgus_l"] for f in detected_frames if f.get("knee_valgus_l") is not None]
+        valgus_r_arr = [f["knee_valgus_r"] for f in detected_frames if f.get("knee_valgus_r") is not None]
+        knee_l_arr = [f["knee_angle_l"] for f in detected_frames if f.get("knee_angle_l") is not None]
+        knee_r_arr = [f["knee_angle_r"] for f in detected_frames if f.get("knee_angle_r") is not None]
+        trunk_lat_arr = [f["trunk_lateral_lean"] for f in detected_frames if f.get("trunk_lateral_lean") is not None]
+        trunk_fwd_arr = [f["trunk_forward_lean"] for f in detected_frames if f.get("trunk_forward_lean") is not None]
+        pelvic_drop_arr = [f["pelvic_drop"] for f in detected_frames if f.get("pelvic_drop") is not None]
+        asymmetry_arr = [f["bilateral_asymmetry"] for f in detected_frames if f.get("bilateral_asymmetry") is not None]
 
         # Knee Valgus Metrics
-        peak_valgus_l = float(np.max(valgus_l_arr)) if valgus_l_arr else 4.0
-        peak_valgus_r = float(np.max(valgus_r_arr)) if valgus_r_arr else 4.0
-        avg_valgus = float(np.mean(valgus_l_arr + valgus_r_arr)) if (valgus_l_arr and valgus_r_arr) else 3.5
+        peak_valgus_l = float(np.max(valgus_l_arr)) if valgus_l_arr else 0.0
+        peak_valgus_r = float(np.max(valgus_r_arr)) if valgus_r_arr else 0.0
+        avg_valgus = float(np.mean(valgus_l_arr + valgus_r_arr)) if (valgus_l_arr and valgus_r_arr) else 0.0
 
         # Trunk Lean Metrics
-        peak_trunk_lateral = float(np.max(trunk_lat_arr)) if trunk_lat_arr else 3.0
-        peak_trunk_forward = float(np.max(trunk_fwd_arr)) if trunk_fwd_arr else 10.0
+        peak_trunk_lateral = float(np.max(trunk_lat_arr)) if trunk_lat_arr else 0.0
+        peak_trunk_forward = float(np.max(trunk_fwd_arr)) if trunk_fwd_arr else 0.0
 
         # Pelvic Drop & Hip Stability
-        avg_pelvic_drop = float(np.mean(pelvic_drop_arr)) if pelvic_drop_arr else 2.0
+        avg_pelvic_drop = float(np.mean(pelvic_drop_arr)) if pelvic_drop_arr else 0.0
         # Hip stability score: 100 is stable (0 drop), penalized above 4 degrees
         hip_stability_score = max(20.0, 100.0 - (avg_pelvic_drop * 10.0))
 
@@ -60,10 +86,10 @@ class BiomechanicsEngine:
         else:
             landing_mechanics_score = 35.0 # Very stiff landing (high ACL impact)
 
-        initial_contact_flexion = float(knee_l_arr[int(n * 0.3)]) if n > 10 else 150.0
+        initial_contact_flexion = float(knee_l_arr[int(len(knee_l_arr) * 0.3)]) if len(knee_l_arr) > 10 else (knee_l_arr[0] if knee_l_arr else 150.0)
 
         # Movement Symmetry Score: 100% minus average asymmetry
-        avg_asymmetry = float(np.mean(asymmetry_arr)) if asymmetry_arr else 5.0
+        avg_asymmetry = float(np.mean(asymmetry_arr)) if asymmetry_arr else 0.0
         movement_symmetry_score = max(10.0, min(100.0, 100.0 - avg_asymmetry))
 
         # Range of motion: max - min angle

@@ -69,20 +69,20 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-slate-900/60 p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-white flex items-center gap-2">
-            <Users className="w-5 h-5 text-cyan-400" />
-            Athlete Profile & Longitudinal Health Records
+          <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <Users className="w-5 h-5 text-teal-700" />
+            Athlete Profile &amp; Longitudinal Health Records
           </h2>
-          <p className="text-xs text-slate-400">
-            Milestone 1 Athlete Profile Management: physical assessment tracking, injury history, and training loads.
+          <p className="text-xs text-slate-500">
+            Comprehensive athlete profiles, physical assessment records, injury history, and acute-to-chronic workload ratios.
           </p>
         </div>
 
         <button
           onClick={() => setCreateModalOpen(true)}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold shadow-lg shadow-cyan-600/20 transition-all"
+          className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition-colors"
         >
           <Plus className="w-4 h-4" />
           <span>Register New Athlete</span>
@@ -98,37 +98,41 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
               key={ath.id}
               className={`p-5 rounded-2xl border transition-all space-y-4 flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-slate-900 border-cyan-500 shadow-xl shadow-cyan-500/10'
-                  : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                  ? 'bg-teal-50/40 border-teal-600 shadow-xs ring-1 ring-teal-600'
+                  : 'bg-white border-slate-200 hover:border-slate-300 shadow-xs'
               }`}
             >
               <div className="space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
                       {ath.name}
-                      {isSelected && <span className="text-[10px] font-mono text-cyan-400 font-semibold bg-cyan-950/60 px-1.5 py-0.5 rounded border border-cyan-800">Active</span>}
+                      {isSelected && (
+                        <span className="text-[10px] font-mono text-teal-800 font-semibold bg-teal-100 px-1.5 py-0.5 rounded border border-teal-300">
+                          Active
+                        </span>
+                      )}
                     </h3>
-                    <p className="text-xs text-slate-400">{ath.sport_type} • {ath.position || 'Athlete'}</p>
+                    <p className="text-xs text-slate-500">{ath.sport_type} • {ath.position || 'Athlete'}</p>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950 text-slate-300 border border-slate-800">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                     {ath.athlete_code}
                   </span>
                 </div>
 
                 {/* Physical metrics */}
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                  <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
-                    <span className="text-[9px] text-slate-400 block uppercase">Age / Ht</span>
-                    <span className="font-bold text-white font-mono">{ath.age}y / {ath.height}cm</span>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="text-[9px] text-slate-500 block uppercase">Age / Ht</span>
+                    <span className="font-bold text-slate-900 font-mono">{ath.age}y / {ath.height}cm</span>
                   </div>
-                  <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
-                    <span className="text-[9px] text-slate-400 block uppercase">Weight</span>
-                    <span className="font-bold text-white font-mono">{ath.weight} kg</span>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="text-[9px] text-slate-500 block uppercase">Weight</span>
+                    <span className="font-bold text-slate-900 font-mono">{ath.weight} kg</span>
                   </div>
-                  <div className="p-2 rounded-xl bg-slate-950 border border-slate-800/80">
-                    <span className="text-[9px] text-slate-400 block uppercase">ACWR Ratio</span>
-                    <span className={`font-bold font-mono ${ath.acwr > 1.4 ? 'text-rose-400' : 'text-cyan-400'}`}>
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
+                    <span className="text-[9px] text-slate-500 block uppercase">ACWR Ratio</span>
+                    <span className={`font-bold font-mono ${ath.acwr > 1.4 ? 'text-rose-700' : 'text-teal-800'}`}>
                       {ath.acwr}
                     </span>
                   </div>
@@ -137,13 +141,13 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
                 {/* Injury History Badges */}
                 <div className="space-y-1.5 pt-1">
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="font-semibold text-slate-400">Injury History:</span>
+                    <span className="font-semibold text-slate-700">Injury History:</span>
                     <button
                       onClick={() => {
                         setTargetAthlete(ath);
                         setInjuryModalOpen(true);
                       }}
-                      className="text-[10px] text-cyan-400 hover:underline flex items-center gap-0.5"
+                      className="text-[10px] text-teal-700 hover:text-teal-800 font-medium hover:underline flex items-center gap-0.5"
                     >
                       <Plus className="w-3 h-3" /> Log Injury
                     </button>
@@ -154,26 +158,26 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
                       ath.injury_history.map((h, i) => (
                         <span
                           key={i}
-                          className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-950 text-slate-300 border border-slate-800"
+                          className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-slate-100 text-slate-700 border border-slate-200"
                         >
                           {h.injury_name} ({h.severity})
                         </span>
                       ))
                     ) : (
-                      <span className="text-[10px] text-slate-500 italic">No prior surgeries recorded</span>
+                      <span className="text-[10px] text-slate-400 italic">No prior surgeries recorded</span>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between">
-                <span className="text-[11px] text-slate-500">Weekly Load: {ath.training_load} hrs</span>
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-between">
+                <span className="text-[11px] text-slate-500 font-mono">Weekly Load: {ath.training_load} hrs</span>
                 <button
                   onClick={() => onSelectAthlete(ath.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
                     isSelected
-                      ? 'bg-cyan-500 text-slate-950 font-bold'
-                      : 'bg-slate-800 hover:bg-slate-750 text-slate-300'
+                      ? 'bg-teal-700 text-white font-bold shadow-xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
                   {isSelected ? 'Selected' : 'Select Athlete'}
@@ -186,36 +190,36 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
 
       {/* Register Athlete Modal */}
       {createModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <Users className="w-4 h-4 text-cyan-400" /> Register New Athlete Profile
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Users className="w-4 h-4 text-teal-700" /> Register New Athlete Profile
               </h3>
-              <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-white text-xs font-mono">✕</button>
+              <button onClick={() => setCreateModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xs font-mono">✕</button>
             </div>
 
             <form onSubmit={handleCreateAthlete} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Athlete ID</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Athlete ID</label>
                   <input
                     type="text"
                     placeholder="e.g. ATH-106"
                     value={newCode}
                     onChange={(e) => setNewCode(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Full Name</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Full Name</label>
                   <input
                     type="text"
                     placeholder="e.g. Jordan Miller"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
@@ -223,11 +227,11 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Sport Type</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Sport Type</label>
                   <select
                     value={newSport}
                     onChange={(e) => setNewSport(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   >
                     <option value="Football">Football</option>
                     <option value="Basketball">Basketball</option>
@@ -238,45 +242,45 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Position / Discipline</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Position / Discipline</label>
                   <input
                     type="text"
                     placeholder="e.g. Winger"
                     value={newPosition}
                     onChange={(e) => setNewPosition(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Age</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Age</label>
                   <input
                     type="number"
                     value={newAge}
                     onChange={(e) => setNewAge(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Height (cm)</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Height (cm)</label>
                   <input
                     type="number"
                     value={newHeight}
                     onChange={(e) => setNewHeight(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Weight (kg)</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Weight (kg)</label>
                   <input
                     type="number"
                     value={newWeight}
                     onChange={(e) => setNewWeight(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
@@ -284,38 +288,38 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Training Load (hrs/wk)</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Training Load (hrs/wk)</label>
                   <input
                     type="number"
                     step="0.5"
                     value={newLoad}
                     onChange={(e) => setNewLoad(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">ACWR Ratio</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">ACWR Ratio</label>
                   <input
                     type="number"
                     step="0.05"
                     value={newAcwr}
                     onChange={(e) => setNewAcwr(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setCreateModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-cyan-600 hover:bg-cyan-500 text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white shadow-xs transition-colors"
                 >
                   Save Athlete Profile
                 </button>
@@ -327,46 +331,46 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
 
       {/* Log Injury Modal */}
       {injuryModalOpen && targetAthlete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center">
-              <h3 className="text-base font-bold text-white flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-rose-400" /> Log Injury Record for {targetAthlete.name}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-700" /> Log Injury Record for {targetAthlete.name}
               </h3>
-              <button onClick={() => setInjuryModalOpen(false)} className="text-slate-400 hover:text-white text-xs font-mono">✕</button>
+              <button onClick={() => setInjuryModalOpen(false)} className="text-slate-400 hover:text-slate-600 text-xs font-mono">✕</button>
             </div>
 
             <form onSubmit={handleAddInjury} className="space-y-3">
               <div>
-                <label className="text-[11px] text-slate-300 block mb-1">Injury Diagnosis Name</label>
+                <label className="text-[11px] font-medium text-slate-700 block mb-1">Injury Diagnosis Name</label>
                 <input
                   type="text"
                   placeholder="e.g. Lateral Meniscus Tear / Hamstring Strain"
                   value={injuryName}
                   onChange={(e) => setInjuryName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-cyan-500"
+                  className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 placeholder:text-slate-400 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   required
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Anatomical Body Part</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Anatomical Body Part</label>
                   <input
                     type="text"
                     value={bodyPart}
                     onChange={(e) => setBodyPart(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Year / Season</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Year / Season</label>
                   <input
                     type="text"
                     value={yearDate}
                     onChange={(e) => setYearDate(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                     required
                   />
                 </div>
@@ -374,11 +378,11 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Severity</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Severity</label>
                   <select
                     value={severity}
                     onChange={(e) => setSeverity(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   >
                     <option value="Mild">Mild (Grade I)</option>
                     <option value="Moderate">Moderate (Grade II)</option>
@@ -387,11 +391,11 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
                   </select>
                 </div>
                 <div>
-                  <label className="text-[11px] text-slate-300 block mb-1">Current Clinical Status</label>
+                  <label className="text-[11px] font-medium text-slate-700 block mb-1">Current Clinical Status</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white outline-none"
+                    className="w-full bg-white border border-slate-300 rounded-xl px-3 py-2 text-xs text-slate-900 outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   >
                     <option value="Fully Recovered">Fully Recovered</option>
                     <option value="Ongoing Rehab">Ongoing Rehab</option>
@@ -400,17 +404,17 @@ export default function AthleteManagement({ athletes, onRefreshAthletes, onSelec
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
                 <button
                   type="button"
                   onClick={() => setInjuryModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:bg-slate-800"
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white"
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-teal-700 hover:bg-teal-800 text-white shadow-xs transition-colors"
                 >
                   Save Injury Record
                 </button>
