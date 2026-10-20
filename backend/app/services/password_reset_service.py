@@ -1,3 +1,12 @@
+"""Deprecated: the token-link password reset flow.
+
+This module implemented the original emailed reset *link* flow. It has been
+replaced by the email OTP workflows in ``app/services/otp_service.py`` (see
+``POST /api/v1/auth/forgot-password`` and ``/reset-password``). It is retained,
+unused, so the historical ``password_resets`` table and its data stay valid;
+new code should use the OTP service. Do not wire these functions into routes.
+"""
+
 import secrets
 import hashlib
 from datetime import datetime, timedelta

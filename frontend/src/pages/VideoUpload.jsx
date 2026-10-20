@@ -24,18 +24,29 @@ function VideoUpload() {
   ];
 
   useEffect(() => {
-    fetchAthletes();
-  }, []);
+    if (user) {
+      fetchAthletes();
+    }
+  }, [user]);
 
   const fetchAthletes = async () => {
     try {
-      const response = await athletesAPI.getMe();
-      setAthletes([response.data]);
-      if (response.data) {
-        setAthleteId(response.data.id);
+      let response;
+      // If user is an athlete, fetch only their profile
+      // If user is coach/therapist/admin/scientist, fetch all athletes
+      if (user?.role === 'athlete') {
+        response = await athletesAPI.getMe();
+        setAthletes([response.data]);
+        if (response.data) {
+          setAthleteId(response.data.id);
+        }
+      } else {
+        response = await athletesAPI.getAll();
+        setAthletes(response.data);
       }
     } catch (err) {
       console.error('Failed to fetch athletes:', err);
+      setError('Failed to load athletes');
     }
   };
 
@@ -125,7 +136,7 @@ function VideoUpload() {
             <option value="">Select an athlete</option>
             {athletes.map((athlete) => (
               <option key={athlete.id} value={athlete.id}>
-                {athlete.sport_type} - {athlete.position || 'N/A'}
+                {athlete.athlete_id} - {athlete.sport_type} ({athlete.position || 'N/A'})
               </option>
             ))}
           </select>

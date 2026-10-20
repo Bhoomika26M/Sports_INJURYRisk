@@ -4,6 +4,7 @@ from app.processing.video_processor import VideoProcessor, VideoMetadata
 from app.processing.smoothing import TemporalSmoother
 from app.processing.normalization import SkeletonNormalizer
 from app.pose.estimator import Keypoint
+from app.pose.keypoints import MEDIAPIPE_KEYPOINT_INDICES
 
 
 class TestVideoProcessor:
@@ -80,22 +81,32 @@ class TestSkeletonNormalizer:
     
     @pytest.fixture
     def synthetic_keypoints_sequence(self):
-        """Create a synthetic sequence with torso."""
+        """
+        Create a synthetic sequence with a detectable torso.
+
+        Keypoints follow MediaPipe BlazePose ordering, which is what
+        SkeletonNormalizer indexes into (via KEYPOINT_INDICES).
+        """
+        # Keypoint names in BlazePose index order (0..32)
+        names = [
+            name for name, _ in sorted(MEDIAPIPE_KEYPOINT_INDICES.items(), key=lambda kv: kv[1])
+        ]
+
         sequence = []
-        for frame_idx in range(5):
+        for _ in range(5):
             frame_keypoints = []
-            for i in range(17):
-                # Create keypoints with detectable torso
-                if i == 5:  # left_shoulder
-                    kp = Keypoint(x=100, y=100, confidence=0.9, name="left_shoulder")
-                elif i == 6:  # right_shoulder
-                    kp = Keypoint(x=150, y=100, confidence=0.9, name="right_shoulder")
-                elif i == 11:  # left_hip
-                    kp = Keypoint(x=100, y=200, confidence=0.9, name="left_hip")
-                elif i == 12:  # right_hip
-                    kp = Keypoint(x=150, y=200, confidence=0.9, name="right_hip")
+            for name in names:
+                # Place shoulders/hips so a torso is detectable
+                if name == "left_shoulder":
+                    kp = Keypoint(x=100, y=100, confidence=0.9, name=name)
+                elif name == "right_shoulder":
+                    kp = Keypoint(x=150, y=100, confidence=0.9, name=name)
+                elif name == "left_hip":
+                    kp = Keypoint(x=100, y=200, confidence=0.9, name=name)
+                elif name == "right_hip":
+                    kp = Keypoint(x=150, y=200, confidence=0.9, name=name)
                 else:
-                    kp = Keypoint(x=50 + i, y=50 + i, confidence=0.9, name=f"keypoint_{i}")
+                    kp = Keypoint(x=50, y=50, confidence=0.9, name=name)
                 frame_keypoints.append(kp)
             sequence.append(frame_keypoints)
         return sequence

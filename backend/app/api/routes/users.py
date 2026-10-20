@@ -1,13 +1,34 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.db.database import get_db
 from app.schemas.user import UserResponse
+from app.schemas.auth import UserRegister
 from app.core.security import get_current_active_user
 from app.core.dependencies import require_admin
+from app.core.rate_limit import RateLimitDependency
+from app.services.auth_service import create_user_by_admin
 from app.models.user import User
 
 router = APIRouter(prefix="/users", tags=["Users"])
+
+
+@router.post("/", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(
+    user_data: UserRegister,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(require_admin),
+    _: None = Depends(RateLimitDependency(max_requests=20, window_seconds=60)),
+):
+    """
+    Create a user with any role (Administrator only).
+
+    This is the supported way to provision professional-role accounts (coach,
+    physiotherapist, sports_scientist, administrator), which public registration
+    deliberately refuses. The creating administrator is recorded in the audit log.
+    """
+    return create_user_by_admin(db, user_data, current_admin, request)
 
 
 @router.get("/", response_model=List[UserResponse])
@@ -39,7 +60,6 @@ def get_user(
     Users can view their own profile. Administrators can view any profile.
     """
     if current_user.role != "administrator" and current_user.id != user_id:
-        from fastapi import HTTPException, status
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only view your own profile"
@@ -47,7 +67,6 @@ def get_user(
     
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
-        from fastapi import HTTPException, status
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="User not found"

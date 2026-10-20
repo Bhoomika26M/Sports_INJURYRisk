@@ -8,7 +8,7 @@ def test_skeleton_renderer_initialization():
     """Test skeleton renderer initialization."""
     renderer = SkeletonRenderer()
     
-    assert renderer.keypoint_radius == 4
+    assert renderer.keypoint_radius == 8
     assert renderer.confidence_threshold == 0.3
 
 

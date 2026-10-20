@@ -43,29 +43,37 @@ The system uses JWT (JSON Web Tokens) with server-side session revocation suppor
 
 ### Password Recovery
 
-The password reset workflow includes:
+The password reset workflow uses **email OTPs** (see
+`docs/OTP_PASSWORD_RECOVERY.md` for full detail). The older emailed reset-link
+flow has been replaced.
 
-1. **Request**:
+1. **Request** (`POST /api/v1/auth/forgot-password`):
    - User provides email
-   - Server generates cryptographically secure random token (secrets.token_urlsafe(32))
-   - Server stores SHA-256 hash of token in `password_resets` table
-   - Server sets 1-hour expiration
-   - Server sends email with reset link (development: prints to console)
+   - Server generates a 6-digit code with `secrets` (leading zeros preserved)
+   - Server stores only a **keyed HMAC-SHA256 digest** in `password_otps`
+   - Server sets a 5-minute expiration
+   - Server emails the code (development: prints to console)
 
-2. **Reset**:
-   - User clicks link with token
-   - Server validates token hash and expiration
-   - Server marks token as used (single-use)
-   - Server updates password
-   - Server revokes all existing sessions
+2. **Reset** (`POST /api/v1/auth/reset-password`):
+   - User submits email + code + new password
+   - Server validates the digest and expiration
+   - Server marks the code used (single-use, atomic conditional update)
+   - Server updates password and revokes all existing sessions in one transaction
    - Server sends confirmation email
 
-3. **Security Features**:
+3. **Authenticated change** (`POST /api/v1/auth/change-password`):
+   - Requires an active session, the current password, **and** an emailed OTP
+   - The recipient is always the authenticated account's own email
+   - On success all sessions (including the current one) are revoked
+
+4. **Security Features**:
    - Generic response prevents account enumeration
-   - Tokens are single-use
-   - Tokens expire after 1 hour
-   - All sessions invalidated after password change
-   - Tokens are hashed before storage
+   - Codes are single-use, expire after 5 minutes, and are limited to 5 attempts
+   - New codes invalidate any outstanding code for the same account/purpose
+   - Codes are purpose-scoped (a recovery code cannot authorize a password change)
+   - A 60-second resend cooldown limits email flooding
+   - Codes are never stored in plaintext, returned in responses, or logged
+   - All sessions are invalidated after any password change
 
 ## Role-Based Access Control (RBAC)
 
@@ -80,9 +88,27 @@ The password reset workflow includes:
 ### Role Assignment Security
 
 - **Public Registration**: Only allows `athlete` role
-- **Professional Roles**: Must be created by administrators via admin-only functions
+- **Professional Roles**: Created by administrators via `POST /api/v1/users/` (administrator-only)
 - **Role Enforcement**: Backend dependencies (`require_role()`) enforce role checks
 - **Default Deny**: Unauthenticated requests return 401; insufficient permissions return 403
+
+### Federated Sign-In (Google)
+
+Google Sign-In uses the OAuth 2.0 authorization-code flow. See
+[`docs/GOOGLE_SIGNIN.md`](docs/GOOGLE_SIGNIN.md) for the full design. Key
+controls:
+
+- **Client secret is server-side only** — the code is exchanged backend-to-backend.
+- **Signed `state`** (HMAC, short-lived, stateless) protects against CSRF and
+  code injection; the callback verifies it before exchanging.
+- **Verified email required** — unverified Google emails are refused.
+- **No account hijacking** — an email already bound to a different Google
+  subject is refused (`409`) instead of re-linked.
+- **Athlete-only self-provisioning** — Google can never create a professional
+  role.
+- **Normal sessions** — Google sign-in mints the same JWT + server-side session,
+  so revocation behaves identically.
+
 
 ### Object-Level Authorization (IDOR Protection)
 

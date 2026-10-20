@@ -39,12 +39,24 @@ export const authAPI = {
   login: (data) => api.post('/api/v1/auth/login', data),
   getMe: () => api.get('/api/v1/auth/me'),
   logout: () => api.post('/api/v1/auth/logout'),
+  // Password recovery via emailed one-time code
+  forgotPassword: (data) => api.post('/api/v1/auth/forgot-password', data),
+  resetPassword: (data) => api.post('/api/v1/auth/reset-password', data),
+  // Authenticated password change (emailed code + current password)
+  requestChangePasswordOtp: () => api.post('/api/v1/auth/change-password/request-otp'),
+  changePassword: (data) => api.post('/api/v1/auth/change-password', data),
+  // Google Sign-In (OAuth authorization-code flow)
+  googleAuthorizeUrl: (next) =>
+    api.get('/api/v1/auth/google/authorize-url', { params: next ? { next } : {} }),
+  googleExchange: (data) => api.post('/api/v1/auth/google/exchange', data),
 };
 
 export const athletesAPI = {
   getAll: (params) => api.get('/api/v1/athletes', { params }),
   getById: (id) => api.get(`/api/v1/athletes/${id}`),
   getMe: () => api.get('/api/v1/athletes/me'),
+  // Full analysis timeline + per-activity risk trends for one athlete
+  getHistory: (id, params) => api.get(`/api/v1/athletes/${id}/history`, { params }),
   create: (data) => api.post('/api/v1/athletes', data),
   update: (id, data) => api.put(`/api/v1/athletes/${id}`, data),
   delete: (id) => api.delete(`/api/v1/athletes/${id}`),
@@ -64,10 +76,26 @@ export const videosAPI = {
   getById: (id) => api.get(`/api/v1/videos/${id}`),
   process: (id) => api.post(`/api/v1/videos/${id}/process`),
   getAnalysis: (id) => api.get(`/api/v1/videos/${id}/analysis`),
+  // Recorded comparison of this analysis vs the athlete's rolling baseline
+  getComparison: (id) => api.get(`/api/v1/videos/${id}/comparison`),
+  // Explainable injury-risk assessment (scientific terms, muscles, rationale)
+  getRisk: (id) => api.get(`/api/v1/risk/${id}`),
+  // Live step-by-step progress while the background analysis runs
+  getProgress: (id) => api.get(`/api/v1/videos/${id}/progress`),
+  // Latest annotated frame (skeleton overlay); <img> can't send headers,
+  // so the token goes in the query string
+  getPreviewFrame: (id) => {
+    const token = localStorage.getItem('token');
+    return `${API_BASE_URL}/api/v1/videos/${id}/preview-frame?token=${token}`;
+  },
   generateAnnotatedVideo: (id) => api.post(`/api/v1/videos/${id}/annotated-video`),
   getAnnotatedVideo: (id) => {
     const token = localStorage.getItem('token');
     return `${API_BASE_URL}/api/v1/videos/${id}/annotated-video?token=${token}`;
+  },
+  getVideoUrl: (id) => {
+    const token = localStorage.getItem('token');
+    return `${API_BASE_URL}/api/v1/videos/${id}/video?token=${token}`;
   },
   delete: (id) => api.delete(`/api/v1/videos/${id}`),
 };

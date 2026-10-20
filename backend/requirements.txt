@@ -17,7 +17,10 @@ httpx==0.25.2
 opencv-python-headless
 numpy
 scipy
-mediapipe
+# Pose backend. Works with the legacy mp.solutions API (<=0.10.14) and with
+# the Tasks API in 0.10.15+/1.x, which needs a .task bundle that the code
+# downloads automatically into backend/models/ on first use.
+mediapipe>=0.10.14
 
 # YOLO11n and Tracking
 ultralytics

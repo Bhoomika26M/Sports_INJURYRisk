@@ -11,7 +11,11 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = '6b665630b4e1'
-down_revision = '1223d6c89f83'
+# Repaired 2026-10-19: this was '1223d6c89f83', which branched the graph and
+# left two alembic heads (so 'alembic upgrade head' failed). It now points at
+# the real functional head, matching this file's own "Revises:" header and
+# making the history linear.
+down_revision = '500da41fe44d'
 branch_labels = None
 depends_on = None
 

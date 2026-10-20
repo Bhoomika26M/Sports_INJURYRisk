@@ -1,6 +1,8 @@
+import cv2
 import numpy as np
 from typing import List
 from app.tracking.base import BaseTracker, TrackedObject
+from app.core.config import settings
 from ultralytics import YOLO
 
 
@@ -12,16 +14,29 @@ class YOLOTracker(BaseTracker):
     Uses ByteTrack for stable ID assignment.
     """
     
-    def __init__(self, model_name: str = "yolo11n.pt", confidence_threshold: float = 0.5):
+    def __init__(
+        self,
+        model_name: str = "yolo11n.pt",
+        confidence_threshold: float = 0.5,
+        detect_max_width: int = None,
+        imgsz: int = None,
+    ):
         """
         Initialize YOLO tracker.
         
         Args:
             model_name: YOLO model name or path
             confidence_threshold: Minimum confidence for valid detections
+            detect_max_width: Downscale frames wider than this before detection
+                (person boxes are scale-invariant). None = use setting; 0 = off.
+            imgsz: Inference size for YOLO. None = use setting.
         """
         self.model_name = model_name
         self.confidence_threshold = confidence_threshold
+        self.detect_max_width = (
+            settings.DETECT_MAX_WIDTH if detect_max_width is None else detect_max_width
+        )
+        self.imgsz = settings.DETECT_IMGSZ if imgsz is None else imgsz
         self.model = None
         self._load_model()
     
@@ -48,9 +63,33 @@ class YOLOTracker(BaseTracker):
         """
         if self.model is None:
             raise RuntimeError("YOLO11n tracker not loaded")
-        
-        # Run tracking (persist=True enables tracking across frames)
-        results = self.model.track(frame, persist=True, verbose=False)
+
+        # Detection on high-resolution frames dominates runtime on 4K footage
+        # (measured ~147ms/frame). A person box is scale-invariant, so detection
+        # runs on a downscaled frame and the boxes are mapped back to the
+        # original coordinates. Trackers stay coherent because the same frame
+        # size is used for every call within a run.
+        detect_frame = frame
+        scale = 1.0
+        if self.detect_max_width and frame.shape[1] > self.detect_max_width:
+            scale = self.detect_max_width / frame.shape[1]
+            new_size = (
+                self.detect_max_width,
+                max(1, int(round(frame.shape[0] * scale))),
+            )
+            detect_frame = cv2.resize(frame, new_size, interpolation=cv2.INTER_AREA)
+
+        # Run tracking (persist=True enables tracking across frames).
+        # classes=[0] keeps only the COCO person class in NMS instead of
+        # computing and then discarding boxes for all 80 classes.
+        results = self.model.track(
+            detect_frame,
+            persist=True,
+            verbose=False,
+            imgsz=self.imgsz,
+            classes=[0],
+            conf=self.confidence_threshold,
+        )
         
         tracked_objects = []
         
@@ -82,8 +121,12 @@ class YOLOTracker(BaseTracker):
                 if confidence < self.confidence_threshold:
                     continue
                 
-                # Get bounding box (x1, y1, x2, y2)
+                # Get bounding box (x1, y1, x2, y2) and map back to the
+                # original frame's coordinates when detection was downscaled.
                 bbox = box.xyxy[0].tolist()
+                if scale != 1.0:
+                    inv = 1.0 / scale
+                    bbox = [coord * inv for coord in bbox]
                 bbox = tuple([float(coord) for coord in bbox])
                 
                 tracked_object = TrackedObject(

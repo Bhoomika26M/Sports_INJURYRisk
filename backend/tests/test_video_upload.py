@@ -1,6 +1,7 @@
 import pytest
 import os
 import tempfile
+from datetime import timedelta
 from io import BytesIO
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -10,24 +11,13 @@ from app.db.database import Base, get_db
 from app.models.user import User
 from app.models.athlete import Athlete
 from app.models.video import Video
-from app.core.security import create_access_token
+from app.core.security import create_access_token, create_user_session, get_password_hash
 
 
 # Test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_video.db"
 engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-
-def override_get_db():
-    try:
-        db = TestingSessionLocal()
-        yield db
-    finally:
-        db.close()
-
-
-app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest.fixture(scope="function")
@@ -43,7 +33,45 @@ def db():
 
 @pytest.fixture
 def client(db):
-    return TestClient(app)
+    """
+    TestClient bound to this module's test database.
+
+    The get_db override is installed per-test and restored afterwards instead
+    of at import time: module-level overrides get wiped by other test modules
+    that call app.dependency_overrides.clear(), which made these tests 401 when
+    the whole suite ran together.
+    """
+    def override_get_db():
+        try:
+            yield db
+        finally:
+            pass
+
+    previous = app.dependency_overrides.get(get_db)
+    app.dependency_overrides[get_db] = override_get_db
+    try:
+        with TestClient(app) as test_client:
+            yield test_client
+    finally:
+        if previous is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = previous
+
+
+def make_auth_headers(db, user):
+    """
+    Mint a token for a user and register its session.
+
+    The app validates the JWT's session id (jti) against the sessions table,
+    so tests must create the same session row a real login would create.
+    """
+    token_data = create_access_token(
+        data={"sub": user.email},
+        expires_delta=timedelta(minutes=30),
+    )
+    create_user_session(db, user, token_data["jti"], token_data["expires_at"])
+    return {"Authorization": f"Bearer {token_data['access_token']}"}
 
 
 @pytest.fixture
@@ -51,7 +79,7 @@ def test_user(db):
     user = User(
         email="test@example.com",
         full_name="Test User",
-        hashed_password="hashed_password",
+        password_hash=get_password_hash("testpassword123"),
         role="athlete",
         is_active=True
     )
@@ -79,9 +107,8 @@ def test_athlete(db, test_user):
 
 
 @pytest.fixture
-def auth_headers(test_user):
-    token = create_access_token(data={"sub": test_user.email})
-    return {"Authorization": f"Bearer {token}"}
+def auth_headers(db, test_user):
+    return make_auth_headers(db, test_user)
 
 
 def test_upload_video_success(client, test_athlete, auth_headers):
@@ -115,7 +142,7 @@ def test_upload_video_unauthorized_athlete(client, db, auth_headers):
     other_user = User(
         email="other@example.com",
         full_name="Other User",
-        hashed_password="hashed_password",
+        password_hash=get_password_hash("testpassword123"),
         role="athlete",
         is_active=True
     )
@@ -203,7 +230,7 @@ def test_get_video_unauthorized(client, db, auth_headers):
     other_user = User(
         email="other@example.com",
         full_name="Other User",
-        hashed_password="hashed_password",
+        password_hash=get_password_hash("testpassword123"),
         role="athlete",
         is_active=True
     )
@@ -223,8 +250,7 @@ def test_get_video_unauthorized(client, db, auth_headers):
     db.commit()
     
     # Upload video as other user
-    other_token = create_access_token(data={"sub": other_user.email})
-    other_headers = {"Authorization": f"Bearer {other_token}"}
+    other_headers = make_auth_headers(db, other_user)
     
     video_content = b"fake video content"
     video_file = BytesIO(video_content)

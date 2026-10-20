@@ -59,14 +59,24 @@ class VideoAnnotationService:
             if fps is None:
                 fps = processor.metadata.fps
             
-            # Create video writer
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            # Create video writer - use H.264 codec for better browser compatibility
+            fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
             video_writer = cv2.VideoWriter(
                 output_video_path,
                 fourcc,
                 fps,
                 (processor.metadata.width, processor.metadata.height)
             )
+            
+            # Fallback to mp4v if avc1 is not supported
+            if not video_writer.isOpened():
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                video_writer = cv2.VideoWriter(
+                    output_video_path,
+                    fourcc,
+                    fps,
+                    (processor.metadata.width, processor.metadata.height)
+                )
             
             if not video_writer.isOpened():
                 raise RuntimeError(f"Failed to create video writer for {output_video_path}")

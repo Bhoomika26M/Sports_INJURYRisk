@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { athletesAPI } from '../services/api';
+import HistoryTimeline from '../components/HistoryTimeline';
 
 const AthleteProfile = () => {
   const { id } = useParams();
@@ -12,6 +13,18 @@ const AthleteProfile = () => {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({});
+
+  // Sport types supported by pose estimation system
+  const sports = {
+    'Basketball': ['Point Guard', 'Shooting Guard', 'Small Forward', 'Power Forward', 'Center'],
+    'Soccer': ['Goalkeeper', 'Defender', 'Midfielder', 'Forward'],
+    'Volleyball': ['Setter', 'Outside Hitter', 'Middle Blocker', 'Opposite', 'Libero'],
+    'Tennis': ['Singles Player', 'Doubles Player'],
+    'Track & Field': ['Sprinter', 'Distance Runner', 'Jumper', 'Thrower'],
+    'Weightlifting': ['Powerlifter', 'Olympic Lifter', 'Bodybuilder'],
+    'CrossFit': ['Athlete'],
+    'General': ['Athlete'],
+  };
 
   useEffect(() => {
     loadAthlete();
@@ -97,21 +110,32 @@ const AthleteProfile = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Sport Type</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                <select
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={editForm.sport_type}
-                  onChange={(e) => setEditForm({ ...editForm, sport_type: e.target.value })}
-                />
+                  onChange={(e) => {
+                    setEditForm({ ...editForm, sport_type: e.target.value, position: '' });
+                  }}
+                >
+                  <option value="">Select a sport</option>
+                  {Object.keys(sports).map(sport => (
+                    <option key={sport} value={sport}>{sport}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Position</label>
-                <input
-                  type="text"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                <select
+                  className="mt-1 block w-full px-3 py-2 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                   value={editForm.position}
                   onChange={(e) => setEditForm({ ...editForm, position: e.target.value })}
-                />
+                  disabled={!editForm.sport_type}
+                >
+                  <option value="">Select a position</option>
+                  {editForm.sport_type && sports[editForm.sport_type]?.map(position => (
+                    <option key={position} value={position}>{position}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700">Age</label>
@@ -235,30 +259,37 @@ const AthleteProfile = () => {
               <h4 className="text-sm font-medium text-gray-900">Movement Analysis</h4>
               <p className="text-sm text-gray-500">Pose estimation and movement pattern analysis</p>
             </div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-              Coming in Milestone 2
-            </span>
+            <Link
+              to="/videos/upload"
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200"
+            >
+              Upload a video
+            </Link>
           </div>
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <h4 className="text-sm font-medium text-gray-900">Biomechanical Assessment</h4>
               <p className="text-sm text-gray-500">Joint angle calculations and movement metrics</p>
             </div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-              Coming in Milestone 2
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              See history below
             </span>
           </div>
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <h4 className="text-sm font-medium text-gray-900">Injury Risk Prediction</h4>
-              <p className="text-sm text-gray-500">AI-powered risk scoring and prediction</p>
+              <p className="text-sm text-gray-500">Explainable risk scoring, trended over time</p>
             </div>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
-              Coming in Milestone 3
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+              Tracked per session
             </span>
           </div>
         </div>
       </div>
+
+      {/* Every completed analysis for this athlete, newest first, with the
+          comparison that was recorded against their rolling baseline. */}
+      {athlete && <HistoryTimeline athleteId={athlete.id} />}
     </div>
   );
 };

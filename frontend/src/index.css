@@ -2,11 +2,128 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;600&family=Space+Grotesk:wght@600;700&display=swap');
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #F9FAFB;
+    color: #111827;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .font-display {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .font-body {
+    font-family: 'Inter', sans-serif;
+  }
+
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply bg-[#BD4006] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#A33605] focus:outline-none focus:ring-2 focus:ring-[#BD4006] focus:ring-offset-2 transition-colors;
+  }
+
+  .btn-secondary {
+    @apply bg-white text-[#111827] border border-[#E5E7EB] font-medium px-4 py-2 rounded-lg hover:bg-[#F9FAFB] hover:border-[#D1D5DB] focus:outline-none focus:ring-2 focus:ring-[#BD4006] focus:ring-offset-2 transition-colors;
+  }
+
+  .btn-destructive {
+    @apply bg-[#EF4444] text-white font-semibold px-4 py-2 rounded-lg hover:bg-[#DC2626] focus:outline-none focus:ring-2 focus:ring-[#EF4444] focus:ring-offset-2 transition-colors;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-white border border-[#E5E7EB] rounded-lg shadow-sm;
+  }
+
+  .card-elevated {
+    @apply bg-white border border-[#D1D5DB] rounded-lg shadow-lg;
+  }
+
+  /* Badges */
+  .badge-optimal {
+    @apply bg-[#ECFDF5] text-[#065F46] text-xs font-mono font-medium px-2 py-1 rounded-full inline-flex items-center gap-1;
+  }
+
+  .badge-optimal::before {
+    content: '';
+    @apply w-1.5 h-1.5 rounded-full bg-[#10B981];
+  }
+
+  .badge-moderate {
+    @apply bg-[#FFFBEB] text-[#92400E] text-xs font-mono font-medium px-2 py-1 rounded-full inline-flex items-center gap-1;
+  }
+
+  .badge-moderate::before {
+    content: '';
+    @apply w-1.5 h-1.5 rounded-full bg-[#F59E0B];
+  }
+
+  .badge-critical {
+    @apply bg-[#FEF2F2] text-[#991B1B] text-xs font-mono font-medium px-2 py-1 rounded-full inline-flex items-center gap-1;
+  }
+
+  .badge-critical::before {
+    content: '';
+    @apply w-1.5 h-1.5 rounded-full bg-[#EF4444];
+  }
+
+  /* Role Badges */
+  .badge-athlete {
+    @apply bg-[#1C1613] text-white text-xs font-mono font-medium px-2 py-1 rounded;
+  }
+
+  .badge-coach {
+    @apply bg-[#059669] text-white text-xs font-mono font-medium px-2 py-1 rounded;
+  }
+
+  .badge-physiotherapist {
+    @apply bg-[#7C3AED] text-white text-xs font-mono font-medium px-2 py-1 rounded;
+  }
+
+  .badge-sports-scientist {
+    @apply bg-[#D97706] text-white text-xs font-mono font-medium px-2 py-1 rounded;
+  }
+
+  .badge-administrator {
+    @apply bg-[#DC2626] text-white text-xs font-mono font-medium px-2 py-1 rounded;
+  }
+
+  /* Inputs */
+  .input-field {
+    @apply bg-white border border-[#E5E7EB] text-[#111827] px-3 py-2 rounded-lg focus:outline-none focus:border-[#BD4006] focus:ring-1 focus:ring-[#BD4006] transition-colors;
+  }
+
+  /* Micro Cards */
+  .micro-card {
+    @apply bg-white border border-[#E5E7EB] rounded-lg p-4 shadow-sm;
+  }
+
+  .micro-card-header {
+    @apply text-xs font-display font-semibold text-[#6B7280] mb-2;
+  }
+
+  .micro-card-value {
+    @apply text-2xl font-display font-bold text-[#111827];
+  }
+
+  .micro-card-delta {
+    @apply text-xs font-mono text-[#6B7280];
+  }
 }

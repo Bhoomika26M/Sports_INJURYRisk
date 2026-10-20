@@ -50,6 +50,34 @@ export const AuthProvider = ({ children }) => {
     return userData;
   };
 
+  const completeLogin = async (accessToken) => {
+    // Shared by password login and federated (Google) sign-in.
+    localStorage.setItem('token', accessToken);
+    setToken(accessToken);
+
+    const userResponse = await authAPI.getMe();
+    const userData = userResponse.data;
+
+    localStorage.setItem('user', JSON.stringify(userData));
+    setUser(userData);
+
+    return userData;
+  };
+
+  const loginWithGoogle = async (code, state) => {
+    const response = await authAPI.googleExchange({ code, state });
+    const { access_token } = response.data;
+    return completeLogin(access_token);
+  };
+
+  const startGoogleLogin = async (next) => {
+    // Ask the backend for the consent-screen URL (keeps client id server-side)
+    // then hand the browser over to Google.
+    const response = await authAPI.googleAuthorizeUrl(next);
+    const { authorization_url } = response.data;
+    window.location.href = authorization_url;
+  };
+
   const register = async (userData) => {
     const response = await authAPI.register(userData);
     return response.data;
@@ -75,6 +103,9 @@ export const AuthProvider = ({ children }) => {
     token,
     loading,
     login,
+    loginWithGoogle,
+    startGoogleLogin,
+    completeLogin,
     register,
     logout,
     isAuthenticated: !!token,

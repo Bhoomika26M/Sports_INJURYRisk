@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.api.routes import auth, users, athletes, datasets, videos
+from app.api.routes import auth, users, athletes, datasets, videos, risk
 import logging
 
 # Configure logging
@@ -72,6 +72,7 @@ app.include_router(users.router, prefix="/api/v1")
 app.include_router(athletes.router, prefix="/api/v1")
 app.include_router(datasets.router, prefix="/api/v1")
 app.include_router(videos.router, prefix="/api/v1/videos")
+app.include_router(risk.router, prefix="/api/v1")
 
 
 @app.get("/")

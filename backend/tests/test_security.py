@@ -7,8 +7,9 @@ from app.db.database import get_db
 from app.models.user import User
 from app.models.athlete import Athlete
 from app.models.session import Session as UserSession
-from app.models.password_reset import PasswordReset
+from app.models.password_otp import PasswordOTP
 from app.core.security import get_password_hash, create_access_token
+from app.core.otp import hash_otp, PURPOSE_PASSWORD_RECOVERY
 from datetime import datetime, timedelta
 
 
@@ -180,6 +181,136 @@ def test_public_registration_cannot_create_coach(db: Session):
 
 
 # ============================================================
+# TEST: Admin-only user creation
+# ============================================================
+
+def test_admin_can_create_professional_role_user(db: Session, admin_headers: dict):
+    """An administrator can create a professional-role account."""
+    email = f"coach{secrets.token_hex(8)}@example.com"
+    response = client.post(
+        "/api/v1/users/",
+        headers=admin_headers,
+        json={
+            "email": email,
+            "password": "password123",
+            "full_name": "New Coach",
+            "role": "coach",
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["email"] == email
+    assert data["role"] == "coach"
+    assert "password" not in data and "password_hash" not in data
+
+    created = db.query(User).filter(User.email == email).first()
+    assert created is not None
+    assert created.role == "coach"
+
+
+def test_admin_created_user_can_log_in(db: Session, admin_headers: dict):
+    """A user created by an admin can authenticate with the given password."""
+    email = f"physio{secrets.token_hex(8)}@example.com"
+    client.post(
+        "/api/v1/users/",
+        headers=admin_headers,
+        json={
+            "email": email,
+            "password": "password123",
+            "full_name": "New Physio",
+            "role": "physiotherapist",
+        },
+    )
+
+    login = client.post(
+        "/api/v1/auth/login", json={"email": email, "password": "password123"}
+    )
+    assert login.status_code == 200
+    assert "access_token" in login.json()
+
+
+def test_non_admin_cannot_create_user(db: Session, auth_headers: dict):
+    """A regular (athlete) user cannot create users."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=auth_headers,
+        json={
+            "email": f"sneaky{secrets.token_hex(8)}@example.com",
+            "password": "password123",
+            "full_name": "Sneaky User",
+            "role": "administrator",
+        },
+    )
+    assert response.status_code == 403
+
+
+def test_unauthenticated_cannot_create_user(db: Session):
+    """User creation requires authentication."""
+    response = client.post(
+        "/api/v1/users/",
+        json={
+            "email": f"anon{secrets.token_hex(8)}@example.com",
+            "password": "password123",
+            "full_name": "Anon User",
+            "role": "administrator",
+        },
+    )
+    assert response.status_code == 401
+
+
+def test_admin_create_user_rejects_duplicate_email(db: Session, admin_headers: dict, test_user: User):
+    """Creating a user with an existing email is rejected."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=admin_headers,
+        json={
+            "email": test_user.email,
+            "password": "password123",
+            "full_name": "Duplicate",
+            "role": "coach",
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_admin_create_user_rejects_invalid_role(db: Session, admin_headers: dict):
+    """An unknown role is rejected."""
+    response = client.post(
+        "/api/v1/users/",
+        headers=admin_headers,
+        json={
+            "email": f"weird{secrets.token_hex(8)}@example.com",
+            "password": "password123",
+            "full_name": "Weird Role",
+            "role": "supervillain",
+        },
+    )
+    assert response.status_code == 400
+
+
+def test_admin_created_athlete_gets_profile(db: Session, admin_headers: dict):
+    """An athlete created by an admin still gets an athlete profile."""
+    email = f"ath{secrets.token_hex(8)}@example.com"
+    response = client.post(
+        "/api/v1/users/",
+        headers=admin_headers,
+        json={
+            "email": email,
+            "password": "password123",
+            "full_name": "New Athlete",
+            "role": "athlete",
+            "sport_type": "Soccer",
+        },
+    )
+    assert response.status_code == 201
+
+    created = db.query(User).filter(User.email == email).first()
+    profile = db.query(Athlete).filter(Athlete.user_id == created.id).first()
+    assert profile is not None
+    assert profile.sport_type == "Soccer"
+
+
+# ============================================================
 # TEST: Account Enumeration Protection
 # ============================================================
 
@@ -222,13 +353,13 @@ def test_password_too_short_rejected(db: Session):
 
 
 def test_password_validation_on_reset(db: Session, test_user: User):
-    """Test that password validation applies to password reset."""
+    """Test that password validation applies to the OTP password reset flow."""
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "token": "fake_token",
+            "email": test_user.email,
+            "otp": "123456",
             "new_password": "short",
-            "confirm_password": "short"
         }
     )
     assert response.status_code == 422
@@ -452,65 +583,60 @@ def test_athlete_delete_restricted_to_admin(db: Session, test_athlete: Athlete, 
 # TEST: Password Reset Security
 # ============================================================
 
-def test_password_reset_token_single_use(db: Session, test_user: User):
-    """Test that password reset tokens are single-use."""
-    # Create a reset token
-    import hashlib
-    token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    
-    password_reset = PasswordReset(
-        user_id=test_user.id,
-        token_hash=token_hash,
-        expires_at=datetime.utcnow() + timedelta(hours=1)
+def _issue_recovery_otp_row(db: Session, user: User, code: str, expires_in_minutes: int = 5):
+    """Insert a recovery OTP row directly (no email) for endpoint testing."""
+    db.add(
+        PasswordOTP(
+            user_id=user.id,
+            purpose=PURPOSE_PASSWORD_RECOVERY,
+            otp_hash=hash_otp(code, PURPOSE_PASSWORD_RECOVERY),
+            expires_at=datetime.utcnow() + timedelta(minutes=expires_in_minutes),
+            attempt_count=0,
+            max_attempts=5,
+        )
     )
-    db.add(password_reset)
     db.commit()
-    
-    # Use token once
+
+
+def test_password_reset_otp_single_use(db: Session, test_user: User):
+    """Test that a recovery OTP is single-use."""
+    code = "123456"
+    _issue_recovery_otp_row(db, test_user, code)
+
+    # Use the code once.
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "token": token,
+            "email": test_user.email,
+            "otp": code,
             "new_password": "newpassword123",
-            "confirm_password": "newpassword123"
         }
     )
     assert response.status_code == 200
-    
-    # Try to use same token again
+
+    # The same code cannot be used again.
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "token": token,
+            "email": test_user.email,
+            "otp": code,
             "new_password": "anotherpassword123",
-            "confirm_password": "anotherpassword123"
         }
     )
     assert response.status_code == 400
 
 
-def test_expired_password_reset_token_rejected(db: Session, test_user: User):
-    """Test that expired password reset tokens are rejected."""
-    import hashlib
-    token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(token.encode()).hexdigest()
-    
-    # Create expired token
-    password_reset = PasswordReset(
-        user_id=test_user.id,
-        token_hash=token_hash,
-        expires_at=datetime.utcnow() - timedelta(hours=1)
-    )
-    db.add(password_reset)
-    db.commit()
-    
+def test_expired_password_reset_otp_rejected(db: Session, test_user: User):
+    """Test that expired recovery OTPs are rejected."""
+    code = "654321"
+    _issue_recovery_otp_row(db, test_user, code, expires_in_minutes=-1)
+
     response = client.post(
         "/api/v1/auth/reset-password",
         json={
-            "token": token,
+            "email": test_user.email,
+            "otp": code,
             "new_password": "newpassword123",
-            "confirm_password": "newpassword123"
         }
     )
     assert response.status_code == 400

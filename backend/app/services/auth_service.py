@@ -8,8 +8,9 @@ from app.core.security import (
     create_user_session
 )
 from app.core.config import settings
-from app.core.audit import log_login, log_failed_login, log_registration
+from app.core.audit import log_login, log_failed_login, log_registration, log_admin_user_created
 from app.models.user import User
+from app.models.athlete import Athlete
 from app.schemas.auth import UserRegister, UserLogin
 
 
@@ -22,28 +23,45 @@ def register_user(db: Session, user_data: UserRegister, request: Request = None)
             detail="Email already registered"
         )
     
-    # DEVELOPMENT MODE: Allow all roles for testing
-    # In production, only 'athlete' role should be allowed for public registration
-    # Professional roles must be assigned by administrators
-    valid_roles = ["athlete", "coach", "physiotherapist", "sports_scientist", "administrator"]
-    if user_data.role not in valid_roles:
+    # Public self-registration is restricted to the 'athlete' role.
+    # Professional roles (coach, physiotherapist, sports_scientist,
+    # administrator) must be provisioned by an administrator via
+    # create_user_by_admin(), never chosen by the registrant. This prevents
+    # privilege escalation through public sign-up.
+    if user_data.role != "athlete":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid role. Must be one of: {', '.join(valid_roles)}"
+            detail="Invalid role. Public registration only allows the 'athlete' role."
         )
     
-    # Create new user
+    # Create new user with the forced athlete role
     hashed_password = get_password_hash(user_data.password)
     db_user = User(
         email=user_data.email,
         password_hash=hashed_password,
         full_name=user_data.full_name,
-        role=user_data.role,  # Allow the requested role in development
+        role="athlete",
         is_active=True
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Automatically create athlete profile for athlete role
+    if db_user.role == "athlete":
+        # Generate a unique athlete_id
+        athlete_id = f"ATH{db_user.id:06d}"
+        db_athlete = Athlete(
+            athlete_id=athlete_id,
+            user_id=db_user.id,
+            sport_type=user_data.sport_type or "General",
+            position=user_data.position,
+            age=user_data.age or 18,
+            height=user_data.height or 170.0,
+            weight=user_data.weight or 70.0,
+        )
+        db.add(db_athlete)
+        db.commit()
     
     # Log registration
     ip_address = request.client.host if request else None
@@ -95,7 +113,7 @@ def create_user_token(user: User, db: Session) -> str:
     return token_data["access_token"]
 
 
-def create_user_by_admin(db: Session, user_data: UserRegister, admin_user: User) -> User:
+def create_user_by_admin(db: Session, user_data: UserRegister, admin_user: User, request: Request = None) -> User:
     """
     Create a user with any role (admin-only function).
     This allows administrators to create professional role accounts.
@@ -135,4 +153,25 @@ def create_user_by_admin(db: Session, user_data: UserRegister, admin_user: User)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
+    
+    # Keep athlete accounts consistent with public registration by creating
+    # their athlete profile too.
+    if db_user.role == "athlete":
+        athlete_id = f"ATH{db_user.id:06d}"
+        db_athlete = Athlete(
+            athlete_id=athlete_id,
+            user_id=db_user.id,
+            sport_type=user_data.sport_type or "General",
+            position=user_data.position,
+            age=user_data.age or 18,
+            height=user_data.height or 170.0,
+            weight=user_data.weight or 70.0,
+        )
+        db.add(db_athlete)
+        db.commit()
+    
+    # Audit the privileged action (never includes the password).
+    ip_address = request.client.host if request else None
+    log_admin_user_created(db_user, admin_user, ip_address)
+    
     return db_user

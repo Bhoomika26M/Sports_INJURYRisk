@@ -3,15 +3,18 @@ from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.schemas.auth import (
     UserRegister, UserLogin, Token, 
-    PasswordResetRequest, PasswordReset, PasswordChange
+    PasswordResetRequest, ResetPasswordOTP, ChangePasswordOTP,
+    GoogleAuthorizeUrlResponse, GoogleCallbackRequest
 )
 from app.schemas.user import UserResponse
 from app.services.auth_service import register_user, authenticate_user, create_user_token
-from app.services.password_reset_service import (
-    request_password_reset, 
-    reset_password, 
-    change_password
+from app.services.otp_service import (
+    request_password_recovery_otp,
+    verify_recovery_and_reset_password,
+    request_password_change_otp,
+    verify_change_password,
 )
+from app.services import google_auth_service as google_auth
 from app.core.security import get_current_active_user, revoke_session
 from app.core.rate_limit import RateLimitDependency
 from app.core.audit import log_logout
@@ -61,6 +64,75 @@ def login(
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@router.get("/google/authorize-url", response_model=GoogleAuthorizeUrlResponse)
+def google_authorize_url(
+    next: str = None,
+    _: None = Depends(RateLimitDependency(max_requests=30, window_seconds=60)),
+):
+    """
+    Get the Google consent-screen URL to redirect the browser to.
+
+    - **next**: optional same-app path to return to after sign-in.
+
+    Returns 503 until the server has Google credentials configured.
+    """
+    url, state = google_auth.build_authorization_url(next_url=next)
+    return {"authorization_url": url, "state": state}
+
+
+@router.post("/google/exchange", response_model=Token)
+def google_exchange(
+    payload: GoogleCallbackRequest,
+    request: Request = None,
+    db: Session = Depends(get_db),
+    _: None = Depends(RateLimitDependency(max_requests=10, window_seconds=60)),
+):
+    """
+    Exchange the Google authorization code for an application token.
+
+    The browser obtains ``code`` + ``state`` at the configured redirect URI and
+    posts them here. The server verifies the state, exchanges the code with
+    Google (using the client secret), then returns the same JWT used by
+    password login.
+    """
+    google_auth.verify_oauth_state(payload.state)
+    ip_address = request.client.host if request else None
+    user, _outcome = google_auth.authenticate_with_google(db, payload.code, ip_address)
+    access_token = create_user_token(user, db)
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.get("/google/callback")
+def google_callback(
+    code: str,
+    state: str,
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Server-side redirect callback (optional alternative to /google/exchange).
+
+    Google can be pointed directly at this endpoint; it exchanges the code and
+    then 302-redirects the browser to the configured frontend URL with the token
+    in the fragment. Failures redirect to the frontend failure URL with an error
+    code. Prefer /google/exchange with a frontend callback page if you would
+    rather not put tokens in a URL.
+    """
+    from fastapi.responses import RedirectResponse
+    from urllib.parse import urlencode
+
+    ip_address = request.client.host if request else None
+    try:
+        google_auth.verify_oauth_state(state)
+        user, _outcome = google_auth.authenticate_with_google(db, code, ip_address)
+        token = create_user_token(user, db)
+        fragment = urlencode({"access_token": token, "token_type": "bearer"})
+        return RedirectResponse(f"{settings.GOOGLE_FRONTEND_SUCCESS_REDIRECT}#{fragment}")
+    except HTTPException as exc:
+        fragment = urlencode({"error": str(exc.detail)})
+        return RedirectResponse(f"{settings.GOOGLE_FRONTEND_FAILURE_REDIRECT}#{fragment}")
+
+
 @router.post("/logout")
 def logout(
     request: Request,
@@ -94,52 +166,90 @@ def logout(
 @router.post("/forgot-password")
 def forgot_password(
     request_data: PasswordResetRequest,
+    request: Request = None,
     db: Session = Depends(get_db),
     _: None = Depends(RateLimitDependency(max_requests=3, window_seconds=300))
 ):
     """
-    Request a password reset.
-    
-    - **email**: User's email address
-    
-    For security reasons, this endpoint always returns the same response
-    regardless of whether the email exists in the system.
+    Request a password-recovery OTP.
+
+    - **email**: The account email address.
+
+    Always returns the same generic response, whether or not an account exists,
+    so the endpoint cannot be used to enumerate accounts. If an eligible account
+    exists, a 6-digit code is emailed to it.
     """
-    return request_password_reset(db, request_data.email)
+    ip_address = request.client.host if request else None
+    return request_password_recovery_otp(db, request_data.email, ip_address)
 
 
 @router.post("/reset-password")
 def reset_password_endpoint(
-    reset_data: PasswordReset,
+    reset_data: ResetPasswordOTP,
+    request: Request = None,
     db: Session = Depends(get_db),
     _: None = Depends(RateLimitDependency(max_requests=5, window_seconds=300))
 ):
     """
-    Reset password using a valid reset token.
-    
-    - **token**: Password reset token (received via email)
-    - **new_password**: New password
-    - **confirm_password**: Confirm new password
+    Reset a forgotten password using an emailed OTP.
+
+    - **email**: The account email address.
+    - **otp**: The 6-digit code from the email (a string; leading zeros count).
+    - **new_password**: The new password.
+
+    On success the OTP is consumed and all of the account's sessions are revoked.
     """
-    return reset_password(db, reset_data.token, reset_data.new_password)
+    ip_address = request.client.host if request else None
+    return verify_recovery_and_reset_password(
+        db, reset_data.email, reset_data.otp, reset_data.new_password, ip_address
+    )
+
+
+@router.post("/change-password/request-otp")
+def change_password_request_otp(
+    request: Request = None,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+    _: None = Depends(RateLimitDependency(max_requests=5, window_seconds=300))
+):
+    """
+    Request a password-change OTP for the authenticated user.
+
+    The recipient is always the email on the authenticated account; the client
+    cannot choose a different recipient. Subject to a resend cooldown.
+    """
+    ip_address = request.client.host if request else None
+    return request_password_change_otp(db, current_user, ip_address)
 
 
 @router.post("/change-password")
 def change_password_endpoint(
-    change_data: PasswordChange,
+    change_data: ChangePasswordOTP,
+    request: Request = None,
     current_user: User = Depends(get_current_active_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _: None = Depends(RateLimitDependency(max_requests=10, window_seconds=300))
 ):
     """
-    Change password for authenticated user.
-    
-    - **current_password**: Current password
-    - **new_password**: New password
-    - **confirm_password**: Confirm new password
-    
-    After successful password change, all existing sessions will be invalidated.
+    Change the authenticated user's password.
+
+    - **otp**: The 6-digit code emailed to the account.
+    - **current_password**: The current password (required, in addition to the OTP).
+    - **new_password**: The new password.
+
+    The account is taken from the authenticated session. On success the OTP is
+    consumed and all sessions (including the current one) are revoked, so the
+    user must sign in again.
     """
-    return change_password(db, current_user, change_data.current_password, change_data.new_password)
+    ip_address = request.client.host if request else None
+    return verify_change_password(
+        db,
+        current_user,
+        change_data.otp,
+        change_data.current_password,
+        change_data.new_password,
+        ip_address,
+    )
 
 
 @router.get("/me", response_model=UserResponse)

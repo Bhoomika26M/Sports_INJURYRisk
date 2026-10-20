@@ -60,6 +60,10 @@ datasets/processed/
 # Video uploads
 backend/uploads/
 
+# MediaPipe pose model bundles (auto-downloaded on first use)
+backend/models/*.task
+backend/models/*.part
+
 # Test coverage
 htmlcov/
 .tox/

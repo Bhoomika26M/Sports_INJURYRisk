@@ -88,14 +88,19 @@ class SkeletonRenderer:
         "left_ankle", "right_ankle"
     ]
     
+    # Precomputed lookups for per-frame hot paths (built once at class
+    # definition instead of scanning the landmark dict for every keypoint)
+    NAME_TO_INDEX = {name: idx for idx, name in BLAZEPOSE_LANDMARKS.items()}
+    BIOMECHANICS_LANDMARK_SET = set(BIOMECHANICS_LANDMARKS)
+    
     def __init__(
         self,
-        keypoint_radius: int = 4,
+        keypoint_radius: int = 8,
         keypoint_color: Tuple[int, int, int] = (0, 255, 0),
-        connection_color: Tuple[int, int, int] = (255, 255, 255),
+        connection_color: Tuple[int, int, int] = (0, 255, 0),
         bbox_color: Tuple[int, int, int] = (255, 0, 0),
         text_color: Tuple[int, int, int] = (255, 255, 255),
-        line_thickness: int = 2,
+        line_thickness: int = 5,
         confidence_threshold: float = 0.3
     ):
         """
@@ -126,7 +131,8 @@ class SkeletonRenderer:
         track_id: Optional[int] = None,
         frame_number: Optional[int] = None,
         timestamp: Optional[float] = None,
-        biomechanical_data: Optional[Dict] = None
+        biomechanical_data: Optional[Dict] = None,
+        draw_hud: bool = True
     ) -> np.ndarray:
         """
         Render skeleton visualization on frame.
@@ -139,6 +145,8 @@ class SkeletonRenderer:
             frame_number: Frame number
             timestamp: Timestamp in seconds
             biomechanical_data: Optional biomechanical measurements to display
+            draw_hud: When False, the fixed-corner text overlays are skipped so
+                they can be drawn later, after the frame is cropped.
         
         Returns:
             Annotated frame
@@ -146,25 +154,113 @@ class SkeletonRenderer:
         # Create a copy to avoid modifying original
         annotated = frame.copy()
         
+        # Determine risk level from biomechanical data
+        risk_level = self._determine_risk_level(biomechanical_data)
+        
         # Draw bounding box
         if bbox is not None:
             self._draw_bbox(annotated, bbox, track_id)
         
-        # Draw skeletal connections
-        self._draw_connections(annotated, keypoints)
+        # Draw skeletal connections with risk-based coloring
+        self._draw_connections(annotated, keypoints, risk_level)
         
-        # Draw keypoints
-        self._draw_keypoints(annotated, keypoints)
+        # Draw keypoints with risk-based coloring
+        self._draw_keypoints(annotated, keypoints, risk_level)
         
+        if draw_hud:
+            self.draw_hud(annotated, frame_number, timestamp, biomechanical_data)
+        
+        return annotated
+
+    def draw_hud(
+        self,
+        frame: np.ndarray,
+        frame_number: Optional[int] = None,
+        timestamp: Optional[float] = None,
+        biomechanical_data: Optional[Dict] = None
+    ) -> None:
+        """
+        Draw the fixed-position text overlays (frame info + biomechanics).
+
+        Split out from :meth:`render` so the HUD can be applied *after* the
+        annotated frame is cropped to follow the athlete - otherwise the text,
+        which is anchored to the frame's top-left, would be cropped away.
+        """
         # Draw frame info
         if frame_number is not None or timestamp is not None:
-            self._draw_frame_info(annotated, frame_number, timestamp)
+            self._draw_frame_info(frame, frame_number, timestamp)
         
         # Draw biomechanical data
         if biomechanical_data is not None:
-            self._draw_biomechanical_data(annotated, biomechanical_data)
+            self._draw_biomechanical_data(frame, biomechanical_data)
+    
+    def _determine_risk_level(self, biomechanical_data: Optional[Dict]) -> str:
+        """
+        Determine risk level from biomechanical data.
         
-        return annotated
+        Args:
+            biomechanical_data: Dictionary with knee_angle, hip_angle, trunk_lean
+        
+        Returns:
+            Risk level: 'low', 'moderate', 'high', or 'critical'
+        """
+        if biomechanical_data is None:
+            return 'low'
+        
+        knee_angle = biomechanical_data.get('knee_angle')
+        hip_angle = biomechanical_data.get('hip_angle')
+        trunk_lean = biomechanical_data.get('trunk_lean')
+        
+        risk_factors = 0
+        
+        # Check knee angle (too deep or too shallow)
+        if knee_angle is not None:
+            if knee_angle < 60 or knee_angle > 140:  # Extreme angles
+                risk_factors += 2
+            elif knee_angle < 70 or knee_angle > 130:  # Concerning angles
+                risk_factors += 1
+        
+        # Check hip angle
+        if hip_angle is not None:
+            if hip_angle < 50 or hip_angle > 160:  # Extreme angles
+                risk_factors += 2
+            elif hip_angle < 60 or hip_angle > 150:  # Concerning angles
+                risk_factors += 1
+        
+        # Check trunk lean (too much forward lean)
+        if trunk_lean is not None:
+            if abs(trunk_lean) > 45:  # Extreme lean
+                risk_factors += 2
+            elif abs(trunk_lean) > 30:  # Concerning lean
+                risk_factors += 1
+        
+        # Determine risk level
+        if risk_factors >= 4:
+            return 'critical'
+        elif risk_factors >= 3:
+            return 'high'
+        elif risk_factors >= 1:
+            return 'moderate'
+        else:
+            return 'low'
+    
+    def _get_risk_color(self, risk_level: str) -> Tuple[int, int, int]:
+        """
+        Get color based on risk level.
+        
+        Args:
+            risk_level: Risk level string
+        
+        Returns:
+            BGR color tuple
+        """
+        colors = {
+            'low': (0, 255, 0),      # Green
+            'moderate': (0, 255, 255),  # Yellow
+            'high': (0, 165, 255),   # Orange
+            'critical': (0, 0, 255)  # Red
+        }
+        return colors.get(risk_level, (0, 255, 0))
     
     def _draw_bbox(
         self,
@@ -199,19 +295,17 @@ class SkeletonRenderer:
                 2
             )
     
-    def _draw_connections(self, frame: np.ndarray, keypoints: List[Keypoint]) -> None:
-        """Draw skeletal connections."""
-        # Create a dictionary for quick lookup by name
-        kp_dict = {kp.name: kp for kp in keypoints}
+    def _draw_connections(self, frame: np.ndarray, keypoints: List[Keypoint], risk_level: str = 'low') -> None:
+        """Draw skeletal connections with risk-based coloring."""
+        # Get color based on risk level
+        color = self._get_risk_color(risk_level)
         
-        # Also create index-based lookup for compatibility
+        # Map BlazePose index → keypoint (O(n) dict lookups, no rescans)
         kp_by_index = {}
         for kp in keypoints:
-            # Find index from name
-            for idx, name in self.BLAZEPOSE_LANDMARKS.items():
-                if name == kp.name:
-                    kp_by_index[idx] = kp
-                    break
+            idx = self.NAME_TO_INDEX.get(kp.name)
+            if idx is not None:
+                kp_by_index[idx] = kp
         
         # Draw connections
         for idx1, idx2 in self.BLAZEPOSE_CONNECTIONS:
@@ -224,26 +318,22 @@ class SkeletonRenderer:
                     kp2.confidence >= self.confidence_threshold):
                     pt1 = (int(kp1.x), int(kp1.y))
                     pt2 = (int(kp2.x), int(kp2.y))
-                    cv2.line(frame, pt1, pt2, self.connection_color, self.line_thickness)
+                    cv2.line(frame, pt1, pt2, color, self.line_thickness)
     
-    def _draw_keypoints(self, frame: np.ndarray, keypoints: List[Keypoint]) -> None:
-        """Draw keypoints."""
+    def _draw_keypoints(self, frame: np.ndarray, keypoints: List[Keypoint], risk_level: str = 'low') -> None:
+        """Draw keypoints with risk-based coloring."""
+        # Get color based on risk level
+        color = self._get_risk_color(risk_level)
+        
         for kp in keypoints:
             if kp.confidence >= self.confidence_threshold:
                 pt = (int(kp.x), int(kp.y))
                 
-                # Color based on confidence
-                if kp.confidence > 0.8:
-                    color = (0, 255, 0)  # Green for high confidence
-                elif kp.confidence > 0.5:
-                    color = (0, 255, 255)  # Yellow for medium confidence
-                else:
-                    color = (0, 0, 255)  # Red for low confidence
-                
+                # Use risk-based color instead of confidence-based
                 cv2.circle(frame, pt, self.keypoint_radius, color, -1)
                 
                 # Optional: Draw keypoint name for important landmarks
-                if kp.name in self.BIOMECHANICS_LANDMARKS:
+                if kp.name in self.BIOMECHANICS_LANDMARK_SET:
                     cv2.putText(
                         frame,
                         kp.name[:3],  # Abbreviated name
@@ -323,10 +413,7 @@ class SkeletonRenderer:
         Returns:
             Index (0-32) or None if not found
         """
-        for idx, name in self.BLAZEPOSE_LANDMARKS.items():
-            if name == landmark_name:
-                return idx
-        return None
+        return self.NAME_TO_INDEX.get(landmark_name)
     
     def get_landmark_name(self, index: int) -> Optional[str]:
         """

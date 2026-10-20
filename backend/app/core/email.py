@@ -47,6 +47,44 @@ Sports Injury Risk Detection Team
         
         return self._send_email(to_email, subject, body)
     
+    def send_otp(
+        self, to_email: str, otp: str, purpose_label: str, expires_minutes: int
+    ) -> bool:
+        """Send a one-time password email.
+
+        The raw code is only ever placed in the email body. In development it is
+        printed to the console instead (clearly marked) and never sent.
+        """
+        if self.development_mode:
+            # Development-only visibility for testing. Production
+            # (ENVIRONMENT != "development") never prints codes.
+            print(f"\n[DEV MODE] OTP for {to_email} ({purpose_label}): {otp} "
+                  f"(expires in {expires_minutes} min)\n")
+            return True
+
+        subject = "Your verification code - Sports Injury Risk Detection"
+        body = f"""
+Hello,
+
+You requested a verification code for {purpose_label}.
+
+Your verification code is:
+
+    {otp}
+
+This code expires in {expires_minutes} minutes.
+
+For your security:
+  - Do not share this code with anyone.
+  - Our team will never ask you for this code.
+  - If you did not request it, you can safely ignore this email and your
+    password will remain unchanged.
+
+Best regards,
+Sports Injury Risk Detection Team
+"""
+        return self._send_email(to_email, subject, body)
+
     def send_password_changed(self, to_email: str, user_name: str) -> bool:
         """Send password change confirmation email."""
         if self.development_mode:

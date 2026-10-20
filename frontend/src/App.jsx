@@ -4,6 +4,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import GoogleCallback from './pages/GoogleCallback';
 import Dashboard from './pages/Dashboard';
 import AthleteList from './pages/AthleteList';
 import AthleteProfile from './pages/AthleteProfile';
@@ -44,6 +46,15 @@ function AppRoutes() {
           <Register />
         </PublicRoute>
       } />
+      <Route path="/forgot-password" element={
+        <PublicRoute>
+          <ForgotPassword />
+        </PublicRoute>
+      } />
+      {/* Google redirects here with ?code=&state=. Deliberately NOT wrapped in
+          PublicRoute: the sign-in is still in flight, so the "already
+          authenticated -> /dashboard" redirect must not race the exchange. */}
+      <Route path="/auth/google/callback" element={<GoogleCallback />} />
       <Route path="/" element={
         <ProtectedRoute>
           <Layout />

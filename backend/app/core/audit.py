@@ -130,3 +130,56 @@ def log_registration(user: User, ip_address: Optional[str] = None):
         details={"role": user.role},
         success=True
     )
+
+
+def log_admin_user_created(
+    new_user: User,
+    admin_user: User,
+    ip_address: Optional[str] = None,
+):
+    """Log an administrator creating a user with a privileged role."""
+    log_security_event(
+        event_type="ADMIN_USER_CREATED",
+        user_id=admin_user.id,
+        user_email=admin_user.email,
+        ip_address=ip_address,
+        details={
+            "created_user_id": new_user.id,
+            "created_user_email": new_user.email,
+            "created_role": new_user.role,
+        },
+        success=True,
+    )
+
+
+def log_otp_requested(
+    purpose: str,
+    user_email: Optional[str] = None,
+    user_id: Optional[int] = None,
+    ip_address: Optional[str] = None,
+):
+    """Log that an email OTP was issued. Never includes the code itself."""
+    log_security_event(
+        event_type="OTP_REQUESTED",
+        user_id=user_id,
+        user_email=user_email,
+        ip_address=ip_address,
+        details={"purpose": purpose},
+        success=True
+    )
+
+
+def log_otp_verification_failed(
+    purpose: str,
+    email: Optional[str] = None,
+    ip_address: Optional[str] = None,
+    reason: Optional[str] = None,
+):
+    """Log a failed/rejected OTP verification. Never includes the code."""
+    log_security_event(
+        event_type="OTP_VERIFICATION_FAILED",
+        user_email=email,
+        ip_address=ip_address,
+        details={"purpose": purpose, "reason": reason},
+        success=False
+    )

@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+from typing import List, Optional
 from app.db.database import get_db
 from app.schemas.athlete import AthleteCreate, AthleteUpdate, AthleteResponse
+from app.schemas.history import AthleteHistoryResponse, HistoryEntry
 from app.services.athlete_service import (
     create_athlete, 
     get_athlete, 
@@ -11,6 +12,8 @@ from app.services.athlete_service import (
     delete_athlete,
     get_athlete_for_user
 )
+from app.services import baseline_service
+from app.services.video_service import VideoService
 from app.core.security import get_current_active_user
 from app.core.dependencies import require_role
 from app.models.user import User
@@ -100,6 +103,47 @@ def get_athlete_endpoint(
         )
     
     return athlete
+
+
+@router.get("/{athlete_id}/history", response_model=AthleteHistoryResponse)
+def get_athlete_history_endpoint(
+    athlete_id: int,
+    activity: Optional[str] = None,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get an athlete's analysis history and risk trends.
+
+    Returns every completed analysis for the athlete in chronological order,
+    each with its recorded risk score, trended metrics, and the comparison that
+    was made against the athlete's rolling baseline at the time it completed.
+
+    - **activity**: optional filter (e.g. `squat`, `jump`, `running`)
+    - **limit**: maximum number of entries to return (oldest first)
+
+    Available to all authenticated users; athletes may only read their own.
+    """
+    # Reuse the shared athlete-access check so IDOR rules stay in one place.
+    VideoService.check_athlete_access(current_user, athlete_id, db)
+
+    # Clamp the page size rather than trusting the client blindly.
+    limit = max(1, min(limit, 500))
+
+    rows = baseline_service.get_athlete_history(
+        db, athlete_id, activity=activity, limit=limit
+    )
+    athlete = baseline_service.resolve_athlete(db, athlete_id)
+    trends = baseline_service.summarize_trends(rows)
+
+    return AthleteHistoryResponse(
+        athlete_id=athlete_id,
+        athlete_public_id=(athlete.athlete_id if athlete else None),
+        total_analyses=len(rows),
+        trends=trends,
+        entries=[HistoryEntry.model_validate(row) for row in rows],
+    )
 
 
 @router.put("/{athlete_id}", response_model=AthleteResponse)
