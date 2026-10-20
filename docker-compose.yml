@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-injury}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-injury_pw}
+      POSTGRES_DB: ${POSTGRES_DB:-injury_risk}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-injury} -d ${POSTGRES_DB:-injury_risk}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongodata:/data/db
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-injury}:${POSTGRES_PASSWORD:-injury_pw}@postgres:5432/${POSTGRES_DB:-injury_risk}
+      MONGO_URL: mongodb://mongo:27017
+      CORS_ORIGINS: http://localhost:8080,http://localhost:5173
+    volumes:
+      - appstorage:/app/storage
+      - ./backend/models:/app/models
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_started
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:
+  mongodata:
+  appstorage:
