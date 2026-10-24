@@ -81,6 +81,24 @@ CORRECTIVE_EXERCISE_LIBRARY = {
             "purpose": "Prevents excessive forward trunk lean during deep squat and acceleration phases.",
             "difficulty": "Beginner"
         }
+    ],
+    "PATELLAR_TENDON": [
+        {
+            "name": "Decline Board Eccentric Single-Leg Squats",
+            "category": "Patellar Tendon Loading",
+            "target": "Patellar Tendon & Quadriceps Complex",
+            "frequency": "3 sets x 15 reps (2x daily)",
+            "purpose": "Clinical gold standard for jumper's knee: stimulates patellar tendon collagen remodeling under eccentric loads.",
+            "difficulty": "Intermediate"
+        },
+        {
+            "name": "Spanish Squats with Heavy Rigid Band",
+            "category": "Isometric Quadriceps Deloading",
+            "target": "Infrapatellar Tendon & Vastus Medialis",
+            "frequency": "5 holds x 45 seconds (pre-activity)",
+            "purpose": "Provides proven analgesic pain relief and reduces high-impact patellar landing strain.",
+            "difficulty": "Beginner"
+        }
     ]
 }
 
@@ -105,25 +123,33 @@ class RecommendationEngine:
         ankle_risk = risk_breakdown.get("ankle_risk", 0.0)
         patellar_risk = risk_breakdown.get("patellar_risk", 0.0)
 
-        # 1. Target Valgus / ACL Risk
-        if acl_risk >= 35.0 or any("valgus" in a.lower() for a in anomalies):
-            if "VALGUS_ACL" not in protocols_added:
-                prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["VALGUS_ACL"])
-                protocols_added.add("VALGUS_ACL")
+        # Rank injury categories by severity so highest risk protocols appear first
+        ranked_categories = sorted([
+            ("HAMSTRING_ASYMMETRY", hamstring_risk),
+            ("VALGUS_ACL", acl_risk),
+            ("PATELLAR_TENDON", patellar_risk),
+            ("ANKLE_INSTABILITY", ankle_risk)
+        ], key=lambda x: x[1], reverse=True)
 
-        # 2. Target Hamstring / Asymmetry Risk
-        if hamstring_risk >= 35.0 or any("asymmetry" in a.lower() for a in anomalies):
-            if "HAMSTRING_ASYMMETRY" not in protocols_added:
-                prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["HAMSTRING_ASYMMETRY"])
-                protocols_added.add("HAMSTRING_ASYMMETRY")
+        for cat, score in ranked_categories:
+            if cat == "HAMSTRING_ASYMMETRY" and (score >= 35.0 or any("asymmetry" in a.lower() or "hamstring" in a.lower() for a in anomalies)):
+                if "HAMSTRING_ASYMMETRY" not in protocols_added:
+                    prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["HAMSTRING_ASYMMETRY"])
+                    protocols_added.add("HAMSTRING_ASYMMETRY")
+            elif cat == "VALGUS_ACL" and (score >= 35.0 or any("valgus" in a.lower() or "acl" in a.lower() for a in anomalies)):
+                if "VALGUS_ACL" not in protocols_added:
+                    prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["VALGUS_ACL"])
+                    protocols_added.add("VALGUS_ACL")
+            elif cat == "PATELLAR_TENDON" and (score >= 35.0 or any("patellar" in a.lower() or "landing" in a.lower() or "impact" in a.lower() for a in anomalies)):
+                if "PATELLAR_TENDON" not in protocols_added:
+                    prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["PATELLAR_TENDON"])
+                    protocols_added.add("PATELLAR_TENDON")
+            elif cat == "ANKLE_INSTABILITY" and (score >= 35.0 or any("ankle" in a.lower() for a in anomalies)):
+                if "ANKLE_INSTABILITY" not in protocols_added:
+                    prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["ANKLE_INSTABILITY"])
+                    protocols_added.add("ANKLE_INSTABILITY")
 
-        # 3. Target Ankle Instability
-        if ankle_risk >= 35.0 or any("ankle" in a.lower() for a in anomalies):
-            if "ANKLE_INSTABILITY" not in protocols_added:
-                prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["ANKLE_INSTABILITY"])
-                protocols_added.add("ANKLE_INSTABILITY")
-
-        # 4. Target Postural / Trunk Lean
+        # Target Postural / Trunk Lean if flagged
         if any("trunk" in a.lower() for a in anomalies):
             if "POSTURE_TRUNK" not in protocols_added:
                 prescribed_exercises.extend(CORRECTIVE_EXERCISE_LIBRARY["POSTURE_TRUNK"])

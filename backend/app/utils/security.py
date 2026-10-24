@@ -4,7 +4,8 @@ import jwt
 from passlib.context import CryptContext
 
 
-SECRET_KEY = "sports-injury-ai-secret-key"
+import os
+SECRET_KEY = os.getenv("SECRET_KEY", "sports-injury-ai-ultra-secure-jwt-hmac-sha256-signing-key-production-ready-2026")
 
 ALGORITHM = "HS256"
 

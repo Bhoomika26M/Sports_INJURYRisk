@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
+from app.routes.users import _seed_initial_users
 from app.schemas.user import UserCreate, UserLogin
 from app.utils.security import (
     hash_password,
@@ -64,6 +65,12 @@ def login(
     existing_user = db.query(User).filter(
         User.email == user.email
     ).first()
+
+    if not existing_user:
+        _seed_initial_users(db)
+        existing_user = db.query(User).filter(
+            User.email == user.email
+        ).first()
 
     if not existing_user:
         raise HTTPException(
