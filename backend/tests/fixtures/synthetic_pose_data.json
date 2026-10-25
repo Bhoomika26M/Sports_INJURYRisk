@@ -1,0 +1,36 @@
+{
+  "_meta": {
+    "WARNING": "SYNTHETIC FIXTURE",
+    "description": "This is entirely generated dummy data for backend testing. It does NOT represent real human movement or clinical evidence.",
+    "version": "1.0"
+  },
+  "athlete_id": 999,
+  "video_id": "test_synthetic_01",
+  "fps": 30,
+  "frames": [
+    {
+      "frame_index": 0,
+      "timestamp_ms": 0.0,
+      "landmarks": [
+        {"name": "left_hip", "x": 0.50, "y": 0.50, "z": 0.0, "visibility": 0.99},
+        {"name": "left_knee", "x": 0.50, "y": 0.70, "z": 0.0, "visibility": 0.99},
+        {"name": "left_ankle", "x": 0.50, "y": 0.90, "z": 0.0, "visibility": 0.99},
+        {"name": "right_hip", "x": 0.55, "y": 0.50, "z": 0.0, "visibility": 0.99},
+        {"name": "right_knee", "x": 0.55, "y": 0.70, "z": 0.0, "visibility": 0.99},
+        {"name": "right_ankle", "x": 0.55, "y": 0.90, "z": 0.0, "visibility": 0.99}
+      ]
+    },
+    {
+      "frame_index": 1,
+      "timestamp_ms": 33.3,
+      "landmarks": [
+        {"name": "left_hip", "x": 0.50, "y": 0.52, "z": 0.0, "visibility": 0.99},
+        {"name": "left_knee", "x": 0.48, "y": 0.72, "z": 0.0, "visibility": 0.99},
+        {"name": "left_ankle", "x": 0.50, "y": 0.90, "z": 0.0, "visibility": 0.99},
+        {"name": "right_hip", "x": 0.55, "y": 0.52, "z": 0.0, "visibility": 0.99},
+        {"name": "right_knee", "x": 0.57, "y": 0.72, "z": 0.0, "visibility": 0.99},
+        {"name": "right_ankle", "x": 0.55, "y": 0.90, "z": 0.0, "visibility": 0.99}
+      ]
+    }
+  ]
+}

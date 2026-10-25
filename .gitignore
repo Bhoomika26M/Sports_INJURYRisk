@@ -1,0 +1,45 @@
+# Node
+node_modules/
+dist/
+build/
+.npm/
+
+# Environment variables & secrets
+.env
+.env.*
+*.env
+*.env.local
+.env.local
+!.env.example
+!*.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.egg-info/
+.pytest_cache/
+alembic.ini
+
+# IDEs
+.vscode/
+.idea/
+
+# Data, databases, and artifacts
+*.db
+*.sqlite
+*.sqlite3
+test.db
+test_assessment.db
+uploads/
+/backend/uploaded_videos/
+/backend/temp/
+*.log
+sample.mp4
+
+# OS
+.DS_Store
+Thumbs.db
