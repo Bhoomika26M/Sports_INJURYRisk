@@ -5,7 +5,7 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import AnomalyTimeline from '../components/AnomalyTimeline';
 import { RecommendationPanel } from '../components/RecommendationPanel';
-import { ArrowLeft, ShieldCheck, Activity, Upload, ChevronRight, Users, Award, Stethoscope, Settings, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Activity, Upload, ChevronRight, Users, Award, Stethoscope, Settings, AlertTriangle, Zap, Heart, Gauge } from 'lucide-react';
 
 export const AthleteDashboard = () => {
   const { user } = useAuth();
@@ -77,7 +77,7 @@ export const AthleteDashboard = () => {
 
   if (!dashboardData) return null;
 
-  const { risk_score, injury_predictions, latest_analysis, anomalies, trend_data, video_count, athlete } = dashboardData;
+  const { risk_score, injury_predictions, latest_analysis, anomalies, anomaly_overview, trend_data, video_count, athlete } = dashboardData;
   const coach = dashboardData.coach || athlete?.coach;
   const physiotherapist = dashboardData.physiotherapist || athlete?.physiotherapist;
 
@@ -151,6 +151,80 @@ export const AthleteDashboard = () => {
             <p className="leading-relaxed">
               <strong>Clinical Advisory:</strong> This screening index is a preventive biomechanical assessment based on computer vision tracking. It does not replace a diagnostic clinical consultation with a sports physician or licensed physiotherapist.
             </p>
+          </div>
+
+          {/* Module 8: Risk Scoring Engine - 5 Explicit Scores */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
+            {/* Score 1: Injury Risk Score */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Injury Risk</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${
+                  (risk_score?.injury_risk_score ?? risk_score?.composite_score ?? 0) >= 65 ? 'bg-rose-50 text-rose-700 border border-rose-200' :
+                  (risk_score?.injury_risk_score ?? risk_score?.composite_score ?? 0) >= 35 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                  'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                }`}>
+                  {risk_score?.risk_category || 'Low Risk'}
+                </span>
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {risk_score?.injury_risk_score !== undefined && risk_score?.injury_risk_score !== null ? risk_score.injury_risk_score.toFixed(1) : (risk_score?.composite_score?.toFixed(1) ?? 'N/A')}
+                <span className="text-xs font-normal text-slate-400">/100</span>
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">Weighted risk model</span>
+            </div>
+
+            {/* Score 2: Movement Quality */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Movement Quality</span>
+                <Activity size={13} className="text-blue-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {risk_score?.movement_quality_score !== undefined ? risk_score.movement_quality_score.toFixed(1) : '100.0'}
+                <span className="text-xs font-normal text-slate-400">/100</span>
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">Kinematic execution</span>
+            </div>
+
+            {/* Score 3: Biomechanical Efficiency */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Bio Efficiency</span>
+                <Gauge size={13} className="text-indigo-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {risk_score?.biomechanical_efficiency_score !== undefined ? risk_score.biomechanical_efficiency_score.toFixed(1) : '100.0'}
+                <span className="text-xs font-normal text-slate-400">/100</span>
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">Symmetry & alignment</span>
+            </div>
+
+            {/* Score 4: Fatigue Risk */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Fatigue Risk</span>
+                <Zap size={13} className="text-amber-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {risk_score?.fatigue_risk_score !== undefined ? risk_score.fatigue_risk_score.toFixed(1) : '0.0'}
+                <span className="text-xs font-normal text-slate-400">/100</span>
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">Acute & chronic load</span>
+            </div>
+
+            {/* Score 5: Overall Health */}
+            <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs col-span-2 sm:col-span-1">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Overall Health</span>
+                <Heart size={13} className="text-rose-500" />
+              </div>
+              <div className="text-2xl font-black text-slate-900">
+                {risk_score?.overall_athlete_health_score !== undefined ? risk_score.overall_athlete_health_score.toFixed(1) : '100.0'}
+                <span className="text-xs font-normal text-slate-400">/100</span>
+              </div>
+              <span className="text-[10px] text-slate-500 mt-1 block">Composite vitality index</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -245,6 +319,105 @@ export const AthleteDashboard = () => {
               )}
             </div>
           </div>
+
+          {/* Module 7: Movement Anomaly & Technique Assessment */}
+          {anomaly_overview && (
+            <div className="bg-white p-6 rounded-2xl shadow-xs border border-slate-200 space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                <div>
+                  <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                    <Activity size={18} className="text-indigo-600" />
+                    <span>Movement Anomaly & Technique Assessment</span>
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Technique grading, execution faults, motion inconsistency analysis, and intra-trial fatigue drift.
+                  </p>
+                </div>
+                {anomaly_overview.technique_assessment && (
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                    anomaly_overview.technique_assessment.technique_grade === 'Optimal' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+                    anomaly_overview.technique_assessment.technique_grade === 'Good' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
+                    anomaly_overview.technique_assessment.technique_grade === 'Suboptimal' ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+                    'bg-rose-50 text-rose-700 border border-rose-200'
+                  }`}>
+                    Technique: {anomaly_overview.technique_assessment.technique_grade} ({anomaly_overview.technique_assessment.technique_score}/100)
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                {/* 1. Technique & Faults */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Execution Mechanics & Faults
+                  </span>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {anomaly_overview.technique_assessment?.execution_summary || "Kinematic patterns evaluated against standard biomechanical planes."}
+                  </p>
+                  {anomaly_overview.technique_assessment?.primary_faults?.length > 0 && (
+                    <ul className="text-[11px] text-slate-700 space-y-1 pt-1">
+                      {anomaly_overview.technique_assessment.primary_faults.map((fault, idx) => (
+                        <li key={idx} className="flex items-start gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 mt-1.5 shrink-0" />
+                          <span>{fault}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* 2. Motion Inconsistency */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Motion Inconsistency & Smoothness
+                  </span>
+                  <div className="flex justify-between items-center text-xs pt-1">
+                    <span className="text-slate-500">Consistency Rating</span>
+                    <strong className="text-slate-900">{anomaly_overview.motion_inconsistency?.consistency_rating || "Consistent"}</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Smoothness / Jerk Index</span>
+                    <strong className="text-slate-900">{anomaly_overview.motion_inconsistency?.smoothness_jerk_score?.toFixed(1) || "90.0"}/100</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">Coeff. of Variation</span>
+                    <strong className="text-slate-900">{anomaly_overview.motion_inconsistency?.coefficient_of_variation_pct?.toFixed(1) || "0.0"}%</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pt-1 border-t border-slate-200/60">
+                    <span className="text-slate-500">Movement Deviations</span>
+                    <strong className="text-indigo-600 font-bold">{anomaly_overview.movement_deviations_count || 0} flagged</strong>
+                  </div>
+                </div>
+
+                {/* 3. Fatigue & Decline Alerts */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                    Fatigue Monitoring & Performance Alerts
+                  </span>
+                  {(anomaly_overview.fatigue_indicators?.length > 0 || anomaly_overview.performance_decline_alerts?.length > 0) ? (
+                    <div className="space-y-2 pt-1">
+                      {anomaly_overview.fatigue_indicators?.map((ind, idx) => (
+                        <div key={idx} className="p-2 rounded-lg bg-amber-50/80 border border-amber-200 text-[11px] text-amber-900 flex items-start gap-1.5">
+                          <Zap size={12} className="text-amber-600 mt-0.5 shrink-0" />
+                          <span>{ind}</span>
+                        </div>
+                      ))}
+                      {anomaly_overview.performance_decline_alerts?.map((alert, idx) => (
+                        <div key={idx} className="p-2 rounded-lg bg-rose-50/80 border border-rose-200 text-[11px] text-rose-900 flex items-start gap-1.5">
+                          <AlertTriangle size={12} className="text-rose-600 mt-0.5 shrink-0" />
+                          <span>{alert}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 pt-1">
+                      No kinematic fatigue drift or performance decline alerts flagged across this trial. Movement kinematics remained stable.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Module 6: Injury Risk Prediction Engine - 6 Categories */}
           {injury_predictions?.categories && (

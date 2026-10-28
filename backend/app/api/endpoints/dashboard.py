@@ -42,7 +42,9 @@ def _generate_dashboard_data(db: Session, athlete_id: int):
     asym_val = None
     
     anomalies = None
+    anomaly_overview = None
     recommendations = None
+    recommendation_breakdown = None
     analysis = None
     
     if latest_video:
@@ -51,13 +53,17 @@ def _generate_dashboard_data(db: Session, athlete_id: int):
             bio_val = analysis["aggregates"].get("max_trunk_lean", 0) # Just an example mapping
             asym_val = analysis["aggregates"].get("symmetry_index", 0) * 2 # Just an example mapping
             
+        anomaly_overview = None
         anomalies_res = anomaly_service.detect_anomalies(db, latest_video.id)
         if anomalies_res:
             anomalies = anomalies_res.events
+            anomaly_overview = anomalies_res
             
+        recommendation_breakdown = None
         rec_res = recommendation_service.generate_recommendations(db, latest_video.id)
         if rec_res:
             recommendations = rec_res.recommendations
+            recommendation_breakdown = rec_res
 
     risk_input = RiskScoreInput(
         biomechanical_deviations=RiskComponentInput(value=min(bio_val if bio_val else 0, 100), source=DataSource.MEASURED if bio_val is not None else DataSource.ESTIMATED, is_missing=bio_val is None),
@@ -103,7 +109,9 @@ def _generate_dashboard_data(db: Session, athlete_id: int):
         "injury_predictions": injury_predictions,
         "latest_analysis": analysis,
         "anomalies": anomalies,
+        "anomaly_overview": anomaly_overview,
         "recommendations": recommendations,
+        "recommendation_breakdown": recommendation_breakdown,
         "trend_data": trend_data,
         "video_count": len(completed_videos)
     }

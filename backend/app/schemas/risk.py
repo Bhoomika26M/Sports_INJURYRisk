@@ -38,6 +38,14 @@ class RiskScoreResponse(BaseModel):
     disclaimer: str = "This score is NOT an injury probability or a clinically validated prediction. It is a preliminary, unvalidated screening threshold."
     injury_categories: Optional[Dict[str, Any]] = None
 
+    # Module 8: Risk Scoring Engine Enhanced Attributes
+    injury_risk_score: Optional[float] = None
+    movement_quality_score: float = 100.0
+    biomechanical_efficiency_score: float = 100.0
+    fatigue_risk_score: float = 0.0
+    overall_athlete_health_score: float = 100.0
+    risk_category: str = "Low Risk"
+
 # ==========================================
 # Module 6: Injury Risk Prediction Schemas
 # ==========================================

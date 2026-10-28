@@ -141,11 +141,39 @@ class RiskScoringService:
         if data_completeness < 100:
             contributing_factors.append(f"Incomplete data ({data_completeness:.0f}% complete). The score is based only on available metrics.")
 
+        # Determine strict Risk Category: Low Risk, Moderate Risk, High Risk, Critical Risk
+        if composite_score is None or composite_score <= 25.0:
+            risk_category = "Low Risk"
+        elif composite_score <= 50.0:
+            risk_category = "Moderate Risk"
+        elif composite_score <= 75.0:
+            risk_category = "High Risk"
+        else:
+            risk_category = "Critical Risk"
+
+        # Module 8: Explicit Scores
+        bio_val = float(input_dict["biomechanical_deviations"].value) if (not input_dict["biomechanical_deviations"].is_missing and input_dict["biomechanical_deviations"].value is not None) else 0.0
+        asym_val = float(input_dict["movement_asymmetry"].value) if (not input_dict["movement_asymmetry"].is_missing and input_dict["movement_asymmetry"].value is not None) else 0.0
+        fatigue_val = float(input_dict["fatigue_indicators"].value) if (not input_dict["fatigue_indicators"].is_missing and input_dict["fatigue_indicators"].value is not None) else 0.0
+        train_val = float(input_dict["training_load"].value) if (not input_dict["training_load"].is_missing and input_dict["training_load"].value is not None) else 0.0
+
+        movement_quality = max(0.0, min(100.0, round(100.0 - (bio_val * 0.60 + asym_val * 0.40), 1)))
+        bio_efficiency = max(0.0, min(100.0, round(100.0 - (asym_val * 0.45 + bio_val * 0.35 + fatigue_val * 0.20), 1)))
+        fatigue_risk = max(0.0, min(100.0, round(fatigue_val * 0.60 + train_val * 0.40, 1)))
+        comp_penalty = composite_score if composite_score is not None else 20.0
+        health_score = max(0.0, min(100.0, round(0.40 * movement_quality + 0.35 * (100.0 - comp_penalty) + 0.25 * (100.0 - fatigue_risk), 1)))
+
         return RiskScoreResponse(
             composite_score=composite_score,
+            injury_risk_score=composite_score,
             risk_band=risk_band,
+            risk_category=risk_category,
             confidence_score=confidence_score,
             data_completeness=data_completeness,
+            movement_quality_score=movement_quality,
+            biomechanical_efficiency_score=bio_efficiency,
+            fatigue_risk_score=fatigue_risk,
+            overall_athlete_health_score=health_score,
             components=components_result,
             contributing_factors=contributing_factors
         )
