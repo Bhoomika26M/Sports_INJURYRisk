@@ -5,6 +5,36 @@ import os
 from app.core.config import settings
 from app.api.api import api_router
 
+def ensure_database_schema():
+    """Guarantees all tables and columns exist across SQLite and PostgreSQL."""
+    try:
+        from app.db.session import engine, Base
+        from sqlalchemy import inspect, text
+        import app.models.user
+        import app.models.athlete
+        import app.models.assignment
+        import app.models.video
+
+        Base.metadata.create_all(bind=engine)
+        inspector = inspect(engine)
+        if "videos" in inspector.get_table_names():
+            existing = {c["name"] for c in inspector.get_columns("videos")}
+            missing = {
+                "movement_type": "VARCHAR DEFAULT 'general'",
+                "processing_progress": "INTEGER DEFAULT 0",
+                "quality_score": "FLOAT",
+                "quality_issues": "VARCHAR"
+            }
+            with engine.connect() as conn:
+                for col_name, col_sql in missing.items():
+                    if col_name not in existing:
+                        conn.execute(text(f"ALTER TABLE videos ADD COLUMN {col_name} {col_sql}"))
+                conn.commit()
+    except Exception as e:
+        print(f"Database schema auto-migration error: {e}")
+
+ensure_database_schema()
+
 app = FastAPI(title=settings.PROJECT_NAME)
 
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
