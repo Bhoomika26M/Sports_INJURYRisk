@@ -567,39 +567,114 @@ export const VideoUpload = () => {
                         )}
                       </div>
 
-                      {/* Tab 1: Video Playback */}
+                      {/* Tab 1: Point-Plotted Video Playback (No Original Video Needed After Processing) */}
                       {activeAnalysisTab === 'video' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="bg-white p-3 rounded-xl border border-slate-200">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2">
-                              Original Movement Capture
-                            </span>
-                            <video 
-                              controls 
-                              src={`${uploadsBaseUrl}/uploads/${filename}.${v.format || 'mp4'}`} 
-                              className="w-full rounded-lg bg-black aspect-video object-contain" 
-                            />
-                          </div>
-
-                          <div className="bg-white p-3 rounded-xl border border-slate-200">
-                            <span className="text-[11px] font-bold text-slate-700 uppercase tracking-wider block mb-2">
-                              MediaPipe Skeleton Pose & Trajectory
-                            </span>
-                            {v.status === 'completed' ? (
-                              <video 
-                                ref={playbackVideoRef} 
-                                controls 
-                                src={`${uploadsBaseUrl}/uploads/${filename}_annotated.mp4`} 
-                                className="w-full rounded-lg bg-black aspect-video object-contain" 
-                              />
-                            ) : (
-                              <div className="w-full aspect-video rounded-lg bg-slate-100 flex flex-col items-center justify-center text-slate-400 text-xs p-4 text-center">
-                                <Sparkles size={24} className="mb-2 text-blue-500 animate-spin" />
-                                <span className="font-semibold text-slate-700">Tracking MediaPipe Pose Landmarks...</span>
-                                <span className="text-[11px] text-slate-400 mt-1">Generating color-coded skeleton lines and joint angles</span>
+                        <div>
+                          {v.status === 'completed' ? (
+                            <div className="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 space-y-3.5">
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+                                <div>
+                                  <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                                    <Sparkles size={14} className="text-blue-600" />
+                                    Point-Plotted Biomechanical Movement Video
+                                  </span>
+                                  <p className="text-[11px] text-slate-500 mt-0.5">
+                                    MediaPipe human pose keypoints, high-contrast skeleton overlays, and live joint angle telemetry.
+                                  </p>
+                                </div>
+                                <div className="flex items-center gap-2 self-start sm:self-auto">
+                                  <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    {v.quality_score ? `Tracking Quality: ${v.quality_score}%` : 'Analysis Completed'}
+                                  </span>
+                                  <span className="text-[10px] font-semibold px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-600 capitalize">
+                                    {v.movement_type || 'General'}
+                                  </span>
+                                </div>
                               </div>
-                            )}
-                          </div>
+
+                              {/* Prominent Full-Width Point-Plotted Video Player */}
+                              <div className="relative rounded-xl overflow-hidden bg-slate-950 border border-slate-800 shadow-sm">
+                                <video 
+                                  ref={playbackVideoRef} 
+                                  controls 
+                                  playsInline
+                                  src={`${uploadsBaseUrl}/uploads/${filename}_annotated.mp4`} 
+                                  className="w-full aspect-video object-contain" 
+                                />
+                              </div>
+
+                              {/* Playback Speed, Frame Stepping & Color Legend Controls */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                <div className="flex items-center gap-1.5 text-xs">
+                                  <span className="text-[11px] text-slate-400 font-semibold mr-1">Slow Motion:</span>
+                                  {[0.25, 0.5, 0.75, 1.0].map((speed) => (
+                                    <button
+                                      key={speed}
+                                      onClick={() => handleSpeedChange(speed)}
+                                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition ${
+                                        playbackSpeed === speed
+                                          ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      {speed}x
+                                    </button>
+                                  ))}
+
+                                  <div className="h-4 w-[1px] bg-slate-200 mx-1" />
+
+                                  <button
+                                    onClick={() => {
+                                      if (playbackVideoRef.current) {
+                                        playbackVideoRef.current.currentTime = Math.max(0, playbackVideoRef.current.currentTime - 0.05);
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition"
+                                    title="Step backward 1-2 frames"
+                                  >
+                                    -0.05s
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      if (playbackVideoRef.current) {
+                                        playbackVideoRef.current.currentTime += 0.05;
+                                      }
+                                    }}
+                                    className="px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-slate-50 text-slate-700 border border-slate-200 hover:bg-slate-100 transition"
+                                    title="Step forward 1-2 frames"
+                                  >
+                                    +0.05s
+                                  </button>
+                                </div>
+
+                                {/* Keypoint Joint Color Legend */}
+                                <div className="flex items-center gap-3 text-[10px] text-slate-500">
+                                  <span className="flex items-center gap-1 font-medium">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-[#2578eb] inline-block ring-1 ring-slate-900" /> Left Side
+                                  </span>
+                                  <span className="flex items-center gap-1 font-medium">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-[#ef4444] inline-block ring-1 ring-slate-900" /> Right Side
+                                  </span>
+                                  <span className="flex items-center gap-1 font-medium">
+                                    <span className="w-2.5 h-2.5 rounded-full bg-[#10b981] inline-block ring-1 ring-slate-900" /> Torso/Spine
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="w-full aspect-video rounded-xl bg-slate-100 border border-slate-200 flex flex-col items-center justify-center text-slate-400 text-xs p-8 text-center space-y-3">
+                              <Sparkles size={28} className="text-blue-500 animate-spin" />
+                              <div>
+                                <span className="font-bold text-slate-800 text-sm block">Tracking MediaPipe Pose Landmarks & Generating Point-Plotted Video...</span>
+                                <span className="text-xs text-slate-500 mt-1 block max-w-md mx-auto">
+                                  Extracting 33 human pose keypoints, drawing high-contrast joint nodes and measuring real-time joint angles.
+                                </span>
+                              </div>
+                              <span className="text-[11px] text-blue-600 bg-blue-50 px-3 py-1 rounded-full font-semibold border border-blue-100">
+                                Processing {v.processing_progress || 0}% Complete
+                              </span>
+                            </div>
+                          )}
                         </div>
                       )}
 

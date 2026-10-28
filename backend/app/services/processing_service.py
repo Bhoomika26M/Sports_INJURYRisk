@@ -89,84 +89,150 @@ def get_primary_pose(pose_landmarks_list):
             
     return best_pose
 
-def draw_custom_skeleton(frame, landmarks, w, h, hip_trajectory=None):
+def draw_custom_skeleton(frame, landmarks, w, h, hip_trajectory=None, frame_angles=None):
     """
-    Renders high-visibility color-coded biomechanical skeleton overlays,
-    confidence joint circles, and movement trajectory trail on the frame.
+    Renders high-visibility, production-grade biomechanical skeleton overlays:
+    - Dynamic resolution scaling (joints and bone lines scale proportionally with video resolution).
+    - High-contrast dual-layer bones (underlayer dark shadow + bright neon foreground).
+    - Prominent triple-layer joint node markers (dark border + bright fill + white core).
+    - Floating live joint angle degree callouts right at the knees and trunk.
+    - Smooth movement trajectory trail.
     """
+    base_scale = max(1.2, min(w, h) / 400.0)
+
     # Convert normalized landmarks to pixel coords
     pts = {}
     visibilities = {}
     for idx, lm in enumerate(landmarks):
-        pts[idx] = (int(lm.x * w), int(lm.y * h))
-        visibilities[idx] = getattr(lm, "visibility", 0.0)
+        px = int(np.clip(lm.x * w, 0, w - 1))
+        py = int(np.clip(lm.y * h, 0, h - 1))
+        pts[idx] = (px, py)
+        vis = getattr(lm, "visibility", 0.9)
+        if vis is None:
+            vis = getattr(lm, "presence", 0.9)
+        if vis is None:
+            vis = 0.9
+        visibilities[idx] = float(vis)
 
     # 1. Draw Trajectory Trail
     if hip_trajectory and len(hip_trajectory) > 1:
         traj_len = len(hip_trajectory)
         for i in range(1, traj_len):
             alpha = i / float(traj_len)
-            thickness = max(1, int(3 * alpha))
+            thickness = max(2, int(4 * alpha * base_scale))
             color = (int(0 * alpha), int(220 * alpha), int(255 * alpha))
             pt1 = (int(hip_trajectory[i - 1][0] * w), int(hip_trajectory[i - 1][1] * h))
             pt2 = (int(hip_trajectory[i][0] * w), int(hip_trajectory[i][1] * h))
             cv2.line(frame, pt1, pt2, color, thickness, cv2.LINE_AA)
 
-    # 2. Draw Anatomical Segment Connections
-    def draw_segment_group(connections, color, thickness=3):
+    # 2. Draw Anatomical Segment Connections (Dual-Layer for Maximum Contrast)
+    def draw_segment_group(connections, color, thickness):
+        shadow_thick = int(thickness * base_scale + 3)
+        fg_thick = max(2, int(thickness * base_scale))
         for idx1, idx2 in connections:
             if idx1 in pts and idx2 in pts:
-                if visibilities.get(idx1, 0) > 0.35 and visibilities.get(idx2, 0) > 0.35:
-                    cv2.line(frame, pts[idx1], pts[idx2], color, thickness, cv2.LINE_AA)
+                # Plot as long as both points are within the frame and have minimal presence
+                if visibilities.get(idx1, 0) >= 0.05 and visibilities.get(idx2, 0) >= 0.05:
+                    # Layer 1: Dark contrast shadow outline
+                    cv2.line(frame, pts[idx1], pts[idx2], (15, 23, 42), shadow_thick, cv2.LINE_AA)
+                    # Layer 2: Vibrant neon foreground
+                    cv2.line(frame, pts[idx1], pts[idx2], color, fg_thick, cv2.LINE_AA)
 
-    draw_segment_group(TORSO, COLOR_TORSO, thickness=3)
-    draw_segment_group(LEFT_ARM, COLOR_LEFT, thickness=3)
-    draw_segment_group(LEFT_HAND, COLOR_LEFT, thickness=2)
-    draw_segment_group(RIGHT_ARM, COLOR_RIGHT, thickness=3)
-    draw_segment_group(RIGHT_HAND, COLOR_RIGHT, thickness=2)
-    draw_segment_group(LEFT_LEG, COLOR_LEFT, thickness=4)
-    draw_segment_group(RIGHT_LEG, COLOR_RIGHT, thickness=4)
-    draw_segment_group(HEAD, COLOR_HEAD, thickness=2)
+    draw_segment_group(TORSO, COLOR_TORSO, thickness=3.5)
+    draw_segment_group(LEFT_ARM, COLOR_LEFT, thickness=3.0)
+    draw_segment_group(LEFT_HAND, COLOR_LEFT, thickness=2.2)
+    draw_segment_group(RIGHT_ARM, COLOR_RIGHT, thickness=3.0)
+    draw_segment_group(RIGHT_HAND, COLOR_RIGHT, thickness=2.2)
+    draw_segment_group(LEFT_LEG, COLOR_LEFT, thickness=4.5)
+    draw_segment_group(RIGHT_LEG, COLOR_RIGHT, thickness=4.5)
+    draw_segment_group(HEAD, COLOR_HEAD, thickness=2.0)
 
     # Draw spine line
     if 11 in pts and 12 in pts and 23 in pts and 24 in pts:
         mid_sh = ((pts[11][0] + pts[12][0]) // 2, (pts[11][1] + pts[12][1]) // 2)
         mid_hp = ((pts[23][0] + pts[24][0]) // 2, (pts[23][1] + pts[24][1]) // 2)
-        cv2.line(frame, mid_sh, mid_hp, COLOR_SPINE, 3, cv2.LINE_AA)
+        cv2.line(frame, mid_sh, mid_hp, (15, 23, 42), int(3.5 * base_scale + 3), cv2.LINE_AA)
+        cv2.line(frame, mid_sh, mid_hp, COLOR_SPINE, max(2, int(3.5 * base_scale)), cv2.LINE_AA)
 
-    # 3. Draw Joint Circle Nodes
+    # 3. Draw Joint Circle Nodes (Triple-Layer: Dark Border + Vibrant Ring + White Core)
+    PRIMARY_JOINTS = {11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32}
     for idx in range(33):
         if idx in pts:
             vis = visibilities.get(idx, 0)
-            if vis > 0.4:
-                radius = 5 if idx in (11, 12, 23, 24, 25, 26, 27, 28) else 3
-                # Outer white rim
-                cv2.circle(frame, pts[idx], radius + 1, (255, 255, 255), -1, cv2.LINE_AA)
-                # Inner color
+            if vis >= 0.05:
+                is_primary = idx in PRIMARY_JOINTS
+                outer_r = int((7.5 if is_primary else 4.5) * base_scale)
+                inner_r = max(2, int((5.5 if is_primary else 3.0) * base_scale))
+                core_r = max(1, int((2.2 if is_primary else 1.2) * base_scale))
+
                 node_color = COLOR_LEFT if idx % 2 != 0 else COLOR_RIGHT
                 if idx in (11, 12, 23, 24):
                     node_color = COLOR_TORSO
                 elif idx < 11:
                     node_color = COLOR_HEAD
-                cv2.circle(frame, pts[idx], radius, node_color, -1, cv2.LINE_AA)
+
+                # Layer 1: Dark outer contrast shadow
+                cv2.circle(frame, pts[idx], outer_r + 2, (15, 23, 42), -1, cv2.LINE_AA)
+                # Layer 2: Vibrant solid fill
+                cv2.circle(frame, pts[idx], outer_r, node_color, -1, cv2.LINE_AA)
+                # Layer 3: Solid white inner core dot
+                cv2.circle(frame, pts[idx], core_r, (255, 255, 255), -1, cv2.LINE_AA)
+
+    # 4. Draw Floating Joint Angle Callout Badges
+    if frame_angles:
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 0.38 * min(1.6, base_scale)
+        font_thick = 1
+
+        def draw_angle_pill(pt, text, border_color=(56, 189, 248)):
+            if not pt or not text:
+                return
+            (tw, th), bl = cv2.getTextSize(text, font, font_scale, font_thick)
+            x1 = pt[0] + int(10 * base_scale)
+            y1 = pt[1] - th - int(6 * base_scale)
+            x2 = x1 + tw + int(12 * base_scale)
+            y2 = pt[1] + int(6 * base_scale)
+            # Frame boundaries
+            if x2 >= w:
+                x1 = pt[0] - tw - int(18 * base_scale)
+                x2 = pt[0] - int(6 * base_scale)
+            if y1 < 0:
+                y1 = pt[1] + int(6 * base_scale)
+                y2 = y1 + th + int(12 * base_scale)
+
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (15, 23, 42), -1)
+            cv2.rectangle(frame, (x1, y1), (x2, y2), border_color, 1)
+            cv2.putText(frame, text, (x1 + int(6 * base_scale), y2 - int(5 * base_scale)), font, font_scale, (255, 255, 255), font_thick, cv2.LINE_AA)
+
+        # Left Knee angle callout
+        if 25 in pts and frame_angles.get("left_knee") is not None:
+            draw_angle_pill(pts[25], f"L: {frame_angles['left_knee']:.0f}deg", border_color=(235, 120, 37))
+
+        # Right Knee angle callout
+        if 26 in pts and frame_angles.get("right_knee") is not None:
+            draw_angle_pill(pts[26], f"R: {frame_angles['right_knee']:.0f}deg", border_color=(68, 68, 239))
 
 def render_hud_telemetry(frame, timestamp_s, angles, movement_type, quality_flag):
     """Renders semi-transparent HUD banner with live joint angles and tracking status."""
     h, w = frame.shape[:2]
-    hud_w, hud_h = min(360, w - 20), 85
+    base_scale = max(1.0, min(w, h) / 480.0)
+    hud_w = int(min(380 * base_scale, w - 20))
+    hud_h = int(90 * base_scale)
     
     # Create semi-transparent dark overlay for top-left HUD
     overlay = frame.copy()
     cv2.rectangle(overlay, (10, 10), (10 + hud_w, 10 + hud_h), (15, 23, 42), -1)
-    cv2.addWeighted(overlay, 0.75, frame, 0.25, 0, frame)
+    cv2.addWeighted(overlay, 0.78, frame, 0.22, 0, frame)
     cv2.rectangle(frame, (10, 10), (10 + hud_w, 10 + hud_h), (51, 65, 85), 1)
 
+    f_scale = 0.42 * min(1.8, base_scale)
+
     # Brand header
-    cv2.putText(frame, "AthletiQ Motion Tracking", (20, 28), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1, cv2.LINE_AA)
+    cv2.putText(frame, "AthletiQ Motion Tracking", (int(20 * base_scale), int(28 * base_scale)), cv2.FONT_HERSHEY_SIMPLEX, f_scale * 1.1, (255, 255, 255), 1, cv2.LINE_AA)
     
     # Quality status indicator dot
     dot_color = (34, 197, 94) if quality_flag == "OK" else (234, 179, 8) if quality_flag == "OCCLUSION" else (239, 68, 68)
-    cv2.circle(frame, (hud_w - 5, 25), 5, dot_color, -1, cv2.LINE_AA)
+    cv2.circle(frame, (hud_w - int(10 * base_scale), int(25 * base_scale)), int(5 * base_scale), dot_color, -1, cv2.LINE_AA)
 
     # Telemetry readout text
     l_knee_str = f"L Knee: {angles.get('left_knee', '--')}deg"
@@ -174,9 +240,9 @@ def render_hud_telemetry(frame, timestamp_s, angles, movement_type, quality_flag
     trunk_str = f"Trunk: {angles.get('trunk_lean', '--')}deg"
     t_str = f"T: {timestamp_s:.2f}s  [{movement_type.capitalize()}]"
 
-    cv2.putText(frame, t_str, (20, 48), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (148, 163, 184), 1, cv2.LINE_AA)
-    cv2.putText(frame, f"{l_knee_str}  |  {r_knee_str}", (20, 68), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (226, 232, 240), 1, cv2.LINE_AA)
-    cv2.putText(frame, trunk_str, (20, 84), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (56, 189, 248), 1, cv2.LINE_AA)
+    cv2.putText(frame, t_str, (int(20 * base_scale), int(48 * base_scale)), cv2.FONT_HERSHEY_SIMPLEX, f_scale * 0.9, (148, 163, 184), 1, cv2.LINE_AA)
+    cv2.putText(frame, f"{l_knee_str}  |  {r_knee_str}", (int(20 * base_scale), int(68 * base_scale)), cv2.FONT_HERSHEY_SIMPLEX, f_scale * 0.9, (226, 232, 240), 1, cv2.LINE_AA)
+    cv2.putText(frame, trunk_str, (int(20 * base_scale), int(84 * base_scale)), cv2.FONT_HERSHEY_SIMPLEX, f_scale * 0.85, (56, 189, 248), 1, cv2.LINE_AA)
 
 def process_video_pipeline(db: Session, video_id: int):
     """
@@ -218,7 +284,7 @@ def process_video_pipeline(db: Session, video_id: int):
         target_w, target_h = compute_target_dimensions(raw_width, raw_height, max_dim=1280)
         
         import imageio
-        out = imageio.get_writer(output_video_path, fps=raw_fps, codec='libx264', format='FFMPEG')
+        out = imageio.get_writer(output_video_path, fps=raw_fps, codec='libx264', pixelformat='yuv420p', format='FFMPEG')
 
         # Model selection: Full model for precision with lite fallback
         current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -233,9 +299,9 @@ def process_video_pipeline(db: Session, video_id: int):
         options = vision.PoseLandmarkerOptions(
             base_options=base_options,
             output_segmentation_masks=False,
-            min_pose_detection_confidence=0.45,
-            min_pose_presence_confidence=0.45,
-            min_tracking_confidence=0.45,
+            min_pose_detection_confidence=0.25,
+            min_pose_presence_confidence=0.25,
+            min_tracking_confidence=0.25,
             running_mode=vision.RunningMode.VIDEO
         )
 
@@ -354,7 +420,7 @@ def process_video_pipeline(db: Session, video_id: int):
                         output_data["trajectories"]["right_ankle"].append({"x": primary_pose[28].x, "y": primary_pose[28].y, "t": timestamp_ms})
 
                     # Draw Custom High-Visibility Skeleton
-                    draw_custom_skeleton(annotated_frame, primary_pose, target_w, target_h, hip_trajectory_queue)
+                    draw_custom_skeleton(annotated_frame, primary_pose, target_w, target_h, hip_trajectory_queue, frame_angles)
                 else:
                     quality_flag = "NO_SUBJECT"
 
