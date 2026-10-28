@@ -24,7 +24,11 @@ def read_profile_me(
     
     profile = athlete_service.get_profile_by_user_id(db, user_id=current_user.id)
     if not profile:
-        raise HTTPException(status_code=404, detail="Profile not found")
+        profile = athlete_service.create_profile(
+            db,
+            user_id=current_user.id,
+            profile_in=AthleteProfileCreate(sport_type="General Athletics", age=22)
+        )
     return profile
 
 @router.post("/me", response_model=AthleteProfileResponse)
