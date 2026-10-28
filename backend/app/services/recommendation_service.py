@@ -346,7 +346,13 @@ class RecommendationEngine:
             )
         }
 
-    def generate_recommendations(self, db: Session, video_id: int, activity: str = "running") -> RecommendationResponse:
+    def generate_recommendations(
+        self, 
+        db: Session, 
+        video_id: Optional[int] = None, 
+        activity: str = "running",
+        athlete_id: Optional[int] = None
+    ) -> RecommendationResponse:
         """
         Module 9: Corrective Recommendation Engine
         Generates explainable, rule-based recommendations categorized across:
@@ -367,9 +373,31 @@ class RecommendationEngine:
         # 0. Athlete context
         athlete = None
         if db:
-            video = db.query(Video).filter(Video.id == video_id).first()
-            if video and video.athlete_id:
-                athlete = db.query(AthleteProfile).filter(AthleteProfile.id == video.athlete_id).first()
+            if video_id:
+                video = db.query(Video).filter(Video.id == video_id).first()
+                if video and video.athlete_id:
+                    athlete = db.query(AthleteProfile).filter(AthleteProfile.id == video.athlete_id).first()
+            elif athlete_id:
+                athlete = db.query(AthleteProfile).filter(AthleteProfile.id == athlete_id).first()
+
+        # If no video is provided, supply baseline foundation recommendations
+        if video_id is None:
+            add_rec("mobility_hip_flexor")
+            add_rec("strength_single_leg_rdl")
+            add_rec("exercise_single_leg_balance")
+            add_rec("recovery_active_flush")
+            add_rec("review_training_load")
+
+            return RecommendationResponse(
+                video_id=None,
+                athlete_id=athlete.id if athlete else None,
+                recommendations=recs,
+                exercise_recommendations=[r for r in recs if r.category == "exercise"],
+                mobility_suggestions=[r for r in recs if r.category == "mobility"],
+                strengthening_recommendations=[r for r in recs if r.category == "strengthening"],
+                recovery_plan=[r for r in recs if r.category == "recovery"],
+                training_modifications=[r for r in recs if r.category == "training_modification"]
+            )
 
         # 1. Gather anomalies
         anomaly_data = anomaly_service.detect_anomalies(db, video_id)

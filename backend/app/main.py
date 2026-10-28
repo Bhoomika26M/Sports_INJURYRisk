@@ -14,6 +14,7 @@ def ensure_database_schema():
         import app.models.athlete
         import app.models.assignment
         import app.models.video
+        import app.models.notification
 
         Base.metadata.create_all(bind=engine)
         inspector = inspect(engine)

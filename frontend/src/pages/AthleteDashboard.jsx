@@ -5,7 +5,8 @@ import api from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import AnomalyTimeline from '../components/AnomalyTimeline';
 import { RecommendationPanel } from '../components/RecommendationPanel';
-import { ArrowLeft, ShieldCheck, Activity, Upload, ChevronRight, Users, Award, Stethoscope, Settings, AlertTriangle, Zap, Heart, Gauge } from 'lucide-react';
+import { ReportsExportModal } from '../components/ReportsExportModal';
+import { ArrowLeft, ShieldCheck, Activity, Upload, ChevronRight, Users, Award, Stethoscope, Settings, AlertTriangle, Zap, Heart, Gauge, FileText, Download } from 'lucide-react';
 
 export const AthleteDashboard = () => {
   const { user } = useAuth();
@@ -14,6 +15,7 @@ export const AthleteDashboard = () => {
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [reportsModalOpen, setReportsModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -117,14 +119,23 @@ export const AthleteDashboard = () => {
             Biomechanical analysis, bilateral symmetry tracking, and clinical risk scoring.
           </p>
         </div>
-        {user?.role === 'athlete' && (
-          <Link 
-            to="/upload" 
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center gap-1.5"
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setReportsModalOpen(true)}
+            className="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center gap-1.5"
+            title="Download PDF & Excel Reports"
           >
-            <Upload size={14} /> Upload Video
-          </Link>
-        )}
+            <FileText size={14} className="text-blue-600" /> Export Reports
+          </button>
+          {user?.role === 'athlete' && (
+            <Link 
+              to="/upload" 
+              className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2.5 px-4 rounded-xl shadow-xs transition flex items-center gap-1.5"
+            >
+              <Upload size={14} /> Upload Video
+            </Link>
+          )}
+        </div>
       </div>
 
       {video_count === 0 ? (
@@ -639,6 +650,15 @@ export const AthleteDashboard = () => {
           </div>
         </>
       )}
+
+      {/* Reports & Clinical Export Modal */}
+      <ReportsExportModal
+        isOpen={reportsModalOpen}
+        onClose={() => setReportsModalOpen(false)}
+        athleteId={athlete?.id || dashboardData?.athlete_id || athleteId}
+        athleteName={athlete?.name}
+        videos={dashboardData?.videos || []}
+      />
     </div>
   );
 };

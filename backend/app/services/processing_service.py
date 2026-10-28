@@ -491,6 +491,13 @@ def process_video_pipeline(db: Session, video_id: int):
         db.commit()
         logger.info(f"Video #{video_id} processing completed successfully. Quality={quality_score}%")
 
+        # Module 11: Trigger Notification & Alert System
+        try:
+            from app.services.notification_service import notification_service
+            notification_service.generate_alerts_for_video(db, video_id)
+        except Exception as alert_err:
+            logger.warning(f"Could not generate post-processing alerts for video #{video_id}: {alert_err}")
+
     except Exception as e:
         logger.error(f"Failed to process video {video_id}: {str(e)}")
         video.status = "error"

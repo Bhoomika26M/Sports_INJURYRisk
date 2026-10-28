@@ -42,3 +42,28 @@ def setup_test_db():
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
+
+@pytest.fixture
+def db_session():
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+@pytest.fixture
+def test_user(db_session):
+    from app.models.user import User
+    from app.core.security import get_password_hash
+    import uuid
+    user = User(
+        email=f"test_{uuid.uuid4().hex[:8]}@example.com",
+        hashed_password=get_password_hash("testpass123"),
+        full_name="Test Athlete",
+        role="athlete",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user

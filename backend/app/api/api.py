@@ -11,7 +11,9 @@ from app.api.endpoints import (
     anomaly,
     recommendations,
     dashboard,
-    datasets
+    datasets,
+    notifications,
+    reports
 )
 
 api_router = APIRouter()
@@ -27,3 +29,5 @@ api_router.include_router(anomaly.router, prefix="/anomaly", tags=["anomaly"])
 api_router.include_router(recommendations.router, prefix="/recommendations", tags=["recommendations"])
 api_router.include_router(dashboard.router, prefix="/dashboard", tags=["dashboard"])
 api_router.include_router(datasets.router, prefix="/datasets", tags=["datasets"])
+api_router.include_router(notifications.router, prefix="/notifications", tags=["notifications"])
+api_router.include_router(reports.router, prefix="/reports", tags=["reports"])

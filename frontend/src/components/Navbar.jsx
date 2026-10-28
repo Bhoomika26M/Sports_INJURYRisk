@@ -13,6 +13,7 @@ import {
   Menu,
   X
 } from 'lucide-react';
+import { NotificationDropdown } from './NotificationDropdown';
 
 const ROLE_STYLES = {
   athlete: { label: 'Athlete', bg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
@@ -100,6 +101,8 @@ export const Navbar = () => {
         <div className="hidden md:flex items-center gap-2.5">
           {user ? (
             <>
+              <NotificationDropdown />
+
               {roleStyle && (
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${roleStyle.bg}`}>
                   {roleStyle.label}
@@ -137,6 +140,7 @@ export const Navbar = () => {
 
         {/* Mobile Hamburger Button */}
         <div className="md:hidden flex items-center gap-2">
+          {user && <NotificationDropdown />}
           {user && roleStyle && (
             <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${roleStyle.bg}`}>
               {roleStyle.label}

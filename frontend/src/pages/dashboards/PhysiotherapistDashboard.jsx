@@ -16,8 +16,10 @@ import {
   HeartPulse,
   Flame,
   FileCheck2,
-  Bandage
+  Bandage,
+  FileText
 } from 'lucide-react';
+import { ReportsExportModal } from '../../components/ReportsExportModal';
 
 export const PhysiotherapistDashboard = () => {
   const { user } = useAuth();
@@ -28,6 +30,7 @@ export const PhysiotherapistDashboard = () => {
   const [filterMode, setFilterMode] = useState('all'); // 'all' | 'assigned' | 'injured'
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const [selectedReportAthlete, setSelectedReportAthlete] = useState(null);
 
   const fetchSummary = async () => {
     try {
@@ -487,6 +490,14 @@ export const PhysiotherapistDashboard = () => {
                             {a.is_assigned_to_me ? <UserMinus size={13} /> : <UserPlus size={13} />}
                           </button>
 
+                          <button
+                            onClick={() => setSelectedReportAthlete({ id: a.id, name: a.name })}
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-teal-600 text-xs font-semibold transition"
+                            title="Export PDF / Excel Reports"
+                          >
+                            <FileText size={13} />
+                          </button>
+
                           <Link
                             to={`/dashboard/athlete/${a.id}`}
                             className="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-xs"
@@ -504,6 +515,16 @@ export const PhysiotherapistDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Reports & Clinical Export Modal */}
+      {selectedReportAthlete && (
+        <ReportsExportModal
+          isOpen={!!selectedReportAthlete}
+          onClose={() => setSelectedReportAthlete(null)}
+          athleteId={selectedReportAthlete.id}
+          athleteName={selectedReportAthlete.name}
+        />
+      )}
     </div>
   );
 };

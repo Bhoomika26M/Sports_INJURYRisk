@@ -17,8 +17,10 @@ import {
   UserMinus,
   Sparkles,
   BarChart3,
-  Clock
+  Clock,
+  FileText
 } from 'lucide-react';
+import { ReportsExportModal } from '../../components/ReportsExportModal';
 
 export const CoachDashboard = () => {
   const { user } = useAuth();
@@ -29,6 +31,7 @@ export const CoachDashboard = () => {
   const [squadFilter, setSquadFilter] = useState('all'); // 'all' | 'squad'
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
+  const [selectedReportAthlete, setSelectedReportAthlete] = useState(null);
 
   const fetchSummary = async () => {
     try {
@@ -526,6 +529,14 @@ export const CoachDashboard = () => {
                             {a.is_assigned_to_me ? <UserMinus size={13} /> : <UserPlus size={13} />}
                           </button>
 
+                          <button
+                            onClick={() => setSelectedReportAthlete({ id: a.id, name: a.name })}
+                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 text-xs font-semibold transition"
+                            title="Export PDF / Excel Reports"
+                          >
+                            <FileText size={13} />
+                          </button>
+
                           <Link
                             to={`/dashboard/athlete/${a.id}`}
                             className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-xs"
@@ -593,6 +604,16 @@ export const CoachDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Reports & Clinical Export Modal */}
+      {selectedReportAthlete && (
+        <ReportsExportModal
+          isOpen={!!selectedReportAthlete}
+          onClose={() => setSelectedReportAthlete(null)}
+          athleteId={selectedReportAthlete.id}
+          athleteName={selectedReportAthlete.name}
+        />
+      )}
     </div>
   );
 };
