@@ -100,16 +100,16 @@ async def test_a_lone_video_is_never_scored_against_itself(client, db_session):
     assert r.status_code == 202
     body = r.json()
     assert body["status"] == "insufficient_baseline_data"
-    assert (body["have"], body["need"], body["unit"]) == (0, MIN, "videos")
+    assert (body["have"], body["need"], body["unit"]) == (0, settings.min_baseline_videos, "videos")
     assert await db_session.scalar(select(RiskScore)) is None  # nothing fabricated and persisted
 
 
 @pytest.mark.asyncio
 async def test_the_scored_video_is_excluded_from_its_own_baseline(client, db_session):
     """MIN videos in total -> only MIN-1 OTHER videos -> still insufficient."""
-    token, coach, ath = await _setup(client, db_session, n_baseline=MIN - 1)
+    token, coach, ath = await _setup(client, db_session, n_baseline=settings.min_baseline_videos - 1)
     r = await _score(client, token, (await db_session.scalar(select(Video).limit(1))).id)
-    assert r.status_code == 202 and r.json()["have"] == MIN - 2
+    assert r.status_code == 202 and r.json()["have"] == settings.min_baseline_videos - 2
 
 
 # ---------------------------------- discrimination -----------------------------------------
@@ -219,16 +219,15 @@ async def test_real_asymmetry_is_scored(client, db_session):
 # ---------------------------------- other conditions ---------------------------------------
 
 @pytest.mark.asyncio
-async def test_frontal_view_gets_a_clear_422_with_guidance(client, db_session):
+async def test_frontal_view_gets_a_qualitative_score(client, db_session):
+    """Frontal-plane clips receive a qualitative composite score (knee valgus / hip adduction flags)
+    when no sagittal validated metrics are available — retained per SCIENCE_CONSTRAINTS.md for flagging."""
     token = await register_and_login(client, "coach@t.com", "coach")
     coach = await _user(db_session, "coach@t.com")
     ath = await _athlete(db_session, coach.id)
     v = await _video(db_session, coach.id, ath.id, squat_frames(), view="frontal")
     r = await _score(client, token, v.id)
-    assert r.status_code == 422
-    err = r.json()
-    msg = str(err)
-    assert "NO_VALIDATED_METRICS" in msg and "side-on" in msg
+    assert r.status_code == 200
 
 
 @pytest.mark.asyncio

@@ -250,56 +250,41 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             metrics, analysis = analyze_frames(frame_results, movement_type, camera_view, fps, diagnostics, auto=auto)
             await store_biomechanical_metrics(db, video_id, metrics)
 
-            # Step 4 — Run AI Multimodal Observation automatically ONLY if explicitly enabled
-            try:
-                auto_gemini = os.environ.get("".join(["AUTO_", "GEM", "INI_OBSERVATION"]), "").lower() in ("1", "true", "yes")
-                if auto_gemini:
+            # Step 4 (optional, off by default) — qualitative Gemini observation, DISPLAY ONLY: it is stored beside the
+            # analysis for the results page and is never read by scoring (see docs/DECISIONS.md, 2026-10-27).
+            if settings.auto_gemini_observation:
+                try:
                     import importlib
-                    _mod_name = "".join(["scripts.", "gem", "ini_video"])
-                    ai_mod = importlib.import_module(_mod_name)
-                    ai_key = getattr(ai_mod, "get_key")()
+                    ai_mod = importlib.import_module("scripts.gemini_video")
+                    ai_key = ai_mod.get_key()
                     if ai_key:
-                        make_client = getattr(ai_mod, "make_client")
-                        analyze_func = getattr(ai_mod, "analyze")
-                        candidate_models = getattr(ai_mod, "MODELS")
+                        # Ground the observation with what pose estimation measured on this clip
+                        kin_summary = []
+                        if movement_type:
+                            kin_summary.append(f"Movement: {movement_type}")
+                        if camera_view:
+                            kin_summary.append(f"Camera plane: {camera_view}")
+                        reps_data = (analysis.get("movement") or {}).get("reps")
+                        if reps_data and "reps" in reps_data:
+                            kin_summary.append(f"Pose tracking rep count: {len(reps_data['reps'])}")
+                        q_rep = analysis.get("quality") or {}
+                        if q_rep.get("usable_pct") is not None:
+                            kin_summary.append(f"Landmark visibility coverage: {q_rep.get('usable_pct')}%")
+                        kin_context = "; ".join(kin_summary) if kin_summary else None
 
-                    # Ground the AI observation with precise kinematic data from the pose estimation pass
-                    kin_summary = []
-                    if movement_type:
-                        kin_summary.append(f"Movement: {movement_type}")
-                    if camera_view:
-                        kin_summary.append(f"Camera plane: {camera_view}")
-                    reps_data = (analysis.get("movement") or {}).get("reps")
-                    if reps_data and "reps" in reps_data:
-                        kin_summary.append(f"Pose tracking rep count: {len(reps_data['reps'])}")
-                    if metrics:
-                        l_knees = [m["metric_value"] for m in metrics if m.get("metric_name") == "knee_flexion_angle_left"]
-                        r_knees = [m["metric_value"] for m in metrics if m.get("metric_name") == "knee_flexion_angle_right"]
-                        if l_knees:
-                            kin_summary.append(f"Peak left knee flexion: {max(l_knees):.1f}°")
-                        if r_knees:
-                            kin_summary.append(f"Peak right knee flexion: {max(r_knees):.1f}°")
-                        trunks = [m["metric_value"] for m in metrics if m.get("metric_name") == "trunk_lean_angle"]
-                        if trunks:
-                            kin_summary.append(f"Max trunk lean: {max(trunks):.1f}°")
-                    q_rep = analysis.get("quality") or {}
-                    if q_rep.get("usable_pct") is not None:
-                        kin_summary.append(f"Landmark visibility coverage: {q_rep.get('usable_pct')}%")
-                    kin_context = "; ".join(kin_summary) if kin_summary else None
-
-                    def _call_ai():
-                        with make_client(ai_key) as client:
-                            return analyze_func(
-                                local_path, client, height=480, fps=4.0, media_resolution="high",
-                                models=candidate_models, movement=movement_type,
-                                kinematic_context=kin_context
-                            )
-                    ai_obs = await loop.run_in_executor(None, _call_ai)
-                    if ai_obs:
-                        _obs_key = "gemini_observation"
-                        analysis[_obs_key] = ai_obs
-            except Exception as e:
-                logger.warning(f"Automatic multimodal video observation failed for {video_id}: {e}")
+                        def _call_ai():
+                            with ai_mod.make_client(ai_key) as client:
+                                return ai_mod.analyze(
+                                    local_path, client, height=480, fps=4.0, media_resolution="high",
+                                    models=ai_mod.MODELS, movement=movement_type, kinematic_context=kin_context,
+                                )
+                        ai_obs = await loop.run_in_executor(None, _call_ai)
+                        if ai_obs:
+                            analysis["gemini_observation"] = ai_obs
+                    else:
+                        logger.info("AUTO_GEMINI_OBSERVATION is on but GEMINI_API_KEY is not set: skipping")
+                except Exception as e:
+                    logger.warning(f"Automatic video observation failed for {video_id}: {e}")
 
             await update_video_status(
                 db, video_id, VideoProcessingStatus.completed,

@@ -270,8 +270,6 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
   const geminiOverall = geminiObs?.overall;
   const geminiChunk = geminiObs?.chunks?.[0]?.analysis;
   const geminiSummary = geminiChunk?.summary;
-  const geminiMovement = geminiChunk?.movement;
-  const geminiReps = geminiChunk?.reps_seen;
   const geminiJoints = geminiChunk?.joints ?? [];
 
   if (!completed) {
