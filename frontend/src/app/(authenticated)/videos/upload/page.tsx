@@ -182,7 +182,7 @@ function UploadFlow() {
       setPhase({ name: "analyzing", videoId: ticket.video_id, startedAt: Date.now() });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return setPhase({ name: "form" });
-      if (err instanceof ApiError && err.status === 400) removeFile(); // the server rejected this file and discarded it
+      if (err instanceof ApiError && (err.status === 400 || err.status === 413)) removeFile(); // the server rejected this file and discarded it
       setPhase({ name: "failed", message: err instanceof Error ? err.message : "The upload didn't go through." });
     }
   }

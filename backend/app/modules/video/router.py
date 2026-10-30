@@ -166,7 +166,7 @@ async def confirm_upload(
 
     local_path = os.path.join(settings.upload_dir, video.storage_key)
     if not os.path.exists(local_path):
-        raise api_error(400, "NOT_FOUND", "File not found in storage")
+        raise api_error(404, "NOT_FOUND", "File not found in storage")
 
     # Format validation
     if not video.original_filename.lower().endswith((".mp4", ".mov", ".webm", ".avi", ".mkv", ".m4v")):
@@ -208,14 +208,15 @@ async def confirm_upload(
 
     # Validate limits
     file_size_mb = os.path.getsize(local_path) / (1024 * 1024)
-    if file_size_mb > 200:
-        await _reject_upload(db, video, "file_too_large", "File exceeds 200MB", local_path)
+    if file_size_mb > settings.max_upload_mb:
+        await _reject_upload(db, video, "file_too_large", f"File exceeds {settings.max_upload_mb} MB", local_path)
 
-    if duration < 2 or duration > 60:
-        await _reject_upload(db, video, "duration_out_of_range", "Duration must be between 2 and 60 seconds", local_path)
+    if duration < settings.min_video_seconds or duration > settings.max_video_seconds:
+        await _reject_upload(db, video, "duration_out_of_range",
+                             f"Duration must be between {settings.min_video_seconds:g} and {settings.max_video_seconds:g} seconds", local_path)
 
-    if height < 480:
-        await _reject_upload(db, video, "resolution_too_low", "Minimum height is 480p", local_path)
+    if height < settings.min_video_height:
+        await _reject_upload(db, video, "resolution_too_low", f"Minimum height is {settings.min_video_height}p", local_path)
 
     video.resolution_width = width
     video.resolution_height = height
@@ -272,7 +273,7 @@ async def ai_observe_video(
 
     local_path = os.path.join(settings.upload_dir, video.storage_key)
     if not os.path.exists(local_path):
-        raise api_error(400, "NOT_FOUND", "Video file not found in storage")
+        raise api_error(404, "NOT_FOUND", "Video file not found in storage")
 
     mod_name = "scripts.gemini_video"
     try:
