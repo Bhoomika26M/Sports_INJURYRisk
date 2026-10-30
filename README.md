@@ -13,7 +13,7 @@ Live status and the reusable Definition-of-Done checklist live in [`/docs/STATE.
 | M1 — auth, athletes, env setup | Auth module, Athlete module, RBAC, argon2 + httpOnly cookies | Complete |
 | M2 — video, pose, biomechanics | Video upload, MediaPipe Pose, YOLO26-pose, biomechanics math | Complete |
 | M3 — risk scoring, recommendations | Heuristic risk scoring, unsupervised anomaly detection, corrective recommendations | Complete |
-| M4 — dashboards, notifications, reports, deploy | Analytics, notifications, PDF/Excel reports, deployment | Not started |
+| M4 — dashboards, notifications, reports, deploy | Analytics, notifications, PDF/Excel reports, deployment | Built and verified (build + API level); live deploy still owed |
 
 ## Highlights
 

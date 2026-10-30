@@ -13,7 +13,7 @@ The single source of truth for "what actually exists right now." Update this aft
   - **6 Rejected Clips** safely gated by quality checks: `multiple_people_subject_unstable` (4 clips) and `no_person_detected` / `low_detection_quality` (2 clips).
   - **Active Population Baselines:** Squatting baseline achieved 6 videos across 6 athletes (surpassing demo threshold of 3 videos / 2 athletes), yielding active non-provisional risk assessments (e.g., Barbell Back Squat composite score `54.8` High Risk, Bodyweight Squat `26.7` Moderate Risk).
 - **Frontend App:** Next.js 16 compiled via `npm run build` and served via `npm run start` on `http://localhost:3000`. Authenticated role navigation, coach dashboard, athlete profiles, and scored video results pages verified in live browser.
-- **Backend Test Suite:** 553 tests passing (speed and jobs, 6 upload formats, pose tasks, athletes, worker task, health, compose env).
+- **Backend Test Suite:** 651 tests passing (audit 2026-10-27, Postgres 16, real-YOLO inference not exercised) (speed and jobs, 6 upload formats, pose tasks, athletes, worker task, health, compose env).
 
 **Previously verified:** 2026-10-09 (Tasks 1–4 merged + integration pass: classifier verdict shown by the results page, Auto-detect upload, all six upload formats, gait amplitude, ankle tier — see `docs/DECISIONS.md` 2026-10-09).
 
