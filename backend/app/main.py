@@ -94,9 +94,26 @@ async def upload_local_file(
     if video.uploaded_by != current_user.id:
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Not the owner of this upload")
 
+    max_bytes = settings.max_upload_mb * 1024 * 1024
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > max_bytes:
+        raise api_error(413, "file_too_large", f"File exceeds {settings.max_upload_mb} MB")
+
     filepath = os.path.join(settings.upload_dir, key)
     os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    async with aiofiles.open(filepath, "wb") as f:
-        async for chunk in request.stream():
-            await f.write(chunk)
+    written = 0
+    try:
+        async with aiofiles.open(filepath, "wb") as f:
+            async for chunk in request.stream():
+                written += len(chunk)
+                if written > max_bytes:   # Content-Length can be absent or wrong: count what actually arrives
+                    raise api_error(413, "file_too_large", f"File exceeds {settings.max_upload_mb} MB")
+                await f.write(chunk)
+    except BaseException:
+        # too big, client disconnected, disk error: never leave a partial file behind
+        try:
+            os.remove(filepath)
+        except OSError:
+            pass
+        raise
     return {"status": "ok"}

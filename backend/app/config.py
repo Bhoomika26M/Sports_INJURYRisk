@@ -1,5 +1,6 @@
 """Application configuration — reads from environment variables."""
 
+import logging
 from pathlib import Path
 from typing import Optional
 
@@ -7,13 +8,19 @@ from pydantic import model_validator
 from pydantic_settings import BaseSettings
 
 
+_DEFAULT_JWT_SECRET = "change-this-to-a-long-random-string-in-production"
+
+
 class Settings(BaseSettings):
+    # "production" makes the app refuse to start with the placeholder JWT secret below.
+    environment: str = "development"
+
     # Database
     database_url: str = "postgresql+asyncpg://injury_user:changeme_in_production@postgres:5432/injury_detection"
     database_url_sync: str = ""  # derived from database_url when unset (see _derive_sync_url)
 
     # JWT
-    jwt_secret_key: str = "change-this-to-a-long-random-string-in-production"
+    jwt_secret_key: str = _DEFAULT_JWT_SECRET
     jwt_access_token_expire_minutes: int = 30
     jwt_refresh_token_expire_days: int = 7
     jwt_algorithm: str = "HS256"
@@ -43,6 +50,11 @@ class Settings(BaseSettings):
     # Storage. Local-disk stand-in for S3.
     # Docker sets UPLOAD_DIR=/uploads (a volume); a host run defaults to backend/uploads.
     upload_dir: str = str(Path(__file__).resolve().parents[1] / "uploads")
+    # Upload limits. The server is authoritative (the upload page mirrors them for instant feedback).
+    max_upload_mb: int = 200
+    min_video_seconds: float = 2.0
+    max_video_seconds: float = 60.0
+    min_video_height: int = 480
     use_s3_storage: bool = False
     s3_bucket: Optional[str] = None
     s3_region: Optional[str] = None
@@ -65,6 +77,11 @@ class Settings(BaseSettings):
     yolo_tracker: str = "botsort.yaml"
     pose_landmarker_variant: str = "full"
 
+    # Optional, OFF by default: after pose analysis, also send the clip to the standalone Gemini observation script
+    # (scripts/gemini_video.py; needs GEMINI_API_KEY). The result is shown to the user and is NEVER used in scoring.
+    # It uploads footage of the athlete to Google, so enable it only with the athlete's consent.
+    auto_gemini_observation: bool = False
+
     # Email (SendGrid)
     sendgrid_api_key: Optional[str] = None
     sendgrid_from_email: str = "noreply@injury-detection.local"
@@ -72,6 +89,14 @@ class Settings(BaseSettings):
     @property
     def backend_cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.backend_cors_origins.split(",") if origin.strip()]
+
+    @model_validator(mode="after")
+    def _refuse_placeholder_secret_in_production(self):
+        if self.jwt_secret_key == _DEFAULT_JWT_SECRET:
+            if self.environment.lower() == "production":
+                raise ValueError("JWT_SECRET_KEY is still the placeholder value: set a long random secret before running with ENVIRONMENT=production")
+            logging.getLogger(__name__).warning("JWT_SECRET_KEY is the placeholder value: fine for local development, never for a deployment")
+        return self
 
     @model_validator(mode="after")
     def _derive_sync_url(self):
