@@ -2,7 +2,7 @@ from typing import Dict, Any, List
 
 class InjuryPredictionEngine:
     """
-    Injury Risk Prediction Engine covering the 6 specific injury categories from the PDF:
+    Rule-based category scoring engine covering six screening categories. Scores are not calibrated probabilities:
     - ACL Injury Risk
     - Hamstring Injury Risk
     - Ankle Sprain Risk
@@ -60,7 +60,6 @@ class InjuryPredictionEngine:
         categories["acl_risk"] = {
             "category_name": "ACL Injury Risk",
             "risk_score": round(acl_score, 1),
-            "probability": round(acl_score / 100.0, 2),
             "risk_level": self._level(acl_score),
             "primary_factors": acl_factors or ["Slight valgus within acceptable baseline range"],
             "description": "High anterior cruciate ligament strain generated during plant-and-cut or jump landing."
@@ -87,7 +86,6 @@ class InjuryPredictionEngine:
         categories["hamstring_risk"] = {
             "category_name": "Hamstring Injury Risk",
             "risk_score": round(hamstring_score, 1),
-            "probability": round(hamstring_score / 100.0, 2),
             "risk_level": self._level(hamstring_score),
             "primary_factors": hamstring_factors or ["Balanced bilateral hamstring load during extension"],
             "description": "Risk of eccentric myofibrillar strain during rapid terminal swing or high-speed deceleration."
@@ -111,7 +109,6 @@ class InjuryPredictionEngine:
         categories["ankle_sprain_risk"] = {
             "category_name": "Ankle Sprain Risk",
             "risk_score": round(ankle_score, 1),
-            "probability": round(ankle_score / 100.0, 2),
             "risk_level": self._level(ankle_score),
             "primary_factors": ankle_factors or ["Stable subtalar neutral alignment"],
             "description": "Lateral inversion stress and talocrural joint instability during ground contact."
@@ -136,7 +133,6 @@ class InjuryPredictionEngine:
         categories["shoulder_risk"] = {
             "category_name": "Shoulder Injury Risk",
             "risk_score": round(shoulder_score, 1),
-            "probability": round(shoulder_score / 100.0, 2),
             "risk_level": self._level(shoulder_score),
             "primary_factors": shoulder_factors or ["Shoulder girdle kinematic parameters nominal"],
             "description": "Glenohumeral joint shear and impingement vulnerability during kinetic transmission."
@@ -163,7 +159,6 @@ class InjuryPredictionEngine:
         categories["lower_back_risk"] = {
             "category_name": "Lower Back Injury Risk",
             "risk_score": round(back_score, 1),
-            "probability": round(back_score / 100.0, 2),
             "risk_level": self._level(back_score),
             "primary_factors": back_factors or ["Neutral spine orientation maintained"],
             "description": "Lumbopelvic shear stress and core anti-rotation breakdown under dynamic load."
@@ -193,7 +188,6 @@ class InjuryPredictionEngine:
         categories["overuse_risk"] = {
             "category_name": "Overuse Injury Risk",
             "risk_score": round(overuse_score, 1),
-            "probability": round(overuse_score / 100.0, 2),
             "risk_level": self._level(overuse_score),
             "primary_factors": overuse_factors or ["Training workload within progressive adaptation sweet spot"],
             "description": "Microtrauma accumulation exceeding tissue remodeling rate due to training load spikes."

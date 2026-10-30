@@ -1,7 +1,14 @@
 import os
 from pathlib import Path
+try:
+    from dotenv import load_dotenv
+    _has_dotenv = True
+except ImportError:
+    _has_dotenv = False
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+if _has_dotenv:
+    load_dotenv(BASE_DIR / ".env")
 UPLOAD_DIR = BASE_DIR / "uploads"
 SAMPLE_DIR = BASE_DIR / "samples"
 
@@ -23,6 +30,6 @@ class Settings:
     SMTP_USER: str = os.getenv("SMTP_USER", "")
     SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
     SMTP_FROM: str = os.getenv("SMTP_FROM", "noreply@kinematix.app")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 settings = Settings()

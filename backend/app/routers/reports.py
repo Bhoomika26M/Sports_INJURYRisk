@@ -31,6 +31,8 @@ def export_pdf_report(video_id: int, db: Session = Depends(get_db)):
     video = db.query(VideoRecord).filter(VideoRecord.id == video_id).first()
     if not video:
         raise HTTPException(status_code=404, detail="Video record not found")
+    if video.status != "analyzed" or not video.processed_video_path:
+        raise HTTPException(status_code=409, detail="Reports are available only after pose analysis succeeds")
 
     analysis = db.query(BiomechanicalAnalysis).filter(BiomechanicalAnalysis.video_id == video_id).first()
     risk = db.query(InjuryRiskAssessment).filter(InjuryRiskAssessment.video_id == video_id).first()
@@ -190,22 +192,21 @@ def export_pdf_report(video_id: int, db: Session = Depends(get_db)):
     story.append(Spacer(1, 12))
 
     # Section 3: Specific Injury Categories
-    story.append(Paragraph("3. Specific Injury Category Predictions", heading2_style))
+    story.append(Paragraph("3. Rule-Based Injury Category Scores", heading2_style))
     cat_risks = risk.category_risks if risk and risk.category_risks else {}
-    cat_rows = [["Injury Risk Category", "Score", "Probability", "Risk Level", "Primary Biomechanical Factors"]]
+    cat_rows = [["Injury Risk Category", "Rule Score (/100)", "Risk Level", "Contributing Factors"]]
 
     for k, item in cat_risks.items():
         factors_str = "; ".join(item.get("primary_factors", [])[:2])
         cat_rows.append([
             item.get("category_name", k),
-            str(item.get("risk_score", 0)),
-            f"{int(item.get('probability', 0) * 100)}%",
+            f"{item.get('risk_score', 0)}/100",
             item.get("risk_level", "Low"),
             factors_str
         ])
 
     if len(cat_rows) > 1:
-        cat_table = Table(cat_rows, colWidths=[130, 50, 65, 80, 215])
+        cat_table = Table(cat_rows, colWidths=[145, 65, 75, 255])
         cat_table.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f172a")),
             ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
@@ -221,7 +222,7 @@ def export_pdf_report(video_id: int, db: Session = Depends(get_db)):
     story.append(Spacer(1, 14))
 
     # Section 4: Corrective Action Plan
-    story.append(Paragraph("4. Prescribed Interventions &amp; Recovery Plan", heading2_style))
+    story.append(Paragraph("4. Suggested Actions for Professional Review", heading2_style))
     recs = risk.corrective_recommendations if risk and risk.corrective_recommendations else {}
     exercises = recs.get("exercises", [])
     if exercises:
@@ -257,6 +258,8 @@ def export_excel_report(video_id: int, db: Session = Depends(get_db)):
     video = db.query(VideoRecord).filter(VideoRecord.id == video_id).first()
     if not video:
         raise HTTPException(status_code=404, detail="Video record not found")
+    if video.status != "analyzed" or not video.processed_video_path:
+        raise HTTPException(status_code=409, detail="Reports are available only after pose analysis succeeds")
 
     analysis = db.query(BiomechanicalAnalysis).filter(BiomechanicalAnalysis.video_id == video_id).first()
     risk = db.query(InjuryRiskAssessment).filter(InjuryRiskAssessment.video_id == video_id).first()
@@ -332,8 +335,8 @@ def export_excel_report(video_id: int, db: Session = Depends(get_db)):
 
     # Sheet 3: Category Risks
     ws_cat = wb.create_sheet(title="Injury Categories")
-    ws_cat.append(["INJURY RISK AREA", "RISK SCORE (/100)", "PROBABILITY (%)", "RISK LEVEL", "DESCRIPTION", "CONTRIBUTING FACTORS"])
-    for c in range(1, 7):
+    ws_cat.append(["INJURY RISK AREA", "RULE SCORE (/100)", "RISK LEVEL", "DESCRIPTION", "CONTRIBUTING FACTORS"])
+    for c in range(1, 6):
         ws_cat.cell(row=1, column=c).fill = header_fill
         ws_cat.cell(row=1, column=c).font = header_font
 
@@ -342,7 +345,6 @@ def export_excel_report(video_id: int, db: Session = Depends(get_db)):
         ws_cat.append([
             item.get("category_name", k),
             item.get("risk_score", 0),
-            f"{int(item.get('probability', 0) * 100)}%",
             item.get("risk_level", "Low"),
             item.get("description", ""),
             "; ".join(item.get("primary_factors", []))

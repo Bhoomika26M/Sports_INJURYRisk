@@ -6,9 +6,9 @@ export default function RecommendationsView({ injuryRisk }) {
     return (
       <div className="bg-white border border-slate-200 rounded-xl p-12 text-center space-y-3 shadow-xs">
         <Sparkles className="w-12 h-12 text-slate-400 mx-auto" />
-        <h3 className="text-base font-bold text-slate-900">No Corrective Prescriptions Generated</h3>
+        <h3 className="text-base font-bold text-slate-900">No Exercise Suggestions Available</h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
-          Run the video analysis first to generate targeted corrective exercise workflows.
+          Run pose analysis first to generate rule-based exercise suggestions for review.
         </p>
       </div>
     );
@@ -28,16 +28,16 @@ export default function RecommendationsView({ injuryRisk }) {
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-teal-700" />
-            Corrective Exercise &amp; Biomechanical Interventions
+            Exercise Suggestions from Screening
           </h2>
           <p className="text-xs text-slate-500">
-            Targeted clinical protocols tailored to detected dynamic knee valgus, pelvic instability, and asymmetry.
+            Exercise suggestions based on the available screening results. Review them with a qualified professional before use.
           </p>
         </div>
 
         <div className="flex items-center gap-2 bg-teal-50 px-3 py-1.5 rounded-lg border border-teal-200 text-xs">
           <ShieldCheck className="w-4 h-4 text-teal-700" />
-          <span className="text-teal-800 font-semibold">{exercises.length} Targeted Exercises Prescribed</span>
+          <span className="text-teal-800 font-semibold">{exercises.length} Exercise Suggestions</span>
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export default function RecommendationsView({ injuryRisk }) {
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
           <Dumbbell className="w-4 h-4 text-teal-700" />
-          Prescribed Corrective Exercises
+          Suggested Exercises
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

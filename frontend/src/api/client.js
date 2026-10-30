@@ -28,7 +28,9 @@ export const api = {
   // Health
   getHealth: async () => {
     const res = await fetch(`${API_BASE}/health`);
-    return res.json();
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Health check failed');
+    return data;
   },
 
   // Auth
@@ -161,14 +163,45 @@ export const api = {
     return res.json();
   },
 
-  uploadVideo: async (formData) => {
-    const res = await fetch(`${API_BASE}/videos/upload`, {
-      method: 'POST',
-      body: formData
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
+  getDemoSamples: async () => {
+    const res = await fetch(`${API_BASE}/videos/demo_samples`);
+    if (!res.ok) throw new Error('Failed to load demo samples');
     return res.json();
   },
+
+  loadDemoSample: async (filename, activityType, title, athleteId = 1) => {
+    const params = new URLSearchParams({
+      filename,
+      athlete_id: athleteId
+    });
+    if (activityType) params.append('activity_type', activityType);
+    if (title) params.append('title', title);
+    const res = await fetch(`${API_BASE}/videos/demo_samples/load?${params.toString()}`, {
+      method: 'POST'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Failed to load demo sample');
+    return data;
+  },
+
+  uploadVideo: (formData, onProgress = () => {}) => new Promise((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${API_BASE}/videos/upload`);
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress(Math.round((event.loaded / event.total) * 100));
+    };
+    request.onerror = () => reject(new Error('Network error while uploading video. Check that the backend is running.'));
+    request.onload = () => {
+      let data;
+      try { data = JSON.parse(request.responseText); } catch { data = {}; }
+      if (request.status < 200 || request.status >= 300) {
+        reject(new Error(data.detail || 'Video upload failed'));
+        return;
+      }
+      resolve(data);
+    };
+    request.send(formData);
+  }),
 
   // Biomechanics
   runAnalysis: async (videoId) => {

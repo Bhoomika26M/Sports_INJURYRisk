@@ -4,7 +4,6 @@ from datetime import datetime
 
 class CategoryRiskDetail(BaseModel):
     category_name: str
-    probability: float # 0.0 to 1.0
     risk_level: str # Low, Moderate, High, Critical
     risk_score: float # 0 - 100
     primary_factors: List[str]

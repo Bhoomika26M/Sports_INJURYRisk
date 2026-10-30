@@ -47,6 +47,8 @@ def run_full_analysis(video_id: int, db: Session = Depends(get_db)):
             max_frames=300
         )
         time_series = tracking_result["time_series"]
+        if not time_series or not any(frame.get("detected") for frame in time_series):
+            raise HTTPException(status_code=422, detail="No athlete pose was detected. Use a clear, well-lit video with the athlete fully visible and try again.")
 
         # 2. Biomechanical Analysis
         biomech_metrics = biomech_engine.analyze(time_series, fps=tracking_result["fps"])
@@ -165,13 +167,24 @@ def run_full_analysis(video_id: int, db: Session = Depends(get_db)):
             }
         }
 
+    except HTTPException as e:
+        video.status = "failed"
+        db.commit()
+        if os.path.exists(processed_path):
+            os.remove(processed_path)
+        raise e
     except Exception as e:
         video.status = "failed"
         db.commit()
+        if os.path.exists(processed_path):
+            os.remove(processed_path)
         raise HTTPException(status_code=500, detail=f"Analysis pipeline error: {str(e)}")
 
 @router.get("/{video_id}")
 def get_biomechanics_data(video_id: int, db: Session = Depends(get_db)):
+    video = db.query(VideoRecord).filter(VideoRecord.id == video_id).first()
+    if not video or video.status != "analyzed" or not video.processed_video_path:
+        raise HTTPException(status_code=404, detail="Biomechanical analysis is not available until pose processing succeeds")
     analysis = db.query(BiomechanicalAnalysis).filter(BiomechanicalAnalysis.video_id == video_id).first()
     if not analysis:
         raise HTTPException(status_code=404, detail="Biomechanical analysis not found for this video")

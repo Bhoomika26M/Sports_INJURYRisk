@@ -20,20 +20,16 @@ from app.routers import (
 Base.metadata.create_all(bind=engine)
 
 # Seed database immediately so tables are ready for TestClient and app
-with SessionLocal() as init_db:
-    try:
-        seed_database(init_db)
-    except Exception as e:
-        print(f"Seed error: {e}")
+init_db = SessionLocal()
+try:
+    seed_database(init_db)
+except Exception as e:
+    print(f"Seed error: {e}")
+finally:
+    init_db.close()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup actions
-    db = SessionLocal()
-    try:
-        seed_database(db)
-    finally:
-        db.close()
     yield
 
 app = FastAPI(
@@ -72,5 +68,5 @@ def health_check():
         "status": "healthy",
         "service": settings.PROJECT_NAME,
         "version": settings.PROJECT_VERSION,
-        "mediapipe_ready": True
+        "mediapipe_ready": biomechanics.pose_engine.detector is not None
     }

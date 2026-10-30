@@ -41,3 +41,9 @@ yarn-error.log*
 Thumbs.db
 *.log
 .venv/
+
+# Locally uploaded and processed videos are runtime data
+backend/uploads/*
+
+# Runtime-generated synthetic sample clips
+backend/samples/sample_*.mp4

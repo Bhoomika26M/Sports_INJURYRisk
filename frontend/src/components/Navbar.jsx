@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, ShieldAlert, Award, Video, Users, Database, Sparkles, LogIn, LogOut, UserCheck } from 'lucide-react';
+import { Activity, ShieldAlert, Award, Video, Users, Database, Sparkles, LogIn, LogOut, UserCheck, ArrowLeftRight } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, activeRole, setActiveRole, currentUser, onOpenAuth, onLogout }) {
   const roles = [
@@ -12,8 +12,9 @@ export default function Navbar({ activeTab, setActiveTab, activeRole, setActiveR
 
   const navItems = [
     { id: 'video_studio', label: 'Video & Pose Tracker', icon: Video },
+    { id: 'comparison', label: 'Compare Sessions', icon: ArrowLeftRight },
     { id: 'biomechanics', label: 'Biomechanical Analysis', icon: Activity },
-    { id: 'injury_risk', label: 'Injury Risk Prediction', icon: ShieldAlert },
+    { id: 'injury_risk', label: 'Risk Screening', icon: ShieldAlert },
     { id: 'recommendations', label: 'Corrective Exercises', icon: Sparkles },
     { id: 'dashboards', label: 'Intelligence Dashboards', icon: Award },
     { id: 'athletes', label: 'Athlete Profiles', icon: Users },

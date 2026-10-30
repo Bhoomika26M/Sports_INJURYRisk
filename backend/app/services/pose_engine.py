@@ -1,5 +1,6 @@
 import os
 import cv2
+import imageio_ffmpeg
 import numpy as np
 from pathlib import Path
 from typing import Dict, List, Any, Tuple, Optional
@@ -87,8 +88,19 @@ class PoseEstimationEngine:
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
         total_video_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
 
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out_writer = cv2.VideoWriter(video_output_path, fourcc, fps, (width, height))
+        output_width = width + (width % 2)
+        output_height = height + (height % 2)
+        encoder = imageio_ffmpeg.write_frames(
+            video_output_path,
+            size=(output_width, output_height),
+            fps=fps,
+            codec="libx264",
+            pix_fmt_in="rgb24",
+            pix_fmt_out="yuv420p",
+            macro_block_size=1,
+            output_params=["-movflags", "+faststart"],
+        )
+        encoder.send(None)
 
         frame_index = 0
         time_series = []
@@ -117,12 +129,18 @@ class PoseEstimationEngine:
 
             # Draw skeleton overlay and HUD onto frame
             annotated_frame = self._render_overlay(frame, landmarks, frame_metrics, width, height, frame_index, fps)
-            out_writer.write(annotated_frame)
+            if annotated_frame.shape[1] != output_width or annotated_frame.shape[0] != output_height:
+                annotated_frame = cv2.copyMakeBorder(
+                    annotated_frame, 0, output_height - annotated_frame.shape[0],
+                    0, output_width - annotated_frame.shape[1], cv2.BORDER_REPLICATE
+                )
+            rgb_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+            encoder.send(np.ascontiguousarray(rgb_frame).tobytes())
 
             frame_index += 1
 
         cap.release()
-        out_writer.release()
+        encoder.close()
 
         return {
             "total_frames": frame_index,

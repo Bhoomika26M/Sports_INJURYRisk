@@ -57,11 +57,11 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
               Coach Team Intelligence &amp; Squad Readiness
             </h2>
             <p className="text-xs text-slate-500">
-              Squad-level injury risk monitoring, availability forecast, and workload modifications.
+              Review of analyzed sessions, movement measures, and workload context.
             </p>
           </div>
           <span className="px-3 py-1 rounded-xl bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold font-mono">
-            Squad Availability: {summary.squad_availability_pct}%
+            Squad Availability: {summary.squad_availability_pct == null ? "Awaiting analyses" : `${summary.squad_availability_pct}%`}
           </span>
         </div>
 
@@ -81,7 +81,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <p className="text-xs font-medium text-slate-500">Avg Movement Quality</p>
-            <p className="text-2xl font-black text-teal-700 font-mono mt-1">{summary.average_squad_movement_quality} / 100</p>
+            <p className="text-2xl font-black text-teal-700 font-mono mt-1">{summary.average_squad_movement_quality == null ? "Not analyzed" : `${summary.average_squad_movement_quality} / 100`}</p>
           </div>
         </div>
 
@@ -137,22 +137,24 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
                       </span>
                     </td>
                     <td className="p-3 font-mono">{ath.training_load} hrs/wk</td>
-                    <td className="p-3 font-mono font-bold text-slate-900">{ath.risk_score}</td>
+                    <td className="p-3 font-mono font-bold text-slate-900">{ath.risk_score == null ? 'Not analyzed' : ath.risk_score}</td>
                     <td className="p-3">
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
                         ath.risk_category.includes('High') || ath.risk_category.includes('Critical')
                           ? 'bg-rose-50 text-rose-700 border-rose-200'
                           : ath.risk_category.includes('Moderate')
                           ? 'bg-amber-50 text-amber-800 border-amber-200'
+                          : ath.risk_category === 'Not analyzed'
+                          ? 'bg-slate-50 text-slate-600 border-slate-200'
                           : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                       }`}>
                         {ath.risk_category}
                       </span>
                     </td>
-                    <td className="p-3 font-mono font-semibold text-teal-800">{ath.movement_quality}</td>
+                    <td className="p-3 font-mono font-semibold text-teal-800">{ath.movement_quality == null ? '—' : ath.movement_quality}</td>
                     <td className="p-3">
                       <span className={`text-[11px] font-semibold ${
-                        ath.readiness_status === 'Restricted Load' ? 'text-rose-700' : 'text-emerald-700'
+                        ath.readiness_status === 'Review flagged result' ? 'text-rose-700' : ath.readiness_status === 'No current flag' ? 'text-teal-700' : 'text-slate-600'
                       }`}>
                         {ath.readiness_status}
                       </span>
@@ -192,7 +194,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
             <div key={i} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">{f.area}</span>
               <div className="flex items-baseline justify-between">
-                <span className="text-2xl font-black text-rose-700 font-mono">{f.flagged_cases} Flagged</span>
+                <span className="text-2xl font-black text-rose-700 font-mono">{f.flagged_cases} flagged / {f.assessed_cases} analyzed</span>
                 <span className="text-xs text-slate-500 font-mono">Norm: {f.target_norm}</span>
               </div>
             </div>
@@ -211,24 +213,24 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
                     <p className="text-xs text-slate-500">{r.sport_type} • {r.athlete_code}</p>
                   </div>
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
-                    r.risk_score > 60 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                    r.risk_score == null ? 'bg-slate-50 text-slate-600 border-slate-200' : r.risk_score > 60 ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'
                   }`}>
-                    {r.risk_category} ({r.risk_score})
+                    {r.risk_score == null ? 'Not analyzed' : `${r.risk_category} (${r.risk_score})`}
                   </span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 text-center text-xs">
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                     <span className="text-[10px] text-slate-500 block uppercase">Peak Valgus</span>
-                    <span className="font-bold text-slate-900 font-mono">{r.knee_valgus_max}°</span>
+                    <span className="font-bold text-slate-900 font-mono">{r.knee_valgus_max == null ? '—' : `${r.knee_valgus_max}°`}</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                     <span className="text-[10px] text-slate-500 block uppercase">Symmetry</span>
-                    <span className="font-bold text-teal-800 font-mono">{r.movement_symmetry}%</span>
+                    <span className="font-bold text-teal-800 font-mono">{r.movement_symmetry == null ? '—' : `${r.movement_symmetry}%`}</span>
                   </div>
                   <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200">
                     <span className="text-[10px] text-slate-500 block uppercase">Pelvic Drop</span>
-                    <span className="font-bold text-slate-900 font-mono">{r.pelvic_drop}°</span>
+                    <span className="font-bold text-slate-900 font-mono">{r.pelvic_drop == null ? '—' : `${r.pelvic_drop}°`}</span>
                   </div>
                 </div>
 
@@ -267,7 +269,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
               Sports Science Research &amp; Biomechanical Analytics
             </h2>
             <p className="text-xs text-slate-500">
-              Kinematic population distributions compared against SportsPose &amp; Human3.6M normative standards.
+              Session-level measures are calculated from successfully analyzed videos. No cohort average is shown until sessions are analyzed.
             </p>
           </div>
         </div>
@@ -276,15 +278,15 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <p className="text-xs font-medium text-slate-500">Population Valgus Mean</p>
-            <p className="text-2xl font-black text-slate-900 font-mono mt-1">{sci.mean_dynamic_valgus_deg}°</p>
+            <p className="text-2xl font-black text-slate-900 font-mono mt-1">{sci.mean_dynamic_valgus_deg == null ? 'Not analyzed' : `${sci.mean_dynamic_valgus_deg}°`}</p>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <p className="text-xs font-medium text-slate-500">Bilateral Symmetry Mean</p>
-            <p className="text-2xl font-black text-teal-800 font-mono mt-1">{sci.mean_bilateral_symmetry_pct}%</p>
+            <p className="text-2xl font-black text-teal-800 font-mono mt-1">{sci.mean_bilateral_symmetry_pct == null ? 'Not analyzed' : `${sci.mean_bilateral_symmetry_pct}%`}</p>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <p className="text-xs font-medium text-slate-500">Mean Deceleration Force</p>
-            <p className="text-2xl font-black text-slate-800 font-mono mt-1">{sci.mean_ground_reaction_force_g} G</p>
+            <p className="text-2xl font-black text-slate-800 font-mono mt-1">{sci.mean_ground_reaction_force_g == null ? 'Not analyzed' : `${sci.mean_ground_reaction_force_g} G`}</p>
           </div>
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs">
             <p className="text-xs font-medium text-slate-500">Video Datasets Analyzed</p>
@@ -294,9 +296,9 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
 
         {/* Biomechanical Benchmark Distribution Comparison */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
-          <h3 className="text-sm font-bold text-slate-900">Cohort Kinematics vs SportsPose Gold-Standard Benchmark</h3>
+          <h3 className="text-sm font-bold text-slate-900">Analyzed Session Measures</h3>
           <div className="space-y-3">
-            {dist.map((d, i) => (
+            {dist.length === 0 ? <p className="text-xs text-slate-500">No analyzed sessions are available for cohort statistics.</p> : dist.map((d, i) => (
               <div key={i} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1.5">
                 <div className="flex justify-between text-xs">
                   <span className="font-semibold text-slate-800">{d.metric}</span>
@@ -317,6 +319,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
 
         {/* Research Insights */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {insights.length === 0 && <p className="text-xs text-slate-500">No research insights are available from the current analyzed sessions.</p>}
           {insights.map((ins, idx) => (
             <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-2">
               <h4 className="text-xs font-bold text-teal-800 uppercase tracking-wider">{ins.title}</h4>
@@ -330,18 +333,9 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
 
   // 4. ADMINISTRATOR DASHBOARD
   if (activeRole === 'administrator') {
-    const sys = adminData?.system_metrics || {
-      total_registered_users: 5,
-      total_athletes: 1,
-      total_video_records: 1,
-      total_biomechanical_analyses: 1,
-      storage_usage_mb: 24.5,
-      database_engine: "PostgreSQL Ready",
-      cv_runtime: "MediaPipe Pose Tasks v1.1.0"
-    };
-    const roleCounts = adminData?.role_breakdown || {
-      athlete: 1, coach: 1, physiotherapist: 1, sports_scientist: 1, administrator: 1
-    };
+    if (!adminData) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">Administrator data is unavailable. Sign in with an administrator account and try again.</div>;
+    const sys = adminData.system_metrics;
+    const roleCounts = adminData.role_breakdown;
     const allUsers = adminData?.users || [];
     const filteredUsers = adminRoleFilter === 'all' 
       ? allUsers 
@@ -513,7 +507,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
                 Scientific Governance &amp; Model Disclosure
               </h3>
               <p className="text-xs text-slate-600 mt-2 leading-relaxed">
-                {adminData?.methodology_notice || "Kinematix uses transparent, deterministic mathematical formulas calibrated against sports science literature. No opaque black-box clinical claims are made."}
+                {adminData?.methodology_notice || "Kinematix uses transparent rule-based calculations for software demonstration. Screening thresholds and scores are not clinically validated and are not a diagnosis."}
               </p>
               <div className="mt-3 space-y-1.5 text-[11px] text-slate-600">
                 <p>• <strong>Risk Weighting:</strong> Biomechanics 35%, Prior Injury 20%, Movement Asymmetry 20%, Training Load (ACWR) 15%, Fatigue 10%.</p>
@@ -523,7 +517,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
             </div>
             <div className="pt-3 border-t border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
               <span>Security: SHA-256 Reset Tokens • JWT Sessions</span>
-              <span>Primary DB: PostgreSQL</span>
+              <span>Database: {sys.database_engine}</span>
             </div>
           </div>
         </div>
@@ -532,8 +526,8 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
   }
 
   // 5. ATHLETE DASHBOARD (DEFAULT)
-  const userScore = injuryRisk?.overall_injury_risk_score || 76.8;
-  const userCat = injuryRisk?.risk_category || 'High Risk';
+  const userScore = injuryRisk?.overall_injury_risk_score ?? null;
+  const userCat = injuryRisk?.risk_category ?? 'Not analyzed';
   const exList = injuryRisk?.corrective_recommendations?.exercises || [];
 
   return (
@@ -545,11 +539,11 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
             Athlete Personal Readiness &amp; Injury Prevention Dashboard
           </h2>
           <p className="text-xs text-slate-500">
-            Personal performance metrics for <strong className="text-slate-800">Marcus Vance (ATH-101)</strong>
+            Personal performance metrics for <strong className="text-slate-800">{athlete?.name || 'Athlete'}</strong>
           </p>
         </div>
-        <span className="px-3 py-1 rounded-xl bg-teal-50 text-teal-800 border border-teal-200 text-xs font-bold font-mono">
-          Status: Active Recovery Protocol
+        <span className={`px-3 py-1 rounded-xl border text-xs font-bold font-mono ${userScore == null ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
+          Status: {userScore == null ? 'No analyzed session' : 'Review analysis'}
         </span>
       </div>
 
@@ -557,14 +551,14 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
         {/* Risk Card */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-4 text-center">
           <p className="text-xs font-bold uppercase tracking-wider text-slate-500">My Injury Risk Exposure</p>
-          <div className="text-4xl font-black text-slate-900 font-mono">{userScore.toFixed(1)} / 100</div>
+          <div className="text-4xl font-black text-slate-900 font-mono">{userScore == null ? 'Not analyzed' : `${Number(userScore).toFixed(1)} / 100`}</div>
           <div>
-            <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            <span className={`px-3 py-1 rounded-full text-xs font-bold border ${userScore == null ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-amber-50 text-amber-800 border-amber-200'}`}>
               {userCat}
             </span>
           </div>
           <p className="text-xs text-slate-600 leading-relaxed">
-            Your dynamic knee valgus angle during drop jump was flagged at 18.9°. Please complete your corrective exercises below.
+            {userScore == null ? 'Upload and analyze a movement session to see measured results and any generated recommendations.' : 'This software-generated score is a screening estimate for review, not a medical diagnosis.'}
           </p>
         </div>
 
@@ -573,12 +567,13 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-teal-700" />
-              Today's Prescribed Prevention Protocol
+              Recommendations from analysis
             </h3>
-            <span className="text-xs text-slate-500 font-mono">3 Exercises Prescribed</span>
+            <span className="text-xs text-slate-500 font-mono">{exList.length} available</span>
           </div>
 
           <div className="space-y-2.5">
+            {exList.length === 0 && <p className="text-xs text-slate-500">No recommendations are available until a video has been analyzed successfully.</p>}
             {exList.map((ex, i) => (
               <div key={i} className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                 <div className="space-y-0.5">

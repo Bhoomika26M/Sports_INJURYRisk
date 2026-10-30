@@ -10,7 +10,7 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
         <Activity className="w-12 h-12 text-slate-400 mx-auto" />
         <h3 className="text-base font-bold text-slate-900">No Biomechanical Analysis Run Yet</h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
-          Please navigate to the Video &amp; Pose Tracker tab and click &quot;Run Biomechanical Analysis &amp; Predictions&quot; on a selected movement video.
+          Please navigate to the Video &amp; Pose Tracker tab and click &quot;Run Pose Analysis &amp; Screening&quot; on a selected movement video.
         </p>
       </div>
     );
@@ -196,7 +196,7 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
                 Dynamic Knee Valgus Angle (Frontal Plane FPPA)
               </h3>
               <p className="text-[11px] text-slate-500">
-                Red dotted line denotes the 15.0° clinical threshold for non-contact ACL rupture risk.
+                Red dotted line marks a 15.0° demo reference; it is not a validated clinical threshold.
               </p>
             </div>
           </div>

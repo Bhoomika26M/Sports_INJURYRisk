@@ -36,7 +36,7 @@ export default function InjuryRiskView({ injuryRisk, athlete, currentVideo }) {
         <ShieldAlert className="w-12 h-12 text-slate-400 mx-auto" />
         <h3 className="text-base font-bold text-slate-900">No Injury Risk Assessment Available</h3>
         <p className="text-xs text-slate-500 max-w-md mx-auto">
-          Run the video analysis in the Video &amp; Pose Tracker tab to compute the weighted predictive injury score.
+          Run pose analysis on a video to calculate the rule-based screening score.
         </p>
       </div>
     );
@@ -118,10 +118,10 @@ export default function InjuryRiskView({ injuryRisk, athlete, currentVideo }) {
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <ShieldAlert className="w-5 h-5 text-rose-700" />
-            Injury Risk &amp; Predictive Biomechanics
+            Injury Risk Screening
           </h2>
           <p className="text-xs text-slate-500">
-            Multi-factor predictive model combining biomechanics (35%), injury history (20%), asymmetry (20%), workload (15%), and fatigue (10%).
+            A transparent rule-based score combining pose-derived measures (35%), injury history (20%), asymmetry (20%), workload (15%), and fatigue (10%). It is not a validated injury probability.
           </p>
         </div>
 
@@ -325,10 +325,10 @@ export default function InjuryRiskView({ injuryRisk, athlete, currentVideo }) {
         <div>
           <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
             <AlertTriangle className="w-5 h-5 text-amber-600" />
-            Specific Injury Categories Prediction (6 Core Sports Risk Factors)
+            Rule-Based Scores by Injury Category
           </h3>
           <p className="text-xs text-slate-500">
-            Multi-modal predictive classification matching the six injury profiles defined in the project specification.
+            These category scores are heuristic indicators for software demonstration; they are not calibrated probabilities or diagnoses.
           </p>
         </div>
 
@@ -348,7 +348,7 @@ export default function InjuryRiskView({ injuryRisk, athlete, currentVideo }) {
 
                 <div className="flex items-baseline gap-2">
                   <span className="text-2xl font-bold text-slate-900 font-mono">{item.risk_score}</span>
-                  <span className="text-xs text-slate-500 font-mono">({(item.probability * 100).toFixed(0)}% Probability)</span>
+                  <span className="text-xs text-slate-500 font-mono">(rule score)</span>
                 </div>
 
                 <p className="text-xs text-slate-600 leading-relaxed">{item.description}</p>

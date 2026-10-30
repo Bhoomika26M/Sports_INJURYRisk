@@ -10,6 +10,7 @@ def test_health_check():
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
+    assert isinstance(data.get("mediapipe_ready"), bool)
 
 def test_datasets():
     response = client.get("/api/datasets")
@@ -128,7 +129,8 @@ def test_forgot_and_reset_password_flow():
     res = client.post("/api/auth/forgot-password", json={"email": "coach@sportsai.com"})
     assert res.status_code == 200
     assert "token" not in res.json()
-    assert "password reset instructions have been sent" in res.json()["message"]
+    assert "password reset instructions" in res.json()["message"]
+    assert "email delivery is configured" in res.json()["message"]
 
     # 2. Simulate secure token generation in DB
     raw_token = "secret_reset_token_xyz_987"
@@ -190,15 +192,30 @@ def test_admin_user_management():
     assert "coach" in roles
 
 def test_video_upload_validation():
+    # Movement metadata is mandatory and must use a supported label.
+    missing_movement = client.post(
+        "/api/videos/upload",
+        files={"file": ("demo.mp4", b"not a video", "video/mp4")},
+        data={"title": "Missing Movement"},
+    )
+    assert missing_movement.status_code == 422
+
+    invalid_movement = client.post(
+        "/api/videos/upload",
+        files={"file": ("demo.mp4", b"not a video", "video/mp4")},
+        data={"title": "Unsupported Movement", "activity_type": "Basketball"},
+    )
+    assert invalid_movement.status_code == 400
+    assert "Select a supported movement" in invalid_movement.json()["detail"]
     # 1. Unsupported format rejection
     invalid_file = ("test.txt", b"not a video", "text/plain")
-    res = client.post("/api/videos/upload", files={"file": invalid_file}, data={"title": "Test Invalid"})
+    res = client.post("/api/videos/upload", files={"file": invalid_file}, data={"title": "Test Invalid", "activity_type": "Drop Jump"})
     assert res.status_code == 400
     assert "Unsupported video format" in res.json()["detail"]
 
     # 2. Empty file rejection
     empty_file = ("empty.mp4", b"", "video/mp4")
-    res_empty = client.post("/api/videos/upload", files={"file": empty_file}, data={"title": "Empty File"})
+    res_empty = client.post("/api/videos/upload", files={"file": empty_file}, data={"title": "Empty File", "activity_type": "Drop Jump"})
     assert res_empty.status_code == 400
     assert "empty" in res_empty.json()["detail"] or "0 bytes" in res_empty.json()["detail"]
 
@@ -295,3 +312,19 @@ def test_athlete_risk_trends_endpoint():
         assert "movement_quality_score" in first
         assert "biomechanical_deviation_score" in first
 
+def test_demo_samples_endpoints():
+    res = client.get("/api/videos/demo_samples")
+    assert res.status_code == 200
+    samples = res.json()
+    assert isinstance(samples, list)
+    if len(samples) > 0:
+        first = samples[0]
+        assert "filename" in first
+        assert "file_size" in first
+        assert "suggested_activity" in first
+
+        load_res = client.post(f"/api/videos/demo_samples/load?filename={first['filename']}")
+        assert load_res.status_code == 200
+        video_data = load_res.json()
+        assert video_data["status"] == "uploaded"
+        assert video_data["duration_seconds"] > 0

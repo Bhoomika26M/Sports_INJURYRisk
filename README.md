@@ -1,6 +1,6 @@
 # Kinematix: Sports Biomechanics & Injury Risk Intelligence Platform
 
-A high-performance sports movement biomechanics and injury risk intelligence platform that analyzes athletic movement videos to identify biomechanical deviations, detect abnormal kinematic patterns, calculate transparent multi-factor injury risk scores, and prescribe targeted corrective interventions.
+A sports movement analysis demo that processes uploaded videos with MediaPipe pose landmarks, calculates transparent 2D biomechanical estimates, and shows rule-based screening scores and exercise suggestions for professional review.
 
 Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, **ReportLab**, **openpyxl**, and **React 19 + Tailwind CSS + Recharts**.
 
@@ -10,19 +10,19 @@ Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, *
 
 > [!NOTE]
 > **Deterministic Rule-Based Screening Methodology**:
-> Kinematix evaluates injury risk using deterministic mathematical formulas and kinematic safety thresholds calibrated against peer-reviewed sports medicine and biomechanics literature (e.g., Hewett et al. dynamic knee valgus thresholds, McLean et al. ACL landing mechanics, Gabbett Acute-to-Chronic Workload Ratios).
+> Kinematix calculates configurable rule-based screening scores from pose estimates and athlete profile fields. These values are for software demonstration; they are not clinically validated and are not calibrated probabilities.
 >
 > Kinematix is designed for athletic screening, movement monitoring, and workload management. It does **not** make unverified clinical diagnostic claims, nor does it claim deep learning model training on proprietary clinical datasets. Occluded or undetected video frames are marked unavailable; no simulated or fabricated measurements are displayed.
 
 ---
 
-## Milestone Architecture Overview
+## Current Feature Areas
 
-### Milestone 1: Authentication, Roles & Athlete Profiles
+### Accounts, Roles & Athlete Profiles
 - **Role-Based Access Control (RBAC)**:
   - 5 authenticated platform roles: **Athlete**, **Coach**, **Physiotherapist**, **Sports Scientist**, and **Administrator**.
   - Secure bcrypt password hashing and JWT bearer session tokens.
-  - Interactive login modal with one-click quick switch demo accounts for all five roles.
+  - Dedicated sign-in and registration pages with email/password authentication and role assignment.
 - **Secure Password Reset Flow**:
   - `POST /api/auth/forgot-password`: Generates secure, single-use SHA-256 hashed reset tokens with a strict 15-minute expiration.
   - `POST /api/auth/reset-password`: Atomically verifies token validity, checks expiration, updates password hash, and marks token as used.
@@ -33,12 +33,12 @@ Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, *
   - Longitudinal injury history tracking (injury type, severity, clinical status).
   - Acute-to-Chronic Workload Ratio (ACWR) and weekly training load monitoring.
 - **Normative Dataset Benchmarks**:
-  - Literature-backed normative references: **Human3.6M**, **SportsPose**, **MPII**, **COCO Keypoints**, and **FIFA Injury Surveillance Dataset**.
+  - Reference catalog entries (not datasets ingested or used to train a model): **Human3.6M**, **SportsPose**, **MPII**, **COCO Keypoints**, and **FIFA Injury Surveillance Dataset**.
   - Reference benchmarks for dynamic valgus, trunk lateral lean, limb symmetry indices, and ACWR safety zones.
 
-### Milestone 2: Markerless Pose Estimation & Biomechanical Analysis
+### Pose Estimation & Biomechanical Analysis
 - **33-Landmark Pose Estimation**:
-  - Real-time 33-point markerless skeleton extraction powered by Google MediaPipe Pose.
+  - Offline frame-by-frame 33-landmark pose estimation powered by Google MediaPipe Pose.
   - Overlay HUD telemetry displaying joint connections, tracked limb angles, and real-time tracking metrics.
 - **Missed Detection & Occlusion Safety**:
   - Occluded or out-of-frame limbs are safely marked `None` / unavailable.
@@ -58,7 +58,7 @@ Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, *
 - **Movement Validation**:
   - Rigorous video file validation: MIME type check, file size limit (250MB), 0-byte rejection, and OpenCV decode verification.
 
-### Milestone 3: Transparent Risk Scoring, Anomalies & Role Dashboards
+### Rule-Based Screening & Role Dashboards
 - **Transparent Weighted Scoring Formula**:
   $$\text{Injury Risk Score} = 0.35 \times \text{Biomech Deviations} + 0.20 \times \text{Injury History} + 0.20 \times \text{Asymmetry} + 0.15 \times \text{Training Load (ACWR)} + 0.10 \times \text{Fatigue}$$
   - Risk Categorization:
@@ -66,7 +66,7 @@ Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, *
     - **Moderate Risk** (31 - 60)
     - **High Risk** (61 - 85)
     - **Critical Risk** (86 - 100)
-- **6 Core Injury Categories Prediction**:
+- **Rule-Based Scores for 6 Injury Categories**:
   - **ACL Injury Risk** (Dynamic valgus > 15°, landing stiffness, asymmetry).
   - **Hamstring Strain Risk** (Pelvic obliquity, rapid deceleration strain).
   - **Ankle Sprain Risk** (Excessive ground reaction force, center-of-mass sway).
@@ -79,18 +79,18 @@ Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, *
 - **Longitudinal Risk Score Trends**:
   - Historical session-over-session risk score and movement symmetry trajectory charts.
 - **Targeted Corrective Interventions**:
-  - Prescribed corrective exercises with sets, reps, frequency, and clinical coaching cues.
+  - Rule-based exercise suggestions with sets, reps, and coaching cues; these are not clinical prescriptions.
   - Mobility improvement protocols, strengthening plans, recovery strategies, and workload modifications.
 - **5 Dedicated Role Dashboards**:
-  - **Coach Dashboard**: Squad availability %, high-risk athlete alerts, full readiness roster table, workload modifications.
+  - **Coach Dashboard**: Session-based risk flags and roster context; squad availability is shown only when all roster athletes have analyzed sessions.
   - **Physiotherapist Dashboard**: Clinical rehabilitation registry, flagged valgus cases, asymmetry tracking.
-  - **Sports Scientist Dashboard**: Cohort population means vs SportsPose gold standard, research insights.
+  - **Sports Scientist Dashboard**: Session-level averages when successful analyses exist; no fixed cohort conclusions are shown.
   - **Administrator Dashboard**: System infrastructure metrics (users, videos, storage, DB engine), user directory with role filter, and audit logs.
-  - **Athlete Dashboard**: Personal injury risk score, daily exercise checklist, active recovery guidelines.
+  - **Athlete Dashboard**: Screening score and exercise suggestions when an analysis is available.
 
-### Milestone 4: Reports, Integration, Testing & Deployment
+### Reports, Integration, Testing & Deployment
 - **Multi-Format Analytical Report Exports**:
-  - **PDF Executive Report** (`/api/reports/{id}/pdf`): Formatted clinical assessment report via ReportLab including athlete metadata, weighted score component breakdown, 10 biomechanical metrics table, 6 injury risk categories, corrective prescriptions, and methodology disclosures.
+  - **PDF report** (`/api/reports/{id}/pdf`): Software demonstration report with available metrics, rule-based scores, and methodology disclosures.
   - **Excel Workbook Export** (`/api/reports/{id}/excel`): Structured 3-sheet spreadsheet via openpyxl containing Summary & Risk, Biomechanical Metrics, and Frame-by-Frame Kinematics time-series data.
 - **PostgreSQL Database Support**:
   - Configurable primary database connection via SQLAlchemy (`DATABASE_URL=postgresql://user:pass@host:5432/kinematix`).
@@ -98,7 +98,17 @@ Built with **FastAPI**, **Google MediaPipe Pose**, **OpenCV**, **SQLAlchemy**, *
 - **Docker Containerization**:
   - `docker-compose.yml` with PostgreSQL 16 healthcheck, FastAPI backend, and Nginx frontend.
 - **Automated Test Suite**:
-  - 15 comprehensive unit and integration tests covering authentication, RBAC, password reset, scoring formulas, video upload validation, occlusion handling, admin dashboards, and PDF/Excel report generation.
+  - Backend tests cover authentication, RBAC, password reset, scoring formulas, upload validation, occlusion handling, dashboards, and report generation. The latest full local run passed all 15 tests; it reports dependency deprecation warnings that are not test failures.
+
+---
+
+## Setup Required and Demo Limitations
+
+- Email password reset requires valid SMTP settings in `backend/.env`; the reset token is single-use and expires after 15 minutes.
+- Google sign-in requires the same Google OAuth web client ID in `backend/.env` and `frontend/.env.local`, with the local website authorized in Google Cloud.
+- The bundled/generated videos are synthetic visual demonstrations, not athlete recordings. Users must explicitly select a movement label when uploading.
+- The app compares two successfully analyzed sessions with synchronized overlay playback. Review the displayed pose-detection coverage; low coverage makes measurements especially uncertain. Scores are software estimates and are not clinically validated.
+- The project specification PDF was not present in this checkout, so milestone-by-milestone compliance is not confirmed here.
 
 ---
 
@@ -184,7 +194,7 @@ All demo accounts use password: `password123`
 | **Sports Scientist** | `scientist@sportsai.com` | Dr. Alexei Volkov | Kinematics Distributions, Datasets |
 | **Administrator** | `admin@sportsai.com` | Sys Admin | Platform Governance, User Accounts, Audits |
 
-*(Use the Quick Demo switcher in the login modal or top navigation to switch perspectives).*
+*(For local development, the sign-in page shows the athlete demo credentials. The top navigation role selector switches the displayed perspective.)*
 
 ---
 
@@ -238,7 +248,7 @@ sports-injury-risk-detection/
 ├── frontend/
 │   ├── src/
 │   │   ├── api/client.js      # REST API client & auth session manager
-│   │   ├── components/        # React UI components (VideoStudio, Biomechanics, InjuryRisk, Dashboards, AuthModal, etc.)
+│   │   ├── components/        # React views and components (AuthPage, VideoStudio, Comparison, Biomechanics, Dashboards, etc.)
 │   │   ├── App.jsx            # Application shell and tab router
 │   │   └── main.jsx           # React DOM root
 │   ├── Dockerfile             # Frontend container definition

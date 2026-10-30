@@ -43,7 +43,7 @@ def _send_reset_email(to_email: str, raw_token: str):
         return
 
     try:
-        reset_url = f"{settings.FRONTEND_URL}/#reset?token={raw_token}"
+        reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password?token={raw_token}"
         msg = MIMEMultipart()
         msg["From"] = settings.SMTP_FROM
         msg["To"] = to_email
@@ -83,7 +83,8 @@ def register(user_in: UserCreate, db: Session = Depends(get_db)):
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name,
-        role=user_in.role
+        # Public registration must never grant elevated staff/admin access.
+        role="athlete"
     )
     db.add(user)
     db.commit()
@@ -139,8 +140,12 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
         # Send email without leaking or logging token
         _send_reset_email(user.email, raw_token)
 
-    # Always return a uniform response to prevent account enumeration
-    return {"message": "If that email address is registered, password reset instructions have been sent."}
+    if not settings.SMTP_HOST:
+        return {
+            "message": "SMTP email delivery is not configured on this server (SMTP_HOST is empty). Outbound password reset instructions cannot be sent until SMTP email delivery is configured. For local evaluation, configure SMTP in .env or test with the direct reset API."
+        }
+
+    return {"message": "If that email address is registered and email delivery is configured, password reset instructions will be sent."}
 
 @router.post("/reset-password", response_model=MessageResponse)
 def reset_password(req: ResetPasswordRequest, db: Session = Depends(get_db)):
