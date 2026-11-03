@@ -18,7 +18,8 @@ import {
   Sparkles,
   BarChart3,
   Clock,
-  FileText
+  FileText,
+  FileSpreadsheet
 } from 'lucide-react';
 import { ReportsExportModal } from '../../components/ReportsExportModal';
 
@@ -32,6 +33,7 @@ export const CoachDashboard = () => {
   const [search, setSearch] = useState('');
   const [actionLoading, setActionLoading] = useState(null);
   const [selectedReportAthlete, setSelectedReportAthlete] = useState(null);
+  const [exportingTeamExcel, setExportingTeamExcel] = useState(false);
 
   const fetchSummary = async () => {
     try {
@@ -41,11 +43,37 @@ export const CoachDashboard = () => {
       setSummary(res.data);
       if (res.data.assigned_count > 0) {
         setSquadFilter('squad');
+      } else {
+        setSquadFilter('all');
       }
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to load squad analytics');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownloadTeamExcel = async () => {
+    try {
+      setExportingTeamExcel(true);
+      const res = await api.get('/reports/team/export/excel', { responseType: 'blob' });
+      const blob = new Blob([res.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      const safeName = (user?.full_name || 'Squad').replace(/\s+/g, '_');
+      link.download = `AthletiQ_Team_Analysis_${safeName}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+    } catch (err) {
+      console.error('Failed to export team excel:', err);
+      alert('Failed to generate Team Analysis Excel workbook. Please ensure assigned athletes exist.');
+    } finally {
+      setExportingTeamExcel(false);
     }
   };
 
@@ -71,9 +99,9 @@ export const CoachDashboard = () => {
 
   if (loading) {
     return (
-      <div className="max-w-6xl mx-auto py-20 px-4 text-center">
-        <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-        <p className="text-xs text-slate-500 font-medium">Calibrating squad biomechanical telemetry...</p>
+      <div className="max-w-6xl mx-auto py-24 px-4 text-center">
+        <div className="w-10 h-10 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-sm text-slate-300 font-medium">Calibrating squad biomechanical telemetry...</p>
       </div>
     );
   }
@@ -81,12 +109,12 @@ export const CoachDashboard = () => {
   if (error) {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 text-center">
-        <div className="bg-red-50 text-red-700 p-4 rounded-2xl border border-red-200 text-xs font-medium mb-3">
+        <div className="bg-rose-500/10 text-rose-300 p-5 rounded-2xl border border-rose-500/30 text-sm font-medium mb-4">
           {error}
         </div>
         <button
           onClick={fetchSummary}
-          className="bg-indigo-600 text-white text-xs font-semibold px-4 py-2 rounded-xl hover:bg-indigo-700 transition"
+          className="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-lg shadow-purple-600/25"
         >
           Retry
         </button>
@@ -112,7 +140,7 @@ export const CoachDashboard = () => {
 
   // Filter athletes
   const filteredAthletes = athletes.filter(a => {
-    if (squadFilter === 'squad' && !a.is_assigned_to_me && assigned_count > 0) {
+    if (squadFilter === 'squad' && !a.is_assigned_to_me) {
       return false;
     }
     const q = search.toLowerCase();
@@ -127,130 +155,140 @@ export const CoachDashboard = () => {
   const flaggedAthletes = athletes.filter(a => (a.risk_score && a.risk_score > 60) || (a.symmetry_index && a.symmetry_index > 15));
 
   return (
-    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
+    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Header Banner */}
-      <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-xs">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 flex items-center justify-center">
-              <Award size={18} />
+      <div className="bg-[#11121a] rounded-2xl border border-white/10 p-6 sm:p-7 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-purple-600/20 border border-purple-500/40 text-purple-300 flex items-center justify-center shadow-sm">
+              <Award size={20} />
             </div>
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Coach Squad Overview</h1>
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border bg-indigo-50 text-indigo-700 border-indigo-200">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Coach Squad Overview</h1>
+            <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border bg-purple-500/15 text-purple-300 border-purple-500/30">
               Head Coach Console
             </span>
           </div>
-          <p className="text-xs text-slate-500">
-            Real-time injury risk intelligence, training load management, and squad readiness.
+          <p className="text-xs sm:text-sm text-slate-400">
+            Real-time injury risk intelligence, training load management, and squad readiness analytics.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleDownloadTeamExcel}
+            disabled={exportingTeamExcel}
+            className="bg-[#1a1b28] hover:bg-[#232435] text-emerald-300 border border-emerald-500/30 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition disabled:opacity-50"
+            title="Download multi-sheet team biomechanical analysis"
+          >
+            <FileSpreadsheet size={16} className={`text-emerald-400 ${exportingTeamExcel ? 'animate-bounce' : ''}`} />
+            {exportingTeamExcel ? 'Generating Team Excel...' : 'Export Squad Analysis (Excel)'}
+          </button>
+
           <Link
             to="/athletes"
-            className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-xs transition"
+            className="bg-[#1c1d2e] border border-white/10 hover:bg-[#25263a] text-slate-200 font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 transition"
           >
-            <Users size={14} /> Full Athlete Directory
+            <Users size={16} className="text-purple-400" /> Full Athletes Directory
           </Link>
         </div>
       </div>
 
       {/* 4 Core Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Squad Readiness */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-[#11121a] p-6 rounded-2xl border border-white/10 shadow-lg flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Squad Readiness</span>
-            <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <ShieldCheck size={16} />
+            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">Squad Readiness</span>
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
+              <ShieldCheck size={18} />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-slate-900">{squad_readiness_pct}%</div>
-            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+          <div className="my-3">
+            <div className="text-3xl sm:text-4xl font-extrabold text-white">{squad_readiness_pct}%</div>
+            <div className="w-full bg-[#1e1f2f] rounded-full h-2 mt-2.5 overflow-hidden">
               <div
                 className="bg-emerald-500 h-full rounded-full transition-all duration-500"
                 style={{ width: `${squad_readiness_pct}%` }}
               />
             </div>
           </div>
-          <span className="text-[11px] text-slate-500">Athletes cleared for full training</span>
+          <span className="text-xs text-slate-400">Athletes cleared for full competition</span>
         </div>
 
         {/* Average Risk Score */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-[#11121a] p-6 rounded-2xl border border-white/10 shadow-lg flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Average Risk Score</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Activity size={16} />
+            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">Average Risk Score</span>
+            <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 text-purple-400 flex items-center justify-center">
+              <Activity size={18} />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-slate-900 flex items-baseline gap-1">
+          <div className="my-3">
+            <div className="text-3xl sm:text-4xl font-extrabold text-white flex items-baseline gap-1.5">
               {avg_risk_score}
-              <span className="text-xs font-normal text-slate-400">/ 100</span>
+              <span className="text-sm font-normal text-slate-400">/ 100</span>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${
-              avg_risk_score > 60 ? 'bg-rose-50 text-rose-700' :
-              avg_risk_score > 30 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full inline-block mt-2 ${
+              avg_risk_score > 60 ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30' :
+              avg_risk_score > 30 ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
             }`}>
               {avg_risk_score > 60 ? 'Elevated Squad Load' : avg_risk_score > 30 ? 'Moderate Monitoring' : 'Optimal Conditioning'}
             </span>
           </div>
-          <span className="text-[11px] text-slate-500">Across {total_athletes} monitored profiles</span>
+          <span className="text-xs text-slate-400">Across {total_athletes} monitored athletes</span>
         </div>
 
         {/* Flagged High-Risk */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-[#11121a] p-6 rounded-2xl border border-white/10 shadow-lg flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">High Risk Alerts</span>
-            <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
-              <ShieldAlert size={16} />
+            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">High Risk Alerts</span>
+            <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center">
+              <ShieldAlert size={18} />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-rose-600">{high_risk_count}</div>
-            <span className="text-[11px] text-rose-600 font-semibold block mt-1">
-              {high_risk_count === 0 ? 'No acute risk alerts' : `${high_risk_count} athletes require load relief`}
+          <div className="my-3">
+            <div className="text-3xl sm:text-4xl font-extrabold text-rose-400">{high_risk_count}</div>
+            <span className="text-xs text-rose-300 font-semibold block mt-1.5">
+              {high_risk_count === 0 ? 'No acute risk flags' : `${high_risk_count} athletes require load relief`}
             </span>
           </div>
-          <span className="text-[11px] text-slate-500">{moderate_risk_count} in moderate vigilance</span>
+          <span className="text-xs text-slate-400">{moderate_risk_count} athletes under moderate watch</span>
         </div>
 
         {/* Squad Membership */}
-        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col justify-between">
+        <div className="bg-[#11121a] p-6 rounded-2xl border border-white/10 shadow-lg flex flex-col justify-between">
           <div className="flex justify-between items-start">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">My Assigned Squad</span>
-            <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users size={16} />
+            <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-slate-400">My Assigned Squad</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 flex items-center justify-center">
+              <Users size={18} />
             </div>
           </div>
-          <div className="my-2">
-            <div className="text-2xl font-black text-indigo-700">{assigned_count}</div>
-            <span className="text-[11px] text-indigo-600 font-medium block mt-1">
-              {assigned_count === 0 ? 'No custom squad filtered' : `${assigned_count} athletes in your roster`}
+          <div className="my-3">
+            <div className="text-3xl sm:text-4xl font-extrabold text-indigo-400">{assigned_count}</div>
+            <span className="text-xs text-indigo-300 font-medium block mt-1.5">
+              {assigned_count === 0 ? 'No athletes in squad' : `${assigned_count} athletes in your roster`}
             </span>
           </div>
-          <span className="text-[11px] text-slate-500">{total_athletes} total available</span>
+          <span className="text-xs text-slate-400">{total_athletes} total in roster pool</span>
         </div>
       </div>
 
       {/* Row 2: Visual Risk Distribution & Coach Training Recommendations */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Risk & Load Breakdown */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs space-y-5">
-          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <BarChart3 size={16} className="text-indigo-600" />
-            <span>Squad Risk & Load Distribution</span>
+        <div className="bg-[#11121a] p-6 sm:p-7 rounded-2xl border border-white/10 shadow-xl space-y-6">
+          <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+            <BarChart3 size={18} className="text-purple-400" />
+            <span>Squad Risk &amp; Load Distribution</span>
           </h2>
 
           {/* Risk Band Bar */}
           <div>
-            <div className="flex justify-between text-xs text-slate-600 mb-1.5 font-medium">
+            <div className="flex justify-between text-xs sm:text-sm text-slate-300 mb-2 font-medium">
               <span>Risk Tier Breakdown</span>
               <span>{low_risk_count} Low &bull; {moderate_risk_count} Mod &bull; {high_risk_count} High</span>
             </div>
-            <div className="w-full bg-slate-100 h-3 rounded-full flex overflow-hidden">
+            <div className="w-full bg-[#1e1f2f] h-3.5 rounded-full flex overflow-hidden">
               <div 
                 className="bg-emerald-500 h-full transition-all" 
                 style={{ width: `${(low_risk_count / (total_athletes || 1)) * 100}%` }}
@@ -267,89 +305,89 @@ export const CoachDashboard = () => {
                 title={`High Risk: ${high_risk_count}`}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-400 mt-1">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Low</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500" /> Moderate</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500" /> High</span>
+            <div className="flex justify-between text-xs text-slate-400 mt-2">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Low ({low_risk_count})</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Mod ({moderate_risk_count})</span>
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-500" /> High ({high_risk_count})</span>
             </div>
           </div>
 
           {/* Training Load Distribution */}
-          <div className="pt-3 border-t border-slate-100">
-            <span className="text-xs font-semibold text-slate-700 block mb-2">Training Load Distribution</span>
-            <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="p-2 bg-slate-50 rounded-xl border border-slate-100">
-                <span className="text-[10px] text-slate-400 block font-semibold">Low</span>
-                <strong className="text-sm text-slate-800">{load_distribution.Low || 0}</strong>
+          <div className="pt-4 border-t border-white/5">
+            <span className="text-xs sm:text-sm font-semibold text-slate-300 block mb-3">Training Load Distribution</span>
+            <div className="grid grid-cols-4 gap-2.5 text-center">
+              <div className="p-3 bg-[#161724] rounded-xl border border-white/5">
+                <span className="text-xs text-slate-400 block font-semibold">Low</span>
+                <strong className="text-base font-bold text-white">{load_distribution.Low || 0}</strong>
               </div>
-              <div className="p-2 bg-blue-50/60 rounded-xl border border-blue-100">
-                <span className="text-[10px] text-blue-600 block font-semibold">Medium</span>
-                <strong className="text-sm text-blue-700">{load_distribution.Medium || 0}</strong>
+              <div className="p-3 bg-purple-500/10 rounded-xl border border-purple-500/20">
+                <span className="text-xs text-purple-300 block font-semibold">Medium</span>
+                <strong className="text-base font-bold text-white">{load_distribution.Medium || 0}</strong>
               </div>
-              <div className="p-2 bg-amber-50/60 rounded-xl border border-amber-100">
-                <span className="text-[10px] text-amber-600 block font-semibold">High</span>
-                <strong className="text-sm text-amber-700">{load_distribution.High || 0}</strong>
+              <div className="p-3 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                <span className="text-xs text-amber-300 block font-semibold">High</span>
+                <strong className="text-base font-bold text-white">{load_distribution.High || 0}</strong>
               </div>
-              <div className="p-2 bg-rose-50/60 rounded-xl border border-rose-100">
-                <span className="text-[10px] text-rose-600 block font-semibold">Exhaustive</span>
-                <strong className="text-sm text-rose-700">{load_distribution.Exhaustive || 0}</strong>
+              <div className="p-3 bg-rose-500/10 rounded-xl border border-rose-500/20">
+                <span className="text-xs text-rose-300 block font-semibold">Exhaustive</span>
+                <strong className="text-base font-bold text-white">{load_distribution.Exhaustive || 0}</strong>
               </div>
             </div>
           </div>
 
           {/* Bilateral Symmetry Benchmark */}
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-            <span className="text-slate-500">Squad Bilateral Symmetry Avg:</span>
-            <span className="font-bold text-slate-800">{avg_symmetry_index}° diff</span>
+          <div className="pt-4 border-t border-white/5 flex items-center justify-between text-xs sm:text-sm">
+            <span className="text-slate-400">Squad Bilateral Symmetry Avg:</span>
+            <span className="font-bold text-white">{avg_symmetry_index}&deg; diff</span>
           </div>
         </div>
 
         {/* Actionable Squad Coaching Recommendations */}
-        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs lg:col-span-2 flex flex-col justify-between">
+        <div className="bg-[#11121a] p-6 sm:p-7 rounded-2xl border border-white/10 shadow-xl lg:col-span-2 flex flex-col justify-between space-y-4">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2 mb-1">
-              <Sparkles size={16} className="text-indigo-600" />
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2 mb-1">
+              <Sparkles size={18} className="text-purple-400" />
               <span>Squad Biomechanical Directives</span>
             </h2>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs sm:text-sm text-slate-400 mb-4">
               Prescriptive guidelines tailored to current squad kinematic metrics and load intensities.
             </p>
 
-            <div className="space-y-3 text-xs">
-              <div className="p-3.5 bg-indigo-50/60 rounded-xl border border-indigo-100 flex items-start gap-3">
-                <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+            <div className="space-y-3.5 text-xs sm:text-sm">
+              <div className="p-4 bg-purple-500/10 rounded-xl border border-purple-500/20 flex items-start gap-3.5">
+                <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
                   1
                 </div>
                 <div>
-                  <h3 className="font-bold text-indigo-950">Active Recovery & Load Moderation</h3>
-                  <p className="text-indigo-900/80 mt-0.5">
+                  <h3 className="font-bold text-white">Active Recovery & Load Moderation</h3>
+                  <p className="text-slate-300 mt-1 leading-relaxed">
                     {high_risk_count > 0 
-                      ? `${high_risk_count} athletes are exhibiting composite risk scores > 60. Subsitute high-impact sprinting drills with low-impact neuromuscular conditioning.`
+                      ? `${high_risk_count} athletes are exhibiting composite risk scores > 60. Substitute high-impact sprinting drills with low-impact neuromuscular conditioning.`
                       : "Squad overall load is well-calibrated. Maintain scheduled tactical and technical progressions without immediate volume restriction."}
                   </p>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-blue-50/60 rounded-xl border border-blue-100 flex items-start gap-3">
-                <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+              <div className="p-4 bg-indigo-500/10 rounded-xl border border-indigo-500/20 flex items-start gap-3.5">
+                <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
                   2
                 </div>
                 <div>
-                  <h3 className="font-bold text-blue-950">Bilateral Knee & Hip Symmetry Drills</h3>
-                  <p className="text-blue-900/80 mt-0.5">
+                  <h3 className="font-bold text-white">Bilateral Knee & Hip Symmetry Drills</h3>
+                  <p className="text-slate-300 mt-1 leading-relaxed">
                     Incorporate unilateral single-leg stability exercises (Nordic hamstring curls, Bulgarian split squats) during pre-session warm-ups to equalize side-to-side force distribution.
                   </p>
                 </div>
               </div>
 
-              <div className="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-100 flex items-start gap-3">
-                <div className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
+              <div className="p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/20 flex items-start gap-3.5">
+                <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 mt-0.5 text-xs font-bold">
                   3
                 </div>
                 <div>
-                  <h3 className="font-bold text-emerald-950">FIFA 11+ Movement Quality Protocol</h3>
-                  <p className="text-emerald-900/80 mt-0.5">
-                    Review jump-landing mechanics and trunk lean deviations. Athletes showing trunk lean &gt; 12° should focus on core isometric endurance.
+                  <h3 className="font-bold text-white">FIFA 11+ Movement Quality Protocol</h3>
+                  <p className="text-slate-300 mt-1 leading-relaxed">
+                    Review jump-landing mechanics and trunk lean deviations. Athletes showing trunk lean &gt; 12&deg; should focus on core isometric endurance.
                   </p>
                 </div>
               </div>
@@ -357,8 +395,8 @@ export const CoachDashboard = () => {
           </div>
 
           {flaggedAthletes.length > 0 && (
-            <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-rose-700 flex items-center gap-1.5">
-              <AlertCircle size={14} className="shrink-0" />
+            <div className="mt-4 pt-3.5 border-t border-white/5 text-xs sm:text-sm text-rose-400 flex items-center gap-2">
+              <AlertCircle size={16} className="shrink-0" />
               <span>{flaggedAthletes.length} athletes flagged with movement asymmetry or elevated risk score.</span>
             </div>
           )}
@@ -366,33 +404,33 @@ export const CoachDashboard = () => {
       </div>
 
       {/* Row 3: Athlete Performance Analytics & Squad Roster Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
-        <div className="p-5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/40">
+      <div className="bg-[#11121a] rounded-2xl border border-white/10 shadow-xl overflow-hidden">
+        <div className="p-6 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141522]">
           <div>
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Users size={18} className="text-indigo-600" />
-              <span>Athlete Performance & Squad Directory</span>
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+              <Users size={20} className="text-purple-400" />
+              <span>Athlete Performance &amp; Squad Directory</span>
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
               Monitor individual risk indices, symmetry differentials, and manage squad assignments.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
             {/* Squad Filter Pills */}
-            <div className="bg-slate-100 p-1 rounded-xl flex text-xs font-semibold">
+            <div className="bg-[#1c1d2e] p-1 rounded-xl flex text-xs font-semibold border border-white/5">
               <button
                 onClick={() => setSquadFilter('all')}
-                className={`px-3 py-1 rounded-lg transition ${
-                  squadFilter === 'all' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                className={`px-3.5 py-1.5 rounded-lg transition ${
+                  squadFilter === 'all' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 All Athletes ({total_athletes})
               </button>
               <button
                 onClick={() => setSquadFilter('squad')}
-                className={`px-3 py-1 rounded-lg transition ${
-                  squadFilter === 'squad' ? 'bg-white text-indigo-600 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                className={`px-3.5 py-1.5 rounded-lg transition ${
+                  squadFilter === 'squad' ? 'bg-purple-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 My Squad ({assigned_count})
@@ -401,23 +439,23 @@ export const CoachDashboard = () => {
 
             {/* Search */}
             <div className="relative">
-              <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+              <Search size={15} className="absolute left-3.5 top-2.5 text-slate-400" />
               <input
                 type="text"
                 placeholder="Search athlete or sport..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-8 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-600 w-48"
+                className="pl-9 pr-4 py-2 border border-white/10 rounded-xl text-xs sm:text-sm bg-[#1c1d2e] text-white outline-none focus:ring-2 focus:ring-purple-500 w-56"
               />
             </div>
           </div>
         </div>
 
         {filteredAthletes.length === 0 ? (
-          <div className="p-12 text-center text-slate-400 text-xs">
-            <Users size={32} className="mx-auto mb-2 opacity-40" />
-            <p className="font-semibold text-slate-700 text-sm">No athletes matching criteria</p>
-            <p className="mt-1">
+          <div className="p-16 text-center text-slate-400 text-xs sm:text-sm">
+            <Users size={36} className="mx-auto mb-3 opacity-30 text-purple-400" />
+            <p className="font-semibold text-white text-base">No athletes matching criteria</p>
+            <p className="mt-1 text-slate-400">
               {squadFilter === 'squad' 
                 ? 'No athletes currently assigned to your squad. Switch to "All Athletes" to add members.'
                 : 'No athletes registered in the database yet.'}
@@ -425,51 +463,51 @@ export const CoachDashboard = () => {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-xs sm:text-sm">
               <thead>
-                <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase text-[10px] tracking-wider bg-slate-50/70">
-                  <th className="py-3 px-5">Athlete</th>
-                  <th className="py-3 px-4">Risk Index</th>
-                  <th className="py-3 px-4">Training Load</th>
-                  <th className="py-3 px-4">Bilateral Symmetry</th>
-                  <th className="py-3 px-4">Screenings</th>
-                  <th className="py-3 px-4">Squad Status</th>
-                  <th className="py-3 px-5 text-right">Actions</th>
+                <tr className="border-b border-white/10 text-slate-400 font-semibold uppercase text-xs tracking-wider bg-[#171826]">
+                  <th className="py-3.5 px-6">Athlete</th>
+                  <th className="py-3.5 px-4">Risk Index</th>
+                  <th className="py-3.5 px-4">Training Load</th>
+                  <th className="py-3.5 px-4">Bilateral Symmetry</th>
+                  <th className="py-3.5 px-4">Screenings</th>
+                  <th className="py-3.5 px-4">Squad Status</th>
+                  <th className="py-3.5 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-white/5 text-slate-300">
                 {filteredAthletes.map(a => {
                   const hasRisk = a.risk_score !== null && a.risk_score !== undefined;
                   const isHigh = hasRisk && a.risk_score > 60;
                   const isMod = hasRisk && a.risk_score >= 30 && a.risk_score <= 60;
 
                   return (
-                    <tr key={a.id} className="hover:bg-slate-50/80 transition">
-                      <td className="py-3.5 px-5">
+                    <tr key={a.id} className="hover:bg-white/5 transition">
+                      <td className="py-4 px-6">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-300 font-bold flex items-center justify-center text-sm shrink-0 border border-purple-500/30">
                             {a.name ? a.name[0] : 'A'}
                           </div>
                           <div>
-                            <div className="font-bold text-slate-900">{a.name}</div>
-                            <div className="text-[11px] text-slate-400">
+                            <div className="font-bold text-white text-sm sm:text-base">{a.name}</div>
+                            <div className="text-xs text-slate-400">
                               {a.sport_type || 'General Athletics'} {a.position ? `&bull; ${a.position}` : ''}
                             </div>
                           </div>
                         </div>
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4">
                         {hasRisk ? (
                           <div className="flex items-center gap-2">
-                            <span className={`font-black text-sm ${
-                              isHigh ? 'text-rose-600' : isMod ? 'text-amber-600' : 'text-emerald-600'
+                            <span className={`font-black text-sm sm:text-base ${
+                              isHigh ? 'text-rose-400' : isMod ? 'text-amber-400' : 'text-emerald-400'
                             }`}>
                               {a.risk_score.toFixed(1)}
                             </span>
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              isHigh ? 'bg-rose-50 text-rose-700' :
-                              isMod ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'
+                            <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                              isHigh ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30' :
+                              isMod ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30' : 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30'
                             }`}>
                               {a.risk_band || (isHigh ? 'High' : isMod ? 'Moderate' : 'Low')}
                             </span>
@@ -479,70 +517,70 @@ export const CoachDashboard = () => {
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                          a.training_load === 'Exhaustive' ? 'bg-rose-50 text-rose-700 border-rose-200' :
-                          a.training_load === 'High' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                          a.training_load === 'Medium' ? 'bg-blue-50 text-blue-700 border-blue-200' :
-                          'bg-slate-100 text-slate-600 border-slate-200'
+                      <td className="py-4 px-4">
+                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${
+                          a.training_load === 'Exhaustive' ? 'bg-rose-500/15 text-rose-300 border-rose-500/30' :
+                          a.training_load === 'High' ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' :
+                          a.training_load === 'Medium' ? 'bg-purple-500/15 text-purple-300 border-purple-500/30' :
+                          'bg-white/5 text-slate-300 border-white/10'
                         }`}>
                           {a.training_load}
                         </span>
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4">
                         {a.symmetry_index !== null && a.symmetry_index !== undefined ? (
-                          <span className={`font-semibold ${a.symmetry_index > 15 ? 'text-rose-600 font-bold' : 'text-slate-700'}`}>
-                            {a.symmetry_index}° diff
+                          <span className={`font-semibold ${a.symmetry_index > 15 ? 'text-rose-400 font-bold' : 'text-slate-200'}`}>
+                            {a.symmetry_index}&deg; diff
                           </span>
                         ) : (
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-slate-700">{a.video_count} videos</span>
+                      <td className="py-4 px-4">
+                        <span className="font-semibold text-slate-200">{a.video_count} video{a.video_count === 1 ? '' : 's'}</span>
                       </td>
 
-                      <td className="py-3.5 px-4">
+                      <td className="py-4 px-4">
                         {a.is_assigned_to_me ? (
-                          <span className="text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-full flex items-center gap-1 w-max">
-                            <CheckCircle2 size={11} /> In Squad
+                          <span className="text-xs font-bold text-purple-300 bg-purple-500/15 border border-purple-500/30 px-3 py-1 rounded-full flex items-center gap-1.5 w-max">
+                            <CheckCircle2 size={13} className="text-purple-400" /> In Squad
                           </span>
                         ) : (
-                          <span className="text-[10px] text-slate-400">Available</span>
+                          <span className="text-xs text-slate-400">Available</span>
                         )}
                       </td>
 
-                      <td className="py-3.5 px-5 text-right">
+                      <td className="py-4 px-6 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleToggleSquad(a.id, a.is_assigned_to_me)}
                             disabled={actionLoading === a.id}
-                            className={`p-1.5 rounded-lg border text-xs font-semibold transition ${
+                            className={`p-2 rounded-xl border text-xs font-semibold transition ${
                               a.is_assigned_to_me
-                                ? 'border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
-                                : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+                                ? 'border-white/10 text-slate-400 hover:bg-rose-500/15 hover:text-rose-300 hover:border-rose-500/30'
+                                : 'border-purple-500/30 bg-purple-500/15 text-purple-300 hover:bg-purple-600 hover:text-white'
                             }`}
                             title={a.is_assigned_to_me ? 'Remove from Squad' : 'Add to Squad'}
                           >
-                            {a.is_assigned_to_me ? <UserMinus size={13} /> : <UserPlus size={13} />}
+                            {a.is_assigned_to_me ? <UserMinus size={15} /> : <UserPlus size={15} />}
                           </button>
 
                           <button
                             onClick={() => setSelectedReportAthlete({ id: a.id, name: a.name })}
-                            className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-blue-600 text-xs font-semibold transition"
+                            className="p-2 rounded-xl border border-white/10 text-slate-300 hover:bg-white/10 hover:text-purple-400 text-xs font-semibold transition"
                             title="Export PDF / Excel Reports"
                           >
-                            <FileText size={13} />
+                            <FileText size={15} />
                           </button>
 
                           <Link
                             to={`/dashboard/athlete/${a.id}`}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-2.5 py-1.5 rounded-lg text-xs transition flex items-center gap-1 shadow-xs"
+                            className="bg-purple-600 hover:bg-purple-500 text-white font-semibold px-3 py-2 rounded-xl text-xs sm:text-sm transition flex items-center gap-1.5 shadow-md shadow-purple-600/20"
                           >
                             <span>Kinematics</span>
-                            <ChevronRight size={13} />
+                            <ChevronRight size={14} />
                           </Link>
                         </div>
                       </td>
@@ -556,45 +594,45 @@ export const CoachDashboard = () => {
       </div>
 
       {/* Row 4: Movement Quality Reports & Recent Movement Screenings */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-[#11121a] rounded-2xl border border-white/10 shadow-xl p-6 sm:p-7 space-y-4">
+        <div className="flex justify-between items-center mb-2">
           <div>
-            <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <Clock size={16} className="text-indigo-600" />
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2.5">
+              <Clock size={18} className="text-purple-400" />
               <span>Recent Video Movement Screenings</span>
             </h2>
-            <p className="text-xs text-slate-500">Live feed of processed biomechanics and pose tracking trials across the squad</p>
+            <p className="text-xs sm:text-sm text-slate-400 mt-0.5">Live feed of processed biomechanics and pose tracking trials across the squad</p>
           </div>
-          <Link to="/athletes" className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold">
+          <Link to="/athletes" className="text-xs sm:text-sm text-purple-400 hover:text-purple-300 font-semibold flex items-center gap-1">
             View All Trials &rarr;
           </Link>
         </div>
 
         {recent_screenings.length === 0 ? (
-          <p className="text-xs text-slate-400 py-6 text-center">No video screenings uploaded recently.</p>
+          <p className="text-xs sm:text-sm text-slate-400 py-8 text-center">No video screenings uploaded recently.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             {recent_screenings.map(v => (
-              <div key={v.id} className="p-3.5 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-col justify-between">
+              <div key={v.id} className="p-4 bg-[#161724] rounded-xl border border-white/5 flex flex-col justify-between hover:border-purple-500/30 transition">
                 <div>
-                  <div className="flex justify-between items-center mb-1.5">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Trial #{v.id}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      v.status === 'completed' ? 'bg-emerald-50 text-emerald-700' :
-                      v.status === 'error' ? 'bg-rose-50 text-rose-700' : 'bg-blue-50 text-blue-700'
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs font-bold text-slate-400 uppercase">Trial #{v.id}</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                      v.status === 'completed' ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' :
+                      v.status === 'error' ? 'bg-rose-500/15 text-rose-300 border border-rose-500/30' : 'bg-purple-500/15 text-purple-300 border border-purple-500/30'
                     }`}>
                       {v.status}
                     </span>
                   </div>
-                  <h4 className="font-bold text-xs text-slate-900 truncate">{v.athlete_name}</h4>
-                  <p className="text-[11px] text-slate-400 truncate">{v.filename}</p>
+                  <h4 className="font-bold text-sm text-white truncate">{v.athlete_name}</h4>
+                  <p className="text-xs text-slate-400 truncate mt-0.5">{v.filename}</p>
                 </div>
 
-                <div className="mt-3 pt-2 border-t border-slate-200/60 flex justify-between items-center text-[10px] text-slate-500">
+                <div className="mt-4 pt-3 border-t border-white/5 flex justify-between items-center text-xs text-slate-400">
                   <span>{v.created_at ? new Date(v.created_at).toLocaleDateString() : 'Recent'}</span>
                   <Link
                     to={`/dashboard/athlete/${v.athlete_id}`}
-                    className="font-semibold text-indigo-600 hover:text-indigo-800"
+                    className="font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1"
                   >
                     Review &rarr;
                   </Link>
@@ -617,3 +655,5 @@ export const CoachDashboard = () => {
     </div>
   );
 };
+
+export default CoachDashboard;

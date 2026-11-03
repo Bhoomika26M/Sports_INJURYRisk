@@ -91,59 +91,59 @@ export const AthletesList = () => {
   });
 
   return (
-    <div className="max-w-6xl mx-auto py-6 px-4 sm:px-6 space-y-6">
+    <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-8">
       {/* Header & Search */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2 tracking-tight">
-            <Users className="text-blue-600" size={22} />
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-[#11121a] p-6 sm:p-7 rounded-2xl border border-white/10 shadow-xl">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-white flex items-center gap-3 tracking-tight">
+            <Users className="text-purple-400" size={24} />
             <span>Athletes Directory</span>
           </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs sm:text-sm text-slate-400">
             {user?.role === 'administrator'
-              ? 'All registered athletes across all departments and programs.'
-              : 'Athletes assigned to your roster for kinematic injury screening.'}
+              ? 'All registered athletes across all sports programs and departments.'
+              : 'Athletes in the organization available for kinematic screening and monitoring.'}
           </p>
         </div>
 
-        <div className="w-full sm:w-64">
+        <div className="w-full sm:w-72">
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-2.5 text-slate-400" />
+            <Search size={15} className="absolute left-3.5 top-2.5 text-slate-400" />
             <input
               type="text"
               placeholder="Search by name, sport, position..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 border border-slate-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600 transition"
+              className="w-full pl-9 pr-4 py-2 border border-white/10 rounded-xl text-xs sm:text-sm bg-[#1c1d2e] text-white outline-none focus:ring-2 focus:ring-purple-500"
             />
           </div>
         </div>
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-700 p-3.5 rounded-xl border border-red-200 text-xs flex items-center gap-2">
+        <div className="bg-rose-500/10 text-rose-300 p-4 rounded-xl border border-rose-500/30 text-xs sm:text-sm flex items-center gap-2">
           <AlertCircle size={16} className="shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {loading ? (
-        <div className="bg-white p-16 text-center text-slate-400 rounded-2xl border border-slate-200">
-          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <span className="text-xs">Loading athlete roster...</span>
+        <div className="bg-[#11121a] p-20 text-center text-slate-400 rounded-2xl border border-white/10">
+          <div className="w-8 h-8 border-3 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <span className="text-xs sm:text-sm font-medium">Loading athlete roster...</span>
         </div>
       ) : filteredAthletes.length === 0 ? (
-        <div className="bg-white p-12 text-center rounded-2xl border border-slate-200 shadow-xs">
-          <Activity size={32} className="mx-auto text-slate-300 mb-2" />
-          <h2 className="text-sm font-bold text-slate-700">No Athletes Found</h2>
-          <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
+        <div className="bg-[#11121a] p-16 text-center rounded-2xl border border-white/10 shadow-xl">
+          <Activity size={36} className="mx-auto text-slate-500 mb-3" />
+          <h2 className="text-base font-bold text-white">No Athletes Found</h2>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-sm mx-auto">
             {user?.role === 'administrator'
               ? 'No athlete physical profiles have been registered yet.'
-              : 'No athletes are currently assigned to your monitoring roster.'}
+              : 'No athletes match your search query.'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredAthletes.map(athlete => {
             const trainingIntensity = athlete.training_load?.intensity || 'Normal';
             const pastInjuriesCount = athlete.injury_history?.length || 0;
@@ -151,79 +151,79 @@ export const AthletesList = () => {
             return (
               <div
                 key={athlete.id}
-                className="bg-white rounded-2xl border border-slate-200 shadow-xs hover:border-slate-300 hover:shadow-sm transition p-5 flex flex-col justify-between"
+                className="bg-[#11121a] rounded-2xl border border-white/10 shadow-lg hover:border-purple-500/40 transition p-6 flex flex-col justify-between"
               >
                 <div>
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                         Athlete #{athlete.id}
                       </span>
-                      <h2 className="text-base font-bold text-slate-900 mt-0.5">
+                      <h2 className="text-lg font-bold text-white mt-0.5">
                         {athlete.name || athlete.sport_type || 'General Athlete'}
                       </h2>
-                      <p className="text-xs text-blue-600 font-semibold">{athlete.position || athlete.sport_type || 'Player'}</p>
+                      <p className="text-xs text-purple-400 font-semibold">{athlete.position || athlete.sport_type || 'Player'}</p>
                     </div>
 
-                    <span className="text-[10px] bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-bold border border-blue-200">
+                    <span className="text-xs bg-purple-500/15 text-purple-300 px-2.5 py-1 rounded-full font-bold border border-purple-500/30">
                       Load: {trainingIntensity}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2 py-2.5 my-2 border-y border-slate-100 text-center text-xs">
+                  <div className="grid grid-cols-3 gap-2 py-3 my-3 border-y border-white/5 text-center text-xs">
                     <div>
-                      <span className="text-slate-400 text-[11px] block">Age</span>
-                      <strong className="text-slate-800">{athlete.age || '—'}</strong>
+                      <span className="text-slate-400 text-xs block">Age</span>
+                      <strong className="text-white text-sm">{athlete.age || '—'}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 text-[11px] block">Height</span>
-                      <strong className="text-slate-800">{athlete.height_cm ? `${athlete.height_cm}cm` : '—'}</strong>
+                      <span className="text-slate-400 text-xs block">Height</span>
+                      <strong className="text-white text-sm">{athlete.height_cm ? `${athlete.height_cm}cm` : '—'}</strong>
                     </div>
                     <div>
-                      <span className="text-slate-400 text-[11px] block">Weight</span>
-                      <strong className="text-slate-800">{athlete.weight_kg ? `${athlete.weight_kg}kg` : '—'}</strong>
+                      <span className="text-slate-400 text-xs block">Weight</span>
+                      <strong className="text-white text-sm">{athlete.weight_kg ? `${athlete.weight_kg}kg` : '—'}</strong>
                     </div>
                   </div>
 
-                  <div className="text-xs text-slate-500 mb-4">
-                    <span className="font-semibold text-slate-600">Past Injuries: </span>
+                  <div className="text-xs text-slate-400 mb-4">
+                    <span className="font-semibold text-slate-300">Past Injuries: </span>
                     {pastInjuriesCount > 0 ? (
-                      <span className="text-amber-600 font-medium">{pastInjuriesCount} recorded</span>
+                      <span className="text-amber-400 font-medium">{pastInjuriesCount} recorded</span>
                     ) : (
-                      <span className="text-emerald-600 font-medium">None reported</span>
+                      <span className="text-emerald-400 font-medium">None reported</span>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                <div className="flex items-center gap-2 pt-3 border-t border-white/5">
                   <button
                     onClick={() => navigate(`/dashboard/athlete/${athlete.id}`)}
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-3 rounded-xl text-xs transition shadow-xs"
+                    className="flex-1 bg-purple-600 hover:bg-purple-500 text-white font-semibold py-2.5 px-3 rounded-xl text-xs sm:text-sm transition shadow-md shadow-purple-600/20"
                   >
-                    View Screenings
+                    View Kinematics
                   </button>
 
                   {user?.role === 'administrator' ? (
                     <button
                       onClick={() => setAssignModal({ open: true, athleteId: athlete.id })}
-                      className="p-2 border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 transition"
+                      className="p-2.5 border border-white/10 hover:bg-white/10 rounded-xl text-slate-300 transition"
                       title="Assign Staff"
                       aria-label="Assign Staff"
                     >
-                      <UserPlus size={15} />
+                      <UserPlus size={16} />
                     </button>
                   ) : (user?.role === 'coach' || user?.role === 'physiotherapist') ? (
                     <button
                       onClick={() => handleToggleSquad(athlete.id, isAthleteAssignedToMe(athlete))}
-                      className={`p-2 border rounded-xl transition ${
+                      className={`p-2.5 border rounded-xl transition ${
                         isAthleteAssignedToMe(athlete)
-                          ? 'border-slate-200 text-slate-600 hover:bg-rose-50 hover:text-rose-600'
-                          : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'
+                          ? 'border-white/10 text-slate-400 hover:bg-rose-500/15 hover:text-rose-300 hover:border-rose-500/30'
+                          : 'border-purple-500/30 bg-purple-500/15 text-purple-300 hover:bg-purple-600 hover:text-white'
                       }`}
                       title={isAthleteAssignedToMe(athlete) ? "Remove from Squad" : "+ Add to Squad"}
                       aria-label={isAthleteAssignedToMe(athlete) ? "Remove from Squad" : "Add to Squad"}
                     >
-                      {isAthleteAssignedToMe(athlete) ? <UserMinus size={15} /> : <UserPlus size={15} />}
+                      {isAthleteAssignedToMe(athlete) ? <UserMinus size={16} /> : <UserPlus size={16} />}
                     </button>
                   ) : null}
                 </div>
@@ -235,22 +235,22 @@ export const AthletesList = () => {
 
       {/* Staff Assignment Modal */}
       {assignModal.open && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-1 flex items-center gap-2">
-              <ShieldCheck className="text-blue-600" size={18} />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-[#11121a] rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-7 border border-white/10">
+            <h3 className="text-lg font-bold text-white mb-1 flex items-center gap-2">
+              <ShieldCheck className="text-purple-400" size={20} />
               <span>Assign Staff Member</span>
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-slate-400 mb-4">
               Select a coach, physiotherapist, or sports scientist to grant monitoring access for Athlete #{assignModal.athleteId}.
             </p>
 
-            <div className="mb-4">
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Select Staff</label>
+            <div className="mb-5">
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Select Staff</label>
               <select
                 value={selectedStaffId}
                 onChange={e => setSelectedStaffId(e.target.value)}
-                className="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-white outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-600"
+                className="w-full p-2.5 border border-white/10 rounded-xl text-xs sm:text-sm bg-[#1c1d2e] text-white outline-none focus:ring-2 focus:ring-purple-500"
               >
                 {allStaff.map(s => (
                   <option key={s.id} value={s.id}>
@@ -260,16 +260,16 @@ export const AthletesList = () => {
               </select>
             </div>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex justify-end gap-3">
               <button
                 onClick={() => setAssignModal({ open: false, athleteId: null })}
-                className="px-3.5 py-1.5 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 transition"
+                className="px-4 py-2 border border-white/10 rounded-xl text-xs font-semibold text-slate-300 hover:bg-white/5 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAssignStaff}
-                className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold transition shadow-xs"
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl text-xs font-semibold transition shadow-md shadow-purple-600/20"
               >
                 Assign
               </button>
@@ -280,3 +280,5 @@ export const AthletesList = () => {
     </div>
   );
 };
+
+export default AthletesList;

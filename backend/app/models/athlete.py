@@ -23,8 +23,12 @@ class AthleteProfile(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Persistent Assigned Coach
+    coach_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
+
     # Relationships
-    user = relationship("User", back_populates="athlete_profile")
+    user = relationship("User", back_populates="athlete_profile", foreign_keys=[user_id])
+    assigned_coach = relationship("User", foreign_keys=[coach_id])
     assignments = relationship("AthleteAssignment", back_populates="athlete", cascade="all, delete-orphan")
 
     @property
@@ -37,22 +41,41 @@ class AthleteProfile(Base):
 
     @property
     def assigned_staff(self) -> list:
-        if not self.assignments:
-            return []
-        return [
-            {
-                "id": a.staff.id,
-                "full_name": a.staff.full_name or a.staff.email.split("@")[0].title(),
-                "email": a.staff.email,
-                "role": a.staff.role,
-                "organization": getattr(a.staff, "organization", None),
-                "specialization": getattr(a.staff, "specialization", None),
-            }
-            for a in self.assignments if a.staff
-        ]
+        staff_list = []
+        # If coach_id is set, ensure it's in the assigned staff list
+        if self.assigned_coach:
+            staff_list.append({
+                "id": self.assigned_coach.id,
+                "full_name": self.assigned_coach.full_name or self.assigned_coach.email.split("@")[0].title(),
+                "email": self.assigned_coach.email,
+                "role": self.assigned_coach.role,
+                "organization": getattr(self.assigned_coach, "organization", None),
+                "specialization": getattr(self.assigned_coach, "specialization", None),
+            })
+        if self.assignments:
+            for a in self.assignments:
+                if a.staff and not any(s["id"] == a.staff.id for s in staff_list):
+                    staff_list.append({
+                        "id": a.staff.id,
+                        "full_name": a.staff.full_name or a.staff.email.split("@")[0].title(),
+                        "email": a.staff.email,
+                        "role": a.staff.role,
+                        "organization": getattr(a.staff, "organization", None),
+                        "specialization": getattr(a.staff, "specialization", None),
+                    })
+        return staff_list
 
     @property
     def coach(self) -> dict | None:
+        if self.assigned_coach:
+            return {
+                "id": self.assigned_coach.id,
+                "full_name": self.assigned_coach.full_name or self.assigned_coach.email.split("@")[0].title(),
+                "email": self.assigned_coach.email,
+                "role": self.assigned_coach.role,
+                "organization": getattr(self.assigned_coach, "organization", None),
+                "specialization": getattr(self.assigned_coach, "specialization", None),
+            }
         for staff in self.assigned_staff:
             if staff.get("role") == "coach":
                 return staff

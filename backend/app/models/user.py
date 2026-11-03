@@ -30,4 +30,4 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    athlete_profile = relationship("AthleteProfile", back_populates="user", uselist=False)
+    athlete_profile = relationship("AthleteProfile", back_populates="user", uselist=False, foreign_keys="AthleteProfile.user_id")

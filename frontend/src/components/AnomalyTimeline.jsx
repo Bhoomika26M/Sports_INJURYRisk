@@ -11,14 +11,14 @@ function AnomalyTimeline({ anomalies, onSeek }) {
     return (
       <div className="space-y-4">
         <div>
-          <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <AlertTriangle size={18} className="text-amber-500" />
+          <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+            <AlertTriangle size={20} className="text-amber-400" />
             <span>Kinematic Anomalies Timeline</span>
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">Time-coded movement deviations detected during video playback.</p>
+          <p className="text-xs sm:text-sm text-slate-400 mt-1">Time-coded movement deviations detected during video playback.</p>
         </div>
-        <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-dashed border-slate-200 text-xs">
-          No significant movement anomalies detected across this trial.
+        <div className="p-8 text-center text-slate-400 bg-[#141522] rounded-xl border border-dashed border-white/10 text-xs sm:text-sm">
+          No significant movement anomalies detected across this trial. Kinematic trajectory maintained within normative boundaries.
         </div>
       </div>
     );
@@ -32,46 +32,46 @@ function AnomalyTimeline({ anomalies, onSeek }) {
 
   const getDotColor = (severity) => {
     switch (severity) {
-      case 'critical': return 'bg-rose-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-amber-500';
-      default: return 'bg-blue-500';
+      case 'critical': return 'bg-rose-500 shadow-rose-500/50';
+      case 'high': return 'bg-orange-500 shadow-orange-500/50';
+      case 'medium': return 'bg-amber-500 shadow-amber-500/50';
+      default: return 'bg-purple-500 shadow-purple-500/50';
     }
   };
 
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <AlertTriangle size={18} className="text-amber-500" />
+        <h3 className="text-lg sm:text-xl font-bold text-white tracking-tight flex items-center gap-2">
+          <AlertTriangle size={20} className="text-amber-400" />
           <span>Kinematic Anomalies Timeline</span>
         </h3>
-        <p className="text-xs text-slate-500 mt-0.5">Click any anomaly to seek the video player to that timestamp.</p>
+        <p className="text-xs sm:text-sm text-slate-400 mt-1">Click any anomaly to seek the video player to that timestamp.</p>
       </div>
 
-      <div className="relative border-l-2 border-slate-200 ml-3 space-y-3 pt-1">
+      <div className="relative border-l-2 border-white/10 ml-3 space-y-3.5 pt-1">
         {kinematicAnomalies.map((event, index) => (
           <div key={index} className="ml-5 relative">
             <span 
-              className={`absolute -left-[27px] top-2.5 w-3.5 h-3.5 rounded-full border-2 border-white ${getDotColor(event.severity)} shadow-xs`}
+              className={`absolute -left-[27px] top-3.5 w-3.5 h-3.5 rounded-full border-2 border-[#090a0f] ${getDotColor(event.severity)} shadow-sm`}
               title={event.severity}
             />
             <div 
-              className="p-3.5 bg-slate-50 hover:bg-slate-100/80 rounded-xl cursor-pointer border border-slate-200 transition"
+              className="p-4 bg-[#141522] hover:bg-[#1a1b2b] rounded-xl cursor-pointer border border-white/10 hover:border-purple-500/40 transition"
               onClick={() => handleEventClick(event.timestamp_ms)}
             >
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-xs capitalize text-slate-800">
+              <div className="flex justify-between items-center mb-1.5">
+                <span className="font-bold text-sm capitalize text-white">
                   {event.metric.replace(/_/g, ' ')}
                 </span>
-                <span className="text-[11px] font-mono bg-white text-slate-700 border border-slate-200 py-0.5 px-2 rounded-md flex items-center gap-1">
-                  <Clock size={11} className="text-slate-400" />
+                <span className="text-xs font-mono bg-[#1c1d2e] text-purple-300 border border-purple-500/20 py-0.5 px-2.5 rounded-lg flex items-center gap-1.5">
+                  <Clock size={12} className="text-purple-400" />
                   {(event.timestamp_ms / 1000).toFixed(2)}s
                 </span>
               </div>
-              <p className="text-xs text-slate-600 mb-1.5 leading-relaxed">{event.explanation}</p>
-              <div className="text-[11px] text-slate-500 flex justify-between border-t border-slate-200/60 pt-1.5 mt-1">
-                <span>Observed: <strong className="text-slate-700">{event.observed_value}</strong></span>
+              <p className="text-xs sm:text-sm text-slate-300 mb-2 leading-relaxed">{event.explanation}</p>
+              <div className="text-xs text-slate-400 flex justify-between border-t border-white/5 pt-2">
+                <span>Observed: <strong className="text-white">{event.observed_value}</strong></span>
                 <span className="text-slate-400">Rule: {event.reference_rule}</span>
               </div>
             </div>

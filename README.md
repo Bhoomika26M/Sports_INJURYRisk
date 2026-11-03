@@ -1,87 +1,113 @@
-# Sports Injury Risk Detection
+# AthletiQ — AI Sports Movement Screening & Injury Risk Detection Platform
 
-AI-powered platform that analyzes athlete movement videos, extracts human poses, evaluates biomechanical indicators, and provides preliminary injury-risk screening.
+AthletiQ is an enterprise AI platform that analyzes athlete movement videos, extracts 33-point 3D pose landmarks via MediaPipe, computes clinical biomechanical kinematics, detects movement anomalies, and predicts non-contact injury risks.
 
-## Project Setup
+---
 
-### Prerequisites
+## Key Features
 
-- Node.js (v22+)
-- Python 3.8 - 3.14 (Tested with 3.14)
-- PostgreSQL 17
+- **Computer Vision Pose Estimation**: High-accuracy landmark extraction using Google MediaPipe BlazePose.
+- **Biomechanical Kinematics Engine**: Calculates dynamic frontal knee valgus, trunk lateral lean, forward flexion, and bilateral limb loading symmetry.
+- **Dynamic Anomaly Detection**: Benchmarks movements against normative athletic clinical ranges (e.g., FIFA Medical Network, ACSM).
+- **Injury Risk Scoring & Corrective Drills**: Computes weighted vulnerability scores (0–100%) and automatically synthesizes personalized corrective neuromuscular protocols.
+- **Clinical Reporting & Multi-Format Exports**: Exports print-ready clinical PDF assessments and multi-tab Excel workbooks.
+- **In-App Notification & Alert System**: Dispatches instant severity-coded alerts (`critical`, `warning`, `info`) for high-risk movement patterns.
+- **Role-Based Access Control (RBAC)**: Fine-grained access policies for Athletes, Coaches, Physiotherapists, Sports Scientists, and Administrators.
+- **Production-Ready Docker Architecture**: Multi-stage container builds with Nginx reverse proxy, PostgreSQL 17, and FastAPI.
 
-### Environment Variables
+---
 
-1. Copy `.env.example` to `.env` in the root (for reference) and `backend/.env`.
-2. Update the `DATABASE_URL` with your PostgreSQL credentials.
+## Quick Start (Docker Compose)
 
-### Frontend Setup
+The fastest way to run the entire full-stack system (Database, Backend, and Frontend):
 
-1. Open a terminal and navigate to `frontend/`.
-2. Install dependencies: `npm install`
-3. Run the development server: `npm run dev`
-
-### Backend Setup
-
-1. Open a terminal and navigate to `backend/`.
-2. Create a virtual environment: `python -m venv .venv`
-3. Activate the virtual environment:
-   - Windows: `.venv\Scripts\activate`
-   - Mac/Linux: `source .venv/bin/activate`
-4. Install dependencies: `pip install -r requirements.txt` (Note: wait for all dependencies like OpenCV, FastAPI, SQLAlchemy, and MediaPipe to finish installing).
-5. Run the FastAPI server: `python -m uvicorn app.main:app --reload`
-
-## Troubleshooting
-
-- **PostgreSQL**: Ensure the PostgreSQL service is running and `psql` is added to your system PATH (`C:\Program Files\PostgreSQL\17\bin`).
-- **Python Dependencies**: If a package fails to install, try upgrading pip: `python -m pip install --upgrade pip`.
-
-### Database Setup (Docker)
-
-1. Ensure Docker Desktop is running.
-2. In the project root, start the PostgreSQL container: `docker-compose up -d`
-3. Run Alembic migrations from the `backend/` directory to create the tables:
+1. **Clone the repository**:
    ```bash
-   cd backend
-   .\.venv\Scripts\activate
-   alembic upgrade head
+   git clone <repo-url>
+   cd sports-injury-risk
    ```
 
-### Backend Structure
+2. **Launch all containers**:
+   ```bash
+   docker compose up --build -d
+   ```
 
-- `app/api/`: API routers and endpoints
-- `app/models/`: SQLAlchemy database models
-- `app/schemas/`: Pydantic models (data validation)
-- `app/services/`: Business logic and external service integrations
-- `app/db/`: Database configuration and sessions
-- `tests/`: Pytest test suite
+3. **Access Services**:
+   - Web Application: [http://localhost:3000](http://localhost:3000)
+   - Backend API: [http://localhost:8000](http://localhost:8000)
+   - Interactive Swagger API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+   - System Health: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
-To run tests:
+4. **Seed Rich Demo Data (Optional)**:
+   ```bash
+   docker compose exec -e SEED_DEMO_DATA=true backend python seed_demo.py
+   ```
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+- Node.js (v22+)
+- Python 3.11 - 3.14
+- PostgreSQL 17
+
+### 1. Environment Variables
+Copy `.env.example` to `.env` in the root, `backend/.env`, and `frontend/.env`:
+```bash
+cp .env.example .env
+cp .env.example backend/.env
+```
+
+### 2. Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 3. Backend Setup
 ```bash
 cd backend
+python -m venv .venv
+
+# Windows:
+.\.venv\Scripts\activate
+# Mac/Linux:
+source .venv/bin/activate
+
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
+```
+
+---
+
+## Automated Test Suite (103 Tests)
+
+To run the complete automated test suite (Unit, Integration, API Validation, Security, Monitoring, and E2E):
+```bash
+cd backend
+.\.venv\Scripts\activate
 pytest -v
 ```
 
-## Authentication & Google OAuth 2.0 Setup
+### Test Coverage Highlights
+- `test_e2e_lifecycle.py`: Multi-role end-to-end journey from registration to video upload, kinematic analysis, notification alerts, and PDF/Excel exports.
+- `test_security.py`: Verifies token tampering rejection, authentication bypass prevention, RBAC boundary enforcement, path traversal defense, and SQL injection resilience.
+- `test_api_validation.py`: Verifies boundary conditions, invalid file types, empty files, and malformed request schemas.
+- `test_monitoring.py`: Verifies liveness (`/health/live`), readiness (`/health/ready`), runtime metrics (`/health/metrics`), and HTTP security headers.
+- `test_processing.py`: Real-world video processing with MediaPipe landmark generation.
 
-The application supports both standard email/password authentication and **Sign in / Sign up with Google (OAuth 2.0 / OpenID Connect)**.
-
-### Quick Setup for Google Authentication:
-1. Create a Web OAuth 2.0 Client in [Google Cloud Console](https://console.cloud.google.com/apis/credentials).
-2. Set Authorized JavaScript origins to:
-   - `http://localhost:5173`
-   - `http://127.0.0.1:5173`
-3. Set your Client ID in `backend/.env`:
-   ```env
-   GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   ```
-4. Set your Client ID in `frontend/.env`:
-   ```env
-   VITE_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-   ```
-5. Full step-by-step instructions: see [Google OAuth Setup Guide](docs/GOOGLE_AUTH_SETUP.md).
+---
 
 ## Documentation
-- [Google OAuth Setup Guide](docs/GOOGLE_AUTH_SETUP.md): Step-by-step Google Cloud Console configuration, security architecture, and manual verification checklist.
-- [Datasets and Movement Analysis Workflow](docs/DATASETS_AND_WORKFLOW.md): Detailed information on computer vision datasets (Human3.6M, COCO, etc.), clinical references (FIFA), and the biomechanical analysis workflow.
 
+Detailed technical documentation and user guides are available in the [`docs/`](docs/) directory:
+
+- [System Architecture & Integration Blueprint](docs/ARCHITECTURE_AND_INTEGRATION.md): Component topology, video pipeline lifecycle, and database schemas.
+- [REST API Reference Guide](docs/API_DOCUMENTATION.md): Comprehensive endpoint parameters, payloads, responses, and error codes.
+- [Production Deployment Guide](docs/DEPLOYMENT_GUIDE.md): Local Docker Compose, cloud VPS deployment, Nginx SSL/TLS, and database backup/restore.
+- [User & Clinical Workflow Guide](docs/USER_GUIDE.md): Visual walkthroughs for Athletes, Coaches, Physiotherapists, Sports Scientists, and Administrators.
+- [Security & Compliance Architecture](docs/SECURITY_AND_COMPLIANCE.md): HIPAA & GDPR considerations, biometric data privacy, and RBAC matrix.
+- [Google OAuth 2.0 Setup Guide](docs/GOOGLE_AUTH_SETUP.md): Step-by-step Google Cloud Console configuration and authentication testing.
+- [Datasets and Movement Analysis Workflow](docs/DATASETS_AND_WORKFLOW.md): Computer vision datasets (Human3.6M, COCO, etc.) and biomechanical models.

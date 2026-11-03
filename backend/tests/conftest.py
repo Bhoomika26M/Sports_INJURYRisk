@@ -67,3 +67,9 @@ def test_user(db_session):
     db_session.commit()
     db_session.refresh(user)
     return user
+
+@pytest.fixture
+def auth_headers(test_user):
+    from app.core.security import create_access_token
+    token = create_access_token(subject=str(test_user.id), role=test_user.role)
+    return {"Authorization": f"Bearer {token}"}

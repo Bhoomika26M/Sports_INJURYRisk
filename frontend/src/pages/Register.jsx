@@ -15,7 +15,8 @@ import {
   User as UserIcon, 
   AlertCircle,
   ArrowRight,
-  Check
+  Check,
+  Sparkles
 } from 'lucide-react';
 import { GoogleAuthButton } from '../components/GoogleAuthButton';
 
@@ -75,7 +76,7 @@ export const Register = () => {
   }, [user, navigate]);
 
   const getPasswordStrength = (pwd) => {
-    if (!pwd) return { score: 0, label: '', color: 'bg-slate-200' };
+    if (!pwd) return { score: 0, label: '', color: 'bg-white/10' };
     let score = 0;
     if (pwd.length >= 6) score += 1;
     if (pwd.length >= 10) score += 1;
@@ -84,8 +85,8 @@ export const Register = () => {
 
     if (score <= 1) return { score: 25, label: 'Weak', color: 'bg-rose-500' };
     if (score === 2) return { score: 50, label: 'Fair', color: 'bg-amber-500' };
-    if (score === 3) return { score: 75, label: 'Good', color: 'bg-blue-500' };
-    return { score: 100, label: 'Strong', color: 'bg-emerald-500' };
+    if (score === 3) return { score: 75, label: 'Good', color: 'bg-purple-500' };
+    return { score: 100, label: 'Strong', color: 'bg-emerald-400' };
   };
 
   const pwdStrength = getPasswordStrength(formData.password);
@@ -111,38 +112,42 @@ export const Register = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-slate-50 p-4 sm:p-6 lg:p-8">
-      <div className="max-w-3xl w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden my-4">
+    <div className="min-h-[calc(100vh-65px)] flex items-center justify-center bg-[#050508] relative overflow-hidden p-4 sm:p-6 lg:p-8">
+      {/* Background Ambient Glow */}
+      <div className="absolute inset-0 bg-gradient-to-b from-purple-950/40 via-purple-900/25 to-[#050508] pointer-events-none" />
+      <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-[110vh] h-[55vh] rounded-b-[50%] bg-purple-600/15 blur-[90px] pointer-events-none" />
+
+      <div className="max-w-3xl w-full relative z-10 bg-[#0c0c16]/85 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.8)] overflow-hidden my-4">
         {/* Header */}
-        <div className="bg-slate-900 text-white p-6 sm:p-7 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div className="p-6 sm:p-7 border-b border-white/10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-gradient-to-r from-purple-950/30 to-black/30">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white">
-                <Activity size={16} />
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 to-indigo-500 flex items-center justify-center text-white shadow-[0_0_15px_rgba(168,85,247,0.4)]">
+                <Activity size={18} />
               </div>
-              <span className="font-bold tracking-tight text-white text-base">Athleti<span className="text-blue-400">Q</span></span>
+              <span className="font-bold tracking-tight text-white text-base">Athleti<span className="text-purple-400">Q</span></span>
             </div>
-            <h1 className="text-xl font-bold">Create your account</h1>
-            <p className="text-slate-400 text-xs mt-0.5">Choose your role to get access to tailored tools and analytics</p>
+            <h1 className="text-xl font-bold text-white">Create your account</h1>
+            <p className="text-white/60 text-xs mt-0.5">Choose your role to get access to tailored biomechanical analytics</p>
           </div>
           <div className="text-xs">
-            <span className="text-slate-400">Already registered? </span>
-            <Link to="/login" className="text-blue-400 hover:text-blue-300 font-semibold ml-1">
+            <span className="text-white/40">Already registered? </span>
+            <Link to="/login" className="text-purple-400 hover:text-purple-300 font-semibold ml-1">
               Sign In &rarr;
             </Link>
           </div>
         </div>
 
-        <div className="p-6 sm:p-8">
+        <div className="p-6 sm:p-8 space-y-6">
           {error && (
-            <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs font-medium flex items-start gap-2.5">
-              <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-600" />
+            <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-medium flex items-start gap-2.5">
+              <AlertCircle size={16} className="shrink-0 mt-0.5 text-rose-400" />
               <div className="flex-1">{error}</div>
             </div>
           )}
 
           {/* Google OAuth Sign-Up */}
-          <div className="mb-6">
+          <div>
             <GoogleAuthButton
               role={formData.role}
               onSuccess={() => navigate('/dashboard')}
@@ -151,9 +156,9 @@ export const Register = () => {
 
             <div className="relative my-5 text-center">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-200" />
+                <div className="w-full border-t border-white/10" />
               </div>
-              <span className="relative bg-white px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              <span className="relative bg-[#0c0c16] px-3 text-[10px] font-bold uppercase tracking-wider text-white/40">
                 Or fill out account details
               </span>
             </div>
@@ -162,7 +167,8 @@ export const Register = () => {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Step 1: Role Selection */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-purple-400 mb-2.5 flex items-center gap-1.5">
+                <Sparkles size={13} />
                 1. Select Your Role
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
@@ -174,26 +180,26 @@ export const Register = () => {
                       key={r.id}
                       type="button"
                       onClick={() => setFormData({ ...formData, role: r.id })}
-                      className={`p-3 rounded-xl border text-left transition relative flex flex-col justify-between ${
+                      className={`p-3 rounded-2xl border text-left transition relative flex flex-col justify-between ${
                         isSelected 
-                          ? 'border-blue-600 bg-blue-50/50 shadow-sm ring-1 ring-blue-500/30' 
-                          : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
+                          ? 'border-purple-500 bg-purple-950/40 shadow-[0_0_15px_rgba(168,85,247,0.25)] ring-1 ring-purple-500/40' 
+                          : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.05]'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center justify-between mb-1.5">
                         <div className="flex items-center gap-2">
-                          <Icon size={16} className={isSelected ? 'text-blue-600' : 'text-slate-500'} />
-                          <span className={`text-xs font-bold ${isSelected ? 'text-blue-900' : 'text-slate-800'}`}>
+                          <Icon size={16} className={isSelected ? 'text-purple-400' : 'text-white/40'} />
+                          <span className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-white/80'}`}>
                             {r.title}
                           </span>
                         </div>
                         {isSelected && (
-                          <div className="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-[0_0_8px_rgba(168,85,247,0.6)]">
                             <Check size={10} strokeWidth={3} />
                           </div>
                         )}
                       </div>
-                      <p className="text-[11px] text-slate-500 leading-tight">{r.description}</p>
+                      <p className="text-[11px] text-white/50 leading-tight">{r.description}</p>
                     </button>
                   );
                 })}
@@ -202,8 +208,8 @@ export const Register = () => {
 
             {/* Administrator Passkey Requirement */}
             {formData.role === 'administrator' && (
-              <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl">
-                <div className="flex items-center gap-2 text-rose-900 font-bold text-xs mb-1">
+              <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-2xl">
+                <div className="flex items-center gap-2 text-rose-300 font-bold text-xs mb-1.5">
                   <Key size={14} />
                   <span>Administrator Access Key Required</span>
                 </div>
@@ -213,22 +219,22 @@ export const Register = () => {
                   onChange={(e) => setFormData({ ...formData, admin_code: e.target.value })}
                   placeholder="Enter administrator security passkey"
                   required
-                  className="w-full px-3 py-2 text-xs bg-white border border-rose-300 rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                  className="w-full px-3 py-2 text-xs bg-white/5 border border-rose-500/30 rounded-xl text-white placeholder:text-white/30 focus:ring-2 focus:ring-rose-500/30 focus:outline-none"
                 />
               </div>
             )}
 
             {/* Step 2: Account Details */}
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-purple-400 mb-2.5">
                 2. Account Details
               </label>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Full Name</label>
+                  <label className="block text-xs font-semibold text-white/70 mb-1">Full Name</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
                       <UserIcon size={15} />
                     </div>
                     <input
@@ -238,15 +244,15 @@ export const Register = () => {
                       onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
                       placeholder="e.g. Alex Rivera"
                       required
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full pl-10 pr-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20 transition"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Email Address</label>
+                  <label className="block text-xs font-semibold text-white/70 mb-1">Email Address</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
                       <Mail size={15} />
                     </div>
                     <input
@@ -256,15 +262,15 @@ export const Register = () => {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       placeholder="alex@team.com"
                       required
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full pl-10 pr-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20 transition"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                  <label className="block text-xs font-semibold text-white/70 mb-1">Password</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
                       <Lock size={15} />
                     </div>
                     <input
@@ -274,34 +280,34 @@ export const Register = () => {
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                       placeholder="At least 6 characters"
                       required
-                      className="w-full pl-9 pr-9 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full pl-10 pr-9 py-2 text-xs rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20 transition"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-white/40 hover:text-white"
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                     >
                       {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                     </button>
                   </div>
                   {formData.password && (
-                    <div className="mt-1 flex items-center gap-2">
-                      <div className="flex-1 bg-slate-100 h-1 rounded-full overflow-hidden">
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <div className="flex-1 bg-white/10 h-1 rounded-full overflow-hidden">
                         <div 
                           className={`h-full ${pwdStrength.color} transition-all duration-300`} 
                           style={{ width: `${pwdStrength.score}%` }} 
                         />
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">{pwdStrength.label}</span>
+                      <span className="text-[10px] font-bold text-white/50 uppercase">{pwdStrength.label}</span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Confirm Password</label>
+                  <label className="block text-xs font-semibold text-white/70 mb-1">Confirm Password</label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-white/40">
                       <Lock size={15} />
                     </div>
                     <input
@@ -311,7 +317,7 @@ export const Register = () => {
                       onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                       placeholder="Repeat password"
                       required
-                      className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full pl-10 pr-3 py-2 text-xs rounded-xl border border-white/10 bg-white/5 text-white placeholder:text-white/30 focus:outline-none focus:border-purple-500/50 focus:bg-white/10 focus:ring-2 focus:ring-purple-500/20 transition"
                     />
                   </div>
                 </div>
@@ -321,7 +327,7 @@ export const Register = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-sm transition duration-150 flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+              className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-semibold py-3 px-4 rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.3)] transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50 text-xs uppercase tracking-wider"
             >
               {submitting ? 'Creating account...' : `Register as ${ROLES.find(r => r.id === formData.role)?.title || 'User'}`}
               {!submitting && <ArrowRight size={15} />}
@@ -332,3 +338,4 @@ export const Register = () => {
     </div>
   );
 };
+export default Register;

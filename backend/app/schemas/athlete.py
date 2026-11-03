@@ -23,6 +23,7 @@ class AthleteProfileUpdate(AthleteProfileBase):
 class AthleteProfileResponse(AthleteProfileBase):
     id: int
     user_id: int
+    coach_id: Optional[int] = None
     name: Optional[str] = None
     assigned_staff: Optional[List[Dict[str, Any]]] = None
     coach: Optional[Dict[str, Any]] = None

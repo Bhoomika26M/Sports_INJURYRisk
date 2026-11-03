@@ -158,17 +158,43 @@ def get_user_by_id(
     return user
 
 @router.put("/{user_id}/role", response_model=UserResponse)
+@router.post("/{user_id}/role", response_model=UserResponse)
 def update_user_role(
     user_id: int,
     *,
     db: Session = Depends(get_db),
-    role_in: UserRoleUpdate,
+    role: Optional[str] = Query(None),
+    role_in: Optional[UserRoleUpdate] = None,
     current_user: User = Depends(allow_admin)
 ) -> Any:
-    """Update a user's role or active status (Administrator only)."""
+    """Update a user's role or active status (Administrator only). Accepts query param or JSON payload."""
+    target_role = role or (role_in.role if role_in else None)
+    target_active = role_in.is_active if role_in and role_in.is_active is not None else None
+    
+    if not target_role:
+        raise HTTPException(status_code=400, detail="New role is required")
+        
     updated_user = user_service.update_user_role_and_status(
-        db, user_id=user_id, new_role=role_in.role, is_active=role_in.is_active
+        db, user_id=user_id, new_role=target_role, is_active=target_active
     )
     if not updated_user:
         raise HTTPException(status_code=404, detail="User not found")
     return updated_user
+
+@router.post("/{user_id}/status", response_model=UserResponse)
+@router.put("/{user_id}/status", response_model=UserResponse)
+def update_user_status(
+    user_id: int,
+    *,
+    db: Session = Depends(get_db),
+    is_active: bool = Query(...),
+    current_user: User = Depends(allow_admin)
+) -> Any:
+    """Toggle a user's active status (Administrator only)."""
+    user = user_service.get_user(db, user_id=user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.is_active = is_active
+    db.commit()
+    db.refresh(user)
+    return user

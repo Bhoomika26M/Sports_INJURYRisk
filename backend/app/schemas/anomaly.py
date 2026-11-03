@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union
 
 class AnomalyEvent(BaseModel):
-    timestamp_ms: int
+    timestamp_ms: Union[int, float]
     metric: str
     observed_value: Optional[float]
     reference_rule: str

@@ -81,14 +81,16 @@ def read_athletes(
     - Administrators see all athletes.
     - Staff members can view their assigned squad, or browse all athletes (filter_by='all') to add them to their squad.
     """
-    if current_user.role == "administrator" or filter_by == "all":
+    if current_user.role == "administrator":
+        if filter_by == "unassigned":
+            return [p for p in athlete_service.get_all_profiles(db, skip=skip, limit=limit) if not p.coach_id and not p.assignments]
         return athlete_service.get_all_profiles(db, skip=skip, limit=limit)
+    elif filter_by == "all":
+        return athlete_service.get_all_profiles(db, skip=skip, limit=limit)
+    elif filter_by == "unassigned":
+        return [p for p in athlete_service.get_all_profiles(db, skip=skip, limit=limit) if not p.coach_id and not p.assignments]
     else:
-        assigned = athlete_service.get_assigned_profiles_for_staff(db, staff_id=current_user.id, skip=skip, limit=limit)
-        # If coach/staff has no assigned athletes yet, return all athletes so they can build their squad
-        if not assigned:
-            return athlete_service.get_all_profiles(db, skip=skip, limit=limit)
-        return assigned
+        return athlete_service.get_assigned_profiles_for_staff(db, staff_id=current_user.id, skip=skip, limit=limit)
 
 @router.get("/{athlete_id}", response_model=AthleteProfileResponse)
 def read_athlete_by_id(

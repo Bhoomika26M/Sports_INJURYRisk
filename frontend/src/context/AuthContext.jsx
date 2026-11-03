@@ -24,6 +24,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     // Attempt session restoration via HttpOnly cookie or Bearer token
     fetchCurrentUser().finally(() => setLoading(false));
+
+    const handleAuthExpired = () => {
+      setUser(null);
+    };
+    window.addEventListener('auth:expired', handleAuthExpired);
+    return () => window.removeEventListener('auth:expired', handleAuthExpired);
   }, []);
 
   const login = async (email, password) => {

@@ -68,10 +68,15 @@ def get_all_profiles(db: Session, skip: int = 0, limit: int = 100) -> List[Athle
     return db.query(AthleteProfile).offset(skip).limit(limit).all()
 
 def get_assigned_profiles_for_staff(db: Session, staff_id: int, skip: int = 0, limit: int = 100) -> List[AthleteProfile]:
-    assignments = db.query(AthleteAssignment).filter(AthleteAssignment.staff_id == staff_id).offset(skip).limit(limit).all()
-    return [assignment.athlete for assignment in assignments]
+    assigned_ids = db.query(AthleteAssignment.athlete_id).filter(AthleteAssignment.staff_id == staff_id)
+    return db.query(AthleteProfile).filter(
+        (AthleteProfile.coach_id == staff_id) | (AthleteProfile.id.in_(assigned_ids))
+    ).offset(skip).limit(limit).all()
 
 def check_staff_assigned_to_athlete(db: Session, staff_id: int, athlete_id: int) -> bool:
+    profile = db.query(AthleteProfile).filter(AthleteProfile.id == athlete_id).first()
+    if profile and profile.coach_id == staff_id:
+        return True
     assignment = db.query(AthleteAssignment).filter(
         AthleteAssignment.staff_id == staff_id,
         AthleteAssignment.athlete_id == athlete_id
@@ -79,11 +84,18 @@ def check_staff_assigned_to_athlete(db: Session, staff_id: int, athlete_id: int)
     return assignment is not None
 
 def assign_staff_to_athlete(db: Session, athlete_id: int, staff_id: int) -> AthleteAssignment:
+    staff = db.query(User).filter(User.id == staff_id).first()
+    profile = db.query(AthleteProfile).filter(AthleteProfile.id == athlete_id).first()
+    
+    if profile and staff and staff.role == "coach":
+        profile.coach_id = staff_id
+
     existing = db.query(AthleteAssignment).filter(
         AthleteAssignment.athlete_id == athlete_id,
         AthleteAssignment.staff_id == staff_id
     ).first()
     if existing:
+        db.commit()
         return existing
     assignment = AthleteAssignment(athlete_id=athlete_id, staff_id=staff_id)
     db.add(assignment)
@@ -92,13 +104,19 @@ def assign_staff_to_athlete(db: Session, athlete_id: int, staff_id: int) -> Athl
     return assignment
 
 def unassign_staff_from_athlete(db: Session, athlete_id: int, staff_id: int) -> bool:
+    profile = db.query(AthleteProfile).filter(AthleteProfile.id == athlete_id).first()
+    if profile and profile.coach_id == staff_id:
+        profile.coach_id = None
+
     assignment = db.query(AthleteAssignment).filter(
         AthleteAssignment.athlete_id == athlete_id,
         AthleteAssignment.staff_id == staff_id
     ).first()
-    if not assignment:
+    if not assignment and (not profile or profile.coach_id != staff_id):
+        db.commit()
         return False
-    db.delete(assignment)
+    if assignment:
+        db.delete(assignment)
     db.commit()
     return True
 

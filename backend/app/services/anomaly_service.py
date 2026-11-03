@@ -45,7 +45,7 @@ class AnomalyDetectionService:
         valid_frames: List[Dict[str, Any]] = []
         
         for m in metrics:
-            timestamp = m.get("timestamp_ms", 0)
+            timestamp = int(round(m.get("timestamp_ms", 0)))
             quality = m.get("quality_flag", "OK")
             
             # 1. Data Quality Checks

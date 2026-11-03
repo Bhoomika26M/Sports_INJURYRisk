@@ -51,7 +51,7 @@ class RiskScoreResponse(BaseModel):
 # ==========================================
 
 class HighRiskMovement(BaseModel):
-    timestamp_ms: int
+    timestamp_ms: Union[int, float]
     time_sec: float
     movement_name: str
     observed_metric: str

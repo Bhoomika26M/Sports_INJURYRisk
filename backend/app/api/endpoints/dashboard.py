@@ -113,7 +113,17 @@ def _generate_dashboard_data(db: Session, athlete_id: int):
         "recommendations": recommendations,
         "recommendation_breakdown": recommendation_breakdown,
         "trend_data": trend_data,
-        "video_count": len(completed_videos)
+        "video_count": len(completed_videos),
+        "videos": [
+            {
+                "id": v.id,
+                "movement_type": v.movement_type or "General",
+                "created_at": v.created_at.strftime("%Y-%m-%d %H:%M") if v.created_at else "Recent",
+                "status": v.status,
+                "quality_score": v.quality_score
+            }
+            for v in completed_videos
+        ]
     }
 
 @router.get("/me")
@@ -153,6 +163,10 @@ def get_roster_summary(
 ):
     assigned_records = db.query(AthleteAssignment).filter(AthleteAssignment.staff_id == current_user.id).all()
     assigned_ids = {a.athlete_id for a in assigned_records}
+    # Also include profiles where coach_id == current_user.id
+    direct_assigned = db.query(AthleteProfile.id).filter(AthleteProfile.coach_id == current_user.id).all()
+    for d in direct_assigned:
+        assigned_ids.add(d[0])
     
     all_profiles = db.query(AthleteProfile).all()
     has_custom_squad = len(assigned_ids) > 0 and current_user.role in ["coach", "physiotherapist"]
@@ -171,7 +185,10 @@ def get_roster_summary(
         data = _generate_dashboard_data(db, p.id)
         score = data["risk_score"].composite_score
         band = data["risk_score"].risk_band
-        if score is not None:
+
+        # If user is a coach with assigned athletes, prioritize squad telemetry in summary counts
+        count_in_stats = (not has_custom_squad) or is_in_squad
+        if score is not None and count_in_stats:
             scores_list.append(score)
             if score > 60:
                 high_risk_count += 1
@@ -183,9 +200,10 @@ def get_roster_summary(
         intensity = "Medium"
         if p.training_load and isinstance(p.training_load, dict):
             intensity = p.training_load.get("intensity", "Medium")
-        load_dist[intensity] = load_dist.get(intensity, 0) + 1
+        if count_in_stats:
+            load_dist[intensity] = load_dist.get(intensity, 0) + 1
         
-        if p.injury_history and isinstance(p.injury_history, list):
+        if p.injury_history and isinstance(p.injury_history, list) and count_in_stats:
             for inj in p.injury_history:
                 desc = inj.get("description", inj.get("type", "General Injury"))
                 lower_desc = desc.lower()
@@ -215,7 +233,7 @@ def get_roster_summary(
             max_lean = aggs.get("max_trunk_lean")
             l_knee = aggs.get("left_knee_min")
             r_knee = aggs.get("right_knee_min")
-            if sym is not None:
+            if sym is not None and count_in_stats:
                 symmetry_list.append(sym)
                 
         athletes_summary.append({
@@ -226,6 +244,7 @@ def get_roster_summary(
             "age": p.age,
             "height_cm": p.height_cm,
             "weight_kg": p.weight_kg,
+            "coach_id": p.coach_id,
             "training_load": intensity,
             "injury_count": len(p.injury_history) if p.injury_history else 0,
             "video_count": data["video_count"],

@@ -479,7 +479,18 @@ class RecommendationEngine:
         # -------------------------------------------------------------
         # Rule G: Athlete Context (Training Load & Systemic Recovery)
         # -------------------------------------------------------------
-        if athlete and (athlete.training_load or "").lower() == "high":
+        training_load_val = athlete.training_load if athlete else None
+        is_high_load = False
+        if isinstance(training_load_val, str):
+            is_high_load = training_load_val.lower() == "high"
+        elif isinstance(training_load_val, dict):
+            acute = training_load_val.get("acute_load", 0) or 0
+            chronic = training_load_val.get("chronic_load", 1) or 1
+            ratio = (acute / chronic) if chronic else 0
+            if ratio > 1.4 or str(training_load_val.get("level", "")).lower() == "high":
+                is_high_load = True
+
+        if is_high_load:
             add_rec("training_acwr_regulation")
             add_rec("recovery_sleep_hydration")
 

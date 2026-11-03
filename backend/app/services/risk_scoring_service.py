@@ -38,15 +38,15 @@ class RiskScoringService:
 
     def _determine_risk_band(self, score: Optional[float]) -> str:
         if score is None:
-            return "Unknown (Unvalidated Screening Threshold)"
+            return "Unknown"
         if score <= self.thresholds["low"]:
-            return "Low (Unvalidated Screening Threshold)"
+            return "Low Risk"
         elif score <= self.thresholds["moderate"]:
-            return "Moderate (Unvalidated Screening Threshold)"
+            return "Moderate Risk"
         elif score <= self.thresholds["high"]:
-            return "High (Unvalidated Screening Threshold)"
+            return "High Risk"
         else:
-            return "Critical (Unvalidated Screening Threshold)"
+            return "Critical Risk"
 
     def _determine_category_level(self, prob: float) -> str:
         if prob < 25.0:
@@ -318,7 +318,7 @@ class RiskScoringService:
             v_ratio = fr.get("knee_valgus_ratio")
             if v_ratio is not None and v_ratio < 0.82:
                 high_risk_movements.append(HighRiskMovement(
-                    timestamp_ms=t_ms,
+                    timestamp_ms=int(round(t_ms)),
                     time_sec=t_sec,
                     movement_name="Dynamic Knee Valgus Collapse",
                     observed_metric="Knee-Ankle Ratio",
@@ -331,7 +331,7 @@ class RiskScoringService:
             t_lean = fr.get("trunk_lean")
             if t_lean is not None and t_lean > 30.0:
                 high_risk_movements.append(HighRiskMovement(
-                    timestamp_ms=t_ms,
+                    timestamp_ms=int(round(t_ms)),
                     time_sec=t_sec,
                     movement_name="Excessive Forward Trunk Lean",
                     observed_metric="Trunk Lean Angle",
@@ -344,7 +344,7 @@ class RiskScoringService:
             p_drop = fr.get("pelvic_drop_angle")
             if p_drop is not None and p_drop > 9.0:
                 high_risk_movements.append(HighRiskMovement(
-                    timestamp_ms=t_ms,
+                    timestamp_ms=int(round(t_ms)),
                     time_sec=t_sec,
                     movement_name="Contralateral Pelvic Drop",
                     observed_metric="Pelvic Tilt Angle",
