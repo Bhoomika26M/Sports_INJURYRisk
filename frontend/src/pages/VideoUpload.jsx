@@ -57,9 +57,19 @@ export const VideoUpload = () => {
   const fileInputRef = useRef(null);
   const playbackVideoRef = useRef(null);
 
-  const uploadsBaseUrl = import.meta.env.VITE_API_URL 
-    ? import.meta.env.VITE_API_URL.replace('/api/v1', '').replace(/\/$/, '') 
-    : 'http://localhost:8000';
+  const uploadsBaseUrl = (() => {
+    const apiUrl = import.meta.env.VITE_API_URL;
+    if (apiUrl && apiUrl.startsWith('http')) {
+      return apiUrl.replace('/api/v1', '').replace(/\/$/, '');
+    }
+    if (apiUrl && apiUrl.startsWith('/')) {
+      return '';
+    }
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return window.location.origin;
+    }
+    return 'http://localhost:8000';
+  })();
 
   useEffect(() => {
     const fetchAthleteData = async () => {

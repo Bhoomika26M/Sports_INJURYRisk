@@ -102,7 +102,8 @@ cors_origins = list(dict.fromkeys(default_origins + [o for o in configured_origi
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins if cors_origins else ["*"],
+    allow_origins=cors_origins,
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

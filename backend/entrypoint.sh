@@ -43,7 +43,7 @@ if [ "$SEED_DEMO_DATA" = "true" ] || [ "$SEED_DEMO_DATA" = "1" ]; then
 fi
 
 # Start Uvicorn application server
-WORKERS=${UVICORN_WORKERS:-4}
+WORKERS=${UVICORN_WORKERS:-1}
 PORT=${PORT:-8000}
 echo "Starting Uvicorn server with $WORKERS workers on port $PORT..."
 exec uvicorn app.main:app --host 0.0.0.0 --port "$PORT" --workers "$WORKERS" --proxy-headers --forwarded-allow-ips "*"
