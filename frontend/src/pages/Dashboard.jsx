@@ -78,8 +78,14 @@ function PhysioView({ d }) {
 
 function ScientistView({ d }) {
   const ins = d.injury_prediction_insights;
+  const [exportError, setExportError] = useState("");
   return (
     <>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/70">
+        <p className="text-sm text-slate-600">Research report: one Excel file with every athlete you can see and all their analyses. Athletes appear by code, not by name.</p>
+        <button className="btn" onClick={() => api.download("/reports/research", "research_export.xlsx").catch((e) => setExportError(e.message))}>Download research export</button>
+      </div>
+      <Error message={exportError} />
       <div className="grid gap-4 sm:grid-cols-2"><Stat label="Athletes" value={d.dataset.athletes} /><Stat label="Analyses" value={d.dataset.analyses} /></div>
       <Section title="Team performance trends (weekly mean risk)"><TrendChart labels={d.team_performance_trends.map((w) => w.week)} series={[{ label: "Mean risk score", data: d.team_performance_trends.map((w) => w.mean_risk_score) }]} /></Section>
       <Section title="Injury prediction insights">
@@ -121,7 +127,11 @@ export default function Dashboard() {
   const View = { athlete: AthleteView, coach: CoachView, physiotherapist: PhysioView, sports_scientist: ScientistView, administrator: AdminView }[user.role];
   return (
     <>
-      <h1 className="text-2xl font-semibold capitalize">{user.role.replace("_", " ")} dashboard</h1>
+      <div className="rounded-2xl bg-gradient-to-r from-slate-900 via-blue-900 to-blue-700 p-6 text-white shadow-lg shadow-blue-900/20">
+        <p className="text-sm font-medium capitalize text-blue-200">{user.role.replace("_", " ")} dashboard</p>
+        <h1 className="mt-1 text-2xl font-bold !text-white">Welcome back, {user.full_name.split(" ")[0]}</h1>
+        <p className="mt-1 text-sm text-blue-100">{new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</p>
+      </div>
       {user.role === "athlete" && error.includes("athlete profile") ? (
         <Section title="Set up your profile"><p className="text-sm">Create your athlete profile on the <Link className="text-blue-600" to="/athletes">Athletes</Link> page to get started.</p></Section>
       ) : (

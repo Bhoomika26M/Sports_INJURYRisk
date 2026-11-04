@@ -2,10 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    background:
+      radial-gradient(1100px 480px at 90% -8%, rgba(37, 99, 235, 0.10), transparent 70%),
+      radial-gradient(900px 420px at -8% 108%, rgba(6, 182, 212, 0.09), transparent 70%),
+      #f5f7fb;
+    background-attachment: fixed;
+  }
+  h1 { @apply tracking-tight text-slate-900; }
+}
+
 @layer components {
-  .card { @apply rounded-xl bg-white p-5 shadow-md shadow-blue-900/5 ring-1 ring-blue-100; }
-  .btn { @apply rounded-lg bg-gradient-to-r from-blue-600 to-blue-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:from-blue-700 hover:to-blue-600 disabled:opacity-50; }
-  .btn-secondary { @apply rounded-lg bg-white px-4 py-2 text-sm font-medium text-blue-700 ring-1 ring-blue-200 hover:bg-blue-50; }
-  .input { @apply w-full rounded-lg border border-blue-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500; }
-  .label { @apply mb-1 block text-xs font-medium uppercase tracking-wide text-blue-900/60; }
+  .card { @apply rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200/70 transition-shadow hover:shadow-md; }
+  .btn { @apply inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-blue-600/30 transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 active:scale-[0.98] disabled:opacity-50; }
+  .btn-secondary { @apply inline-flex items-center justify-center rounded-xl bg-white px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:ring-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/40; }
+  .input { @apply w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-4 focus:ring-blue-500/15; }
+  .label { @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500; }
 }

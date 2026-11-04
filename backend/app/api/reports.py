@@ -2,13 +2,13 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from starlette.concurrency import run_in_threadpool
 
 from app.core.config import settings
-from app.core.deps import get_current_user
+from app.core.deps import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.athlete import Athlete
 from app.models.notification import ReportRecord
@@ -62,6 +62,72 @@ async def generate_report(
     db.commit()
     db.refresh(record)
     return record
+
+
+@router.get("/research")
+def research_export(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(Role.sports_scientist.value, Role.administrator.value)),
+):
+    """Team-level Excel export for research: one row per athlete and one per analysis.
+
+    Athletes are identified by their code only (no names), so the file can be shared more freely.
+    """
+    from io import BytesIO
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font
+
+    athletes = db.scalars(accessible_athletes_query(user)).all()
+    by_id = {a.id: a for a in athletes}
+    analyses = db.scalars(
+        select(Analysis).where(Analysis.athlete_id.in_(list(by_id) or [0])).order_by(Analysis.created_at)
+    ).all()
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Athletes"
+    ws.append(["Athlete code", "Sport", "Position", "Age", "Analyses", "Latest analysis", "Latest risk score",
+               "Latest risk category", "Mean risk score", "Latest movement quality"])
+    per_athlete: dict[int, list[Analysis]] = {}
+    for a in analyses:
+        per_athlete.setdefault(a.athlete_id, []).append(a)
+    for ath in athletes:
+        rows = per_athlete.get(ath.id, [])
+        last = rows[-1] if rows else None
+        ws.append([
+            ath.athlete_code, ath.sport_type, ath.position, ath.age, len(rows),
+            last.created_at.date().isoformat() if last else None,
+            last.risk_score if last else None, last.risk_category if last else None,
+            round(sum(r.risk_score for r in rows) / len(rows), 1) if rows else None,
+            last.movement_quality if last else None,
+        ])
+
+    ws2 = wb.create_sheet("Analyses")
+    metric_keys = ["knee_valgus_peak_deg", "hip_stability_pelvic_drop_deg", "trunk_lean_max_deg",
+                   "landing_knee_flexion_deg", "stride_variability_pct", "joint_alignment_score"]
+    ws2.append(["Date", "Athlete code", "Activity", "Risk score", "Risk category", "Movement quality",
+                "Biomechanical efficiency", "Fatigue risk", "Overall health", *metric_keys])
+    for a in analyses:
+        scores = a.scores or {}
+        metrics = (a.biomechanics or {}).get("metrics", {})
+        ws2.append([
+            a.created_at.date().isoformat(), by_id[a.athlete_id].athlete_code, a.activity, a.risk_score,
+            a.risk_category, a.movement_quality, scores.get("biomechanical_efficiency"),
+            scores.get("fatigue_risk"), scores.get("overall_health"), *[metrics.get(k) for k in metric_keys],
+        ])
+    for sheet in (ws, ws2):
+        for cell in sheet[1]:
+            cell.font = Font(bold=True)
+        for col in sheet.columns:
+            sheet.column_dimensions[col[0].column_letter].width = max(12, min(30, len(str(col[0].value)) + 2))
+
+    buf = BytesIO()
+    wb.save(buf)
+    return Response(
+        content=buf.getvalue(), media_type=MEDIA_TYPES["xlsx"],
+        headers={"Content-Disposition": 'attachment; filename="research_export.xlsx"'},
+    )
 
 
 @router.get("", response_model=list[ReportOut])

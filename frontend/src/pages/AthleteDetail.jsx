@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { useAuth } from "../auth.jsx";
+import ShareBox from "../components/ShareBox.jsx";
 import { Error, fmtDate, RiskBadge, Section, Stat, Table, TrendChart } from "../components/ui.jsx";
 
 const ACTIVITIES = ["running", "sprinting", "jumping", "squatting", "landing", "throwing", "cutting", "drill"];
@@ -83,6 +84,12 @@ export default function AthleteDetail() {
           { header: "Uploaded", render: (v) => fmtDate(v.created_at) }, { header: "Activity", key: "activity" }, { header: "File", key: "original_filename" },
           { header: "Status", render: (v) => (v.status === "failed" ? <span className="font-medium text-red-600">Failed: {v.error || "unknown error"}</span> : v.status === "processing" || v.status === "uploaded" ? <span className="text-blue-600">Analysing…</span> : v.status) },
           { header: "Result", render: (v) => { const a = analyses.find((x) => x.video_id === v.id); return a ? <Link className="text-blue-600" to={`/analyses/${a.id}`}>{a.risk_category} ({a.risk_score})</Link> : "—"; } },
+          { header: "", render: (v) => canUpload && (
+            <span className="flex gap-3 text-sm font-medium">
+              {v.status === "failed" && <button type="button" className="text-blue-600 hover:text-blue-700" onClick={act(() => api.post(`/videos/${v.id}/analyze`), "Analysis restarted.")}>Retry</button>}
+              <button type="button" className="text-red-600 hover:text-red-700" onClick={(e) => { if (window.confirm(`Delete ${v.original_filename} and its results?`)) act(() => api.del(`/videos/${v.id}`), "Video deleted.")(e); }}>Delete</button>
+            </span>
+          ) },
         ]} rows={videos} />
       </Section>
 
@@ -107,6 +114,8 @@ export default function AthleteDetail() {
           </form>
         </Section>
       </div>
+
+      {(user.role === "administrator" || athlete.user_id === user.id) && <ShareBox athleteId={id} />}
     </>
   );
 }

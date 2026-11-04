@@ -176,6 +176,9 @@ def centre_of_mass(P: np.ndarray) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 
+LANDING_ACTIVITIES = {"jumping", "landing", "running", "sprinting", "cutting", "drill"}
+
+
 def landing_analysis(P: np.ndarray, fps: float, knee_flex: np.ndarray, valgus: np.ndarray, lean: np.ndarray, bh: float) -> dict | None:
     """Detect the dominant landing and describe its mechanics."""
     ankle_y = 0.5 * (joint(P, "left_ankle")[:, 1] + joint(P, "right_ankle")[:, 1])
@@ -326,7 +329,11 @@ def analyze_biomechanics(
         "trunk_lean": [_f(abs(lean[i])) for i in reps],
     }
 
-    landing = landing_analysis(P, fps, angles["knee_flexion"], valgus, lean, bh)
+    # Landing mechanics only make sense for movements that end in a foot strike. For a squat the
+    # feet stay planted, so small foot shifts must not be read as a (stiff) landing.
+    landing = None
+    if activity in LANDING_ACTIVITIES:
+        landing = landing_analysis(P, fps, angles["knee_flexion"], valgus, lean, bh)
     force = None
     if height_cm and weight_kg:
         force = estimate_vertical_grf(com[:, 1], fps, bh, height_cm, weight_kg)

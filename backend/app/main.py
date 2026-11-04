@@ -13,6 +13,7 @@ from app.core.middleware import RateLimitMiddleware, RequestLoggingMiddleware
 from app.core.security import hash_password
 from app.db.session import SessionLocal, init_db
 from app.models.user import Role, User
+from app.models.video import Video
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,18 @@ def bootstrap_admin() -> None:
             logger.info("Bootstrapped administrator %s", email)
 
 
+def fail_stale_videos() -> None:
+    """A restart kills running analysis jobs; mark them failed so they do not show 'Analysing' forever."""
+    with SessionLocal() as db:
+        stale = db.scalars(select(Video).where(Video.status.in_(["uploaded", "processing"]))).all()
+        for video in stale:
+            video.status = "failed"
+            video.error = "The analysis was interrupted when the server restarted. Use Retry."
+        if stale:
+            db.commit()
+            logger.info("Marked %d interrupted video(s) as failed", len(stale))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     setup_logging()
@@ -45,6 +58,7 @@ async def lifespan(app: FastAPI):
         os.makedirs(directory, exist_ok=True)
     init_db()
     bootstrap_admin()
+    fail_stale_videos()
     yield
 
 

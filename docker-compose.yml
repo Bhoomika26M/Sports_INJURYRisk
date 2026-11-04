@@ -1,6 +1,8 @@
+
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-injury}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-injury_pw}
@@ -8,18 +10,34 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-injury} -d ${POSTGRES_DB:-injury_risk}"]
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-injury} -d ${POSTGRES_DB:-injury_risk}
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 10s
 
   mongo:
     image: mongo:7
+    restart: unless-stopped
     volumes:
       - mongodata:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "db.adminCommand('ping').ok"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   backend:
     build: ./backend
+    restart: unless-stopped
     env_file:
       - path: .env
         required: false
@@ -34,14 +52,26 @@ services:
       postgres:
         condition: service_healthy
       mongo:
-        condition: service_started
+        condition: service_healthy
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   frontend:
     build: ./frontend
+    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "8080:80"
 

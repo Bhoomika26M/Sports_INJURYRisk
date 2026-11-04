@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { api } from "../api.js";
 import { BarChart, Error, fmtDate, RiskBadge, Section, Stat, Table } from "../components/ui.jsx";
 import SkeletonPlayer from "../components/SkeletonPlayer.jsx";
+import Trajectory from "../components/Trajectory.jsx";
 
 const REPORT_TYPES = [["injury_risk", "Injury risk"], ["biomechanical", "Biomechanical"], ["movement", "Movement analysis"], ["performance", "Performance"], ["rehabilitation", "Rehabilitation"]];
 
@@ -42,6 +43,7 @@ export default function AnalysisDetail() {
       </div>
 
       <Section title="Movement tracking"><SkeletonPlayer videoId={a.video_id} /></Section>
+      <Section title="Joint trajectory"><Trajectory videoId={a.video_id} /></Section>
 
       <Section title="Injury risk by category">
         <BarChart horizontal labels={a.injury_risks.map((r) => r.category.replace(/_/g, " "))} data={a.injury_risks.map((r) => r.score)} label="Risk score" />

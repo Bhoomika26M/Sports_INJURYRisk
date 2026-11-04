@@ -117,3 +117,26 @@ def test_tasks_backend_glue(monkeypatch):
     backend.detect(frame, 50)
     assert out[0] == (0.25, 0.75, 0.9) and len(out) == 33
     assert seen == sorted(set(seen)) and len(seen) == 3
+
+
+def test_delete_video_removes_results_but_keeps_reports(client, tmp_path, monkeypatch):
+    h, vid = _upload(client, tmp_path, monkeypatch, FakeBackend())
+    run_analysis(vid)
+    analysis = client.get("/api/v1/analyses", headers=h).json()[0]
+    r = client.post(f"/api/v1/reports/generate?analysis_id={analysis['id']}&report_type=injury_risk&file_format=pdf", headers=h)
+    assert r.status_code == 201, r.text
+    assert client.delete(f"/api/v1/videos/{vid}", headers=h).status_code == 204
+    assert client.get(f"/api/v1/videos/{vid}", headers=h).status_code == 404
+    assert client.get("/api/v1/analyses", headers=h).json() == []
+    assert len(client.get("/api/v1/reports", headers=h).json()) == 1
+
+
+def test_interrupted_jobs_are_marked_failed_on_startup(client, tmp_path, monkeypatch):
+    from app.models.video import Video
+    from app import main
+
+    h, vid = _upload(client, tmp_path, monkeypatch, FakeBackend())  # status "uploaded", job never ran
+    monkeypatch.setattr(main, "SessionLocal", client.app.state.testing_session)
+    main.fail_stale_videos()
+    video = client.get(f"/api/v1/videos/{vid}", headers=h).json()
+    assert video["status"] == "failed" and "Retry" in video["error"]

@@ -32,3 +32,8 @@ def load_pose(video_id: int) -> dict | None:
     if not path.exists():
         return None
     return json.loads(path.read_text())
+
+
+def delete_pose(video_id: int) -> None:
+    """Remove the stored joint positions for a video (file store only)."""
+    _file_path(video_id).unlink(missing_ok=True)

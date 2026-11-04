@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
 import { api } from "../api.js";
-import { Error, Section } from "../components/ui.jsx";
+import { Error, fmtDate, Section, Table } from "../components/ui.jsx";
 
 const ROLES = ["athlete", "coach", "physiotherapist", "sports_scientist", "administrator"];
 
 export default function Admin() {
   const [users, setUsers] = useState([]);
   const [error, setError] = useState("");
+  const [reports, setReports] = useState([]);
+  const [names, setNames] = useState({});
   const [form, setForm] = useState({ email: "", full_name: "", password: "", role: "coach" });
   const load = () => api.get("/users").then(setUsers).catch((e) => setError(e.message));
-  useEffect(() => { load(); }, []);
+  const loadReports = () => api.get("/reports").then(setReports).catch((e) => setError(e.message));
+  useEffect(() => {
+    load(); loadReports();
+    api.get("/athletes").then((list) => setNames(Object.fromEntries(list.map((a) => [a.id, a.full_name])))).catch(() => {});
+  }, []);
+  const removeReport = (r) => { if (window.confirm("Delete this report file?")) api.del(`/reports/${r.id}`).then(loadReports).catch((e) => setError(e.message)); };
   const patch = (id, body) => api.patch(`/users/${id}`, body).then(load).catch((e) => setError(e.message));
 
   return (
@@ -29,6 +36,24 @@ export default function Admin() {
             ))}
           </tbody>
         </table>
+      </Section>
+      <Section title="Reports">
+        <Table
+          empty="No reports have been generated yet."
+          columns={[
+            { header: "Created", render: (r) => fmtDate(r.created_at) },
+            { header: "Athlete", render: (r) => names[r.athlete_id] || `#${r.athlete_id}` },
+            { header: "Type", render: (r) => r.report_type.replace(/_/g, " ") },
+            { header: "Format", render: (r) => r.file_format.toUpperCase() },
+            { header: "", render: (r) => (
+              <span className="flex gap-3 text-sm font-medium">
+                <button type="button" className="text-blue-600 hover:text-blue-700" onClick={() => api.download(`/reports/${r.id}/download`, `${r.report_type}_report.${r.file_format}`).catch((e) => setError(e.message))}>Download</button>
+                <button type="button" className="text-red-600 hover:text-red-700" onClick={() => removeReport(r)}>Delete</button>
+              </span>
+            ) },
+          ]}
+          rows={reports}
+        />
       </Section>
       <Section title="Create user">
         <form className="grid gap-3 sm:grid-cols-5" onSubmit={(e) => { e.preventDefault(); api.post("/users/admin-create", form).then(() => { setForm({ ...form, email: "", full_name: "", password: "" }); load(); }).catch((er) => setError(er.message)); }}>

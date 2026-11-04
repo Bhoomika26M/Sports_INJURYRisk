@@ -3,9 +3,9 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# libgl1 / libglib2.0-0: needed by OpenCV and MediaPipe. ffmpeg: video transcoding.
+# libgl1 / libglib2.0-0: OpenCV. libegl1 / libgles2: MediaPipe pose model (fixes "libEGL.so.1: cannot open shared object file"). ffmpeg: video transcoding.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        ffmpeg libgl1 libglib2.0-0 \
+        ffmpeg libgl1 libglib2.0-0 libegl1 libgles2 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

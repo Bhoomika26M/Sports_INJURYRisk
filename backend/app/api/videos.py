@@ -12,12 +12,13 @@ from starlette.concurrency import run_in_threadpool
 from app.core.config import settings
 from app.core.deps import get_current_user, require_roles
 from app.db.session import get_db
+from app.models.notification import ReportRecord
 from app.models.user import Role, User
-from app.models.video import Video
+from app.models.video import Analysis, Video
 from app.schemas.video import Activity, VideoOut
 from app.services.access import accessible_athletes_query, get_athlete_for
 from app.services.analysis_pipeline import run_analysis
-from app.services.pose_store import load_pose
+from app.services.pose_store import delete_pose, load_pose
 from app.services.video_processing import ALLOWED_EXTENSIONS, validate_video
 
 router = APIRouter(prefix="/videos", tags=["videos"])
@@ -147,6 +148,11 @@ def reanalyze(
 @router.delete("/{video_id}", status_code=204)
 def delete_video(video_id: int, db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     video = _get_video(db, user, video_id, write=True)
+    analysis_ids = [a.id for a in db.scalars(select(Analysis).where(Analysis.video_id == video.id))]
+    if analysis_ids:  # keep generated reports, just detach them from the deleted analysis
+        for report in db.scalars(select(ReportRecord).where(ReportRecord.analysis_id.in_(analysis_ids))):
+            report.analysis_id = None
     Path(video.stored_path).unlink(missing_ok=True)
+    delete_pose(video.id)
     db.delete(video)
     db.commit()
