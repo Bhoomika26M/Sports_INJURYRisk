@@ -34,10 +34,14 @@ alembic.ini
 *.sqlite3
 test.db
 test_assessment.db
-uploads/
+uploads/*
+!uploads/.gitkeep
+backend/uploads/*
+!backend/uploads/.gitkeep
 /backend/uploaded_videos/
 /backend/temp/
 *.log
+*.tmp
 sample.mp4
 
 # OS

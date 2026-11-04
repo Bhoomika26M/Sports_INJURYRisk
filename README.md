@@ -1,113 +1,209 @@
 # AthletiQ — AI Sports Movement Screening & Injury Risk Detection Platform
 
-AthletiQ is an enterprise AI platform that analyzes athlete movement videos, extracts 33-point 3D pose landmarks via MediaPipe, computes clinical biomechanical kinematics, detects movement anomalies, and predicts non-contact injury risks.
+AthletiQ is an enterprise full-stack AI platform that analyzes athletic movement videos, extracts 33-point 3D anatomical pose landmarks using Google MediaPipe BlazePose, computes clinical biomechanical kinematics, detects movement anomalies, and predicts non-contact injury risks (e.g., ACL tears, hamstring strains, patellar tendinopathy).
 
 ---
 
-## Key Features
+## Architecture Overview
 
-- **Computer Vision Pose Estimation**: High-accuracy landmark extraction using Google MediaPipe BlazePose.
-- **Biomechanical Kinematics Engine**: Calculates dynamic frontal knee valgus, trunk lateral lean, forward flexion, and bilateral limb loading symmetry.
-- **Dynamic Anomaly Detection**: Benchmarks movements against normative athletic clinical ranges (e.g., FIFA Medical Network, ACSM).
-- **Injury Risk Scoring & Corrective Drills**: Computes weighted vulnerability scores (0–100%) and automatically synthesizes personalized corrective neuromuscular protocols.
-- **Clinical Reporting & Multi-Format Exports**: Exports print-ready clinical PDF assessments and multi-tab Excel workbooks.
-- **In-App Notification & Alert System**: Dispatches instant severity-coded alerts (`critical`, `warning`, `info`) for high-risk movement patterns.
-- **Role-Based Access Control (RBAC)**: Fine-grained access policies for Athletes, Coaches, Physiotherapists, Sports Scientists, and Administrators.
-- **Production-Ready Docker Architecture**: Multi-stage container builds with Nginx reverse proxy, PostgreSQL 17, and FastAPI.
+```
+┌────────────────────────────────────────────────────────┐
+│               Frontend: React 19 + Vite                │
+│       TailwindCSS • Lucide Icons • Recharts Charts     │
+│       Deployed on: Vercel / Render Static Site (Free)  │
+└───────────────────────────┬────────────────────────────┘
+                            │ REST API / JWT
+                            ▼
+┌────────────────────────────────────────────────────────┐
+│                Backend: FastAPI (Python)               │
+│     Pydantic v2 • SQLAlchemy 2.0 • Alembic • JWT Auth  │
+│        Deployed on: Render Web Service (Docker / Free) │
+└─────────────┬────────────────────────────┬─────────────┘
+              │                            │
+              ▼                            ▼
+┌──────────────────────────┐  ┌──────────────────────────┐
+│   AI & Kinematics Engine │  │      Database Engine     │
+│   • MediaPipe Pose (CPU) │  │   • PostgreSQL 17 or     │
+│   • OpenCV & FFmpeg      │  │   • SQLite (Zero-Config) │
+│   • Joint Angle Analysis │  │   • Auto-Schema Sync     │
+└──────────────────────────┘  └──────────────────────────┘
+```
 
 ---
 
-## Quick Start (Docker Compose)
+## Free Cloud Deployment (Zero-Cost Hosting)
 
-The fastest way to run the entire full-stack system (Database, Backend, and Frontend):
+The platform is optimized to deploy completely free without requiring expensive GPU instances or paid database tiers.
 
-1. **Clone the repository**:
-   ```bash
-   git clone <repo-url>
-   cd sports-injury-risk
-   ```
+### Option 1: 1-Click Render Blueprint (Recommended)
 
-2. **Launch all containers**:
-   ```bash
-   docker compose up --build -d
-   ```
+Render provides free hosting for both the Docker backend and the static frontend with automatic inter-service linking via the included [`render.yaml`](render.yaml):
 
-3. **Access Services**:
-   - Web Application: [http://localhost:3000](http://localhost:3000)
-   - Backend API: [http://localhost:8000](http://localhost:8000)
-   - Interactive Swagger API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-   - System Health: [http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+1. **Push your code** to GitHub.
+2. Sign in to [Render](https://dashboard.render.com/) and navigate to **Blueprints**.
+3. Click **New Blueprint Instance** and connect your repository (`Bhoomika26M/Sports_INJURYRisk`, branch `Aparna-Sasikumar`).
+4. Render detects [`render.yaml`](render.yaml) and provisions:
+   - **`athletiq-backend`**: Docker Web Service running FastAPI, MediaPipe, OpenCV, and SQLite on persistent `/tmp` storage.
+   - **`athletiq-frontend`**: High-performance Static Site built from Vite, automatically linked to the backend's external URL via `VITE_API_URL`.
+5. Click **Apply**. Once built, both services will be live with free HTTPS URLs.
 
-4. **Seed Rich Demo Data (Optional)**:
-   ```bash
-   docker compose exec -e SEED_DEMO_DATA=true backend python seed_demo.py
-   ```
+---
+
+### Option 2: Vercel (Frontend) + Render (Backend)
+
+For ultra-fast global edge delivery on the frontend:
+
+#### Step 1: Deploy Backend on Render
+1. Go to [Render Dashboard](https://dashboard.render.com/) > **New +** > **Web Service**.
+2. Connect your GitHub repository.
+3. Configure the service:
+   - **Environment**: Docker
+   - **Docker Context**: `backend`
+   - **Dockerfile Path**: `backend/Dockerfile`
+   - **Instance Type**: Free (512 MB RAM / 0.5 CPU)
+4. Under **Environment Variables**, add:
+   | Variable | Value | Description |
+   |---|---|---|
+   | `PORT` | `8000` | Application HTTP port |
+   | `SECRET_KEY` | *(generate a random 32-char string)* | JWT signature key |
+   | `DATABASE_URL_OVERRIDE` | `sqlite:////tmp/sports_injury.db` | Embedded zero-cost SQLite database |
+   | `UPLOAD_DIR` | `/tmp/uploads` | Upload storage directory |
+   | `UVICORN_WORKERS` | `1` | Optimized for free tier memory limits |
+   | `BACKEND_CORS_ORIGINS` | `*` | Allows cross-origin API access |
+5. Click **Deploy Web Service** and copy your backend URL (e.g. `https://athletiq-backend.onrender.com`).
+
+#### Step 2: Deploy Frontend on Vercel
+1. Go to [Vercel Dashboard](https://vercel.com/) > **Add New...** > **Project**.
+2. Import your GitHub repository.
+3. Configure the project:
+   - **Root Directory**: `frontend`
+   - **Framework Preset**: Vite
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `dist`
+4. Under **Environment Variables**, add:
+   | Variable | Value |
+   |---|---|
+   | `VITE_API_URL` | `https://athletiq-backend.onrender.com/api/v1` |
+5. Click **Deploy**. SPA client-side routing is automatically handled by the included [`frontend/vercel.json`](frontend/vercel.json).
 
 ---
 
 ## Local Development Setup
 
 ### Prerequisites
-- Node.js (v22+)
-- Python 3.11 - 3.14
-- PostgreSQL 17
+- Node.js (v20+) & npm
+- Python 3.11 – 3.14
+- Git
 
-### 1. Environment Variables
-Copy `.env.example` to `.env` in the root, `backend/.env`, and `frontend/.env`:
-```bash
-cp .env.example .env
-cp .env.example backend/.env
-```
-
-### 2. Frontend Setup
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 3. Backend Setup
+### 1. Backend Setup
 ```bash
 cd backend
 python -m venv .venv
 
-# Windows:
-.\.venv\Scripts\activate
-# Mac/Linux:
+# Activate virtual environment:
+# Windows (PowerShell):
+.\.venv\Scripts\Activate.ps1
+# macOS / Linux:
 source .venv/bin/activate
 
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
+Backend API will be accessible at:
+- Root & Health: [http://localhost:8000](http://localhost:8000)
+- Interactive API Docs (Swagger): [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 2. Frontend Setup
+In a separate terminal:
+```bash
+cd frontend
+npm install
+npm run dev
+```
+Frontend application will be accessible at [http://localhost:5173](http://localhost:5173).
+
+---
+
+## Quick Start with Docker Compose
+
+To launch the complete containerized stack locally (PostgreSQL 17, FastAPI backend, and Nginx reverse proxy frontend):
+
+```bash
+# Start all containers in the background
+docker compose up --build -d
+
+# Verify services
+docker compose ps
+
+# Access the application
+# Frontend UI: http://localhost:3000
+# Backend API: http://localhost:8000
+```
+
+---
+
+## AI & Computer Vision Kinematics Engine
+
+The video processing pipeline uses Google MediaPipe BlazePose (`pose_landmarker_full.task` and `pose_landmarker_lite.task`) running natively on CPU delegates:
+
+1. **Resolution & Contrast Normalization**: Dynamically scales high-res videos to 1280px standard format with contrast auto-enhancement for dimly lit indoor training gyms.
+2. **33-Point 3D Landmark Tracking**: Extracts coordinates for head, shoulders, elbows, wrists, hips, knees, ankles, and feet at video frame rates.
+3. **Primary Athlete Focus**: In multi-person environments, automatically locks onto the focal subject based on bounding box proximity.
+4. **Dynamic Joint Angle Telemetry**:
+   - Bilateral knee flexion angles
+   - Torso/trunk lateral lean relative to vertical
+   - Hip flexion and ankle dorsiflexion
+5. **Annotated Skeleton Export**: Uses `imageio` and FFmpeg to generate browser-compatible MP4 video (`yuv420p` / `libx264`) featuring neon dual-layer skeleton overlays, movement trajectories, and real-time HUD metrics.
+6. **Automated Risk Scoring**: Compares movement patterns against clinical norms to compute risk scores (0–100%) and trigger automated alerts.
+
+---
+
+## Role-Based Access Control (RBAC)
+
+The system supports 5 specialized roles:
+
+| Role | Permissions & Dashboards |
+|---|---|
+| **Athlete** | View personal movement assessments, injury risk scores, corrective exercise plans, and upload movement trials. |
+| **Coach** | Track assigned athlete rosters, review movement compliance, and monitor team workload trends. |
+| **Physiotherapist** | Access full joint kinematics, symmetry scores, clinical risk evaluations, and prescribe targeted neuromuscular drills. |
+| **Sports Scientist** | Cross-athlete dataset exploration, kinematic anomaly detection, population benchmarking, and movement simulation. |
+| **Administrator** | Manage user accounts, role delegations, athlete-staff assignments, and system audit logs. |
 
 ---
 
 ## Automated Test Suite (103 Tests)
 
-To run the complete automated test suite (Unit, Integration, API Validation, Security, Monitoring, and E2E):
+The backend includes a comprehensive pytest suite covering unit, integration, validation, security, and end-to-end workflows:
+
 ```bash
 cd backend
-.\.venv\Scripts\activate
 pytest -v
 ```
 
-### Test Coverage Highlights
-- `test_e2e_lifecycle.py`: Multi-role end-to-end journey from registration to video upload, kinematic analysis, notification alerts, and PDF/Excel exports.
-- `test_security.py`: Verifies token tampering rejection, authentication bypass prevention, RBAC boundary enforcement, path traversal defense, and SQL injection resilience.
-- `test_api_validation.py`: Verifies boundary conditions, invalid file types, empty files, and malformed request schemas.
-- `test_monitoring.py`: Verifies liveness (`/health/live`), readiness (`/health/ready`), runtime metrics (`/health/metrics`), and HTTP security headers.
-- `test_processing.py`: Real-world video processing with MediaPipe landmark generation.
+All 103 tests pass with 100% success rate:
+- ✅ **`test_e2e_lifecycle.py`**: Multi-role journey from registration to video upload, kinematic analysis, alert dispatch, and PDF/Excel export.
+- ✅ **`test_videos.py` & `test_processing.py`**: Multipart video upload validation, MediaPipe pose extraction, skeleton rendering, and artifact storage.
+- ✅ **`test_security.py`**: JWT validation, password hashing, role enforcement, and path traversal defense.
+- ✅ **`test_anomaly.py` & `test_risk_scoring.py`**: Clinical anomaly algorithms and injury risk calculations.
+- ✅ **`test_monitoring.py`**: System health endpoints (`/health/live`, `/health/ready`, `/health/metrics`).
 
 ---
 
-## Documentation
+## Environment Variables Reference
 
-Detailed technical documentation and user guides are available in the [`docs/`](docs/) directory:
+### Backend (`backend/.env` or Cloud Dashboard)
+| Variable | Default | Purpose |
+|---|---|---|
+| `SECRET_KEY` | *(auto-generated)* | Key for signing JWT authentication tokens |
+| `DATABASE_URL_OVERRIDE` | `sqlite:///./sports_injury.db` | Direct database connection string (SQLite or PostgreSQL) |
+| `BACKEND_CORS_ORIGINS` | `["*"]` | Allowed CORS origins for frontend requests |
+| `UPLOAD_DIR` | `../uploads` | Storage path for uploaded videos and JSON landmarks |
+| `UVICORN_WORKERS` | `1` | Number of Uvicorn workers (keep at 1 for free cloud tiers) |
+| `ADMIN_REGISTRATION_CODE` | `admin-secret-dev-code` | Secret code required for registering administrator accounts |
 
-- [System Architecture & Integration Blueprint](docs/ARCHITECTURE_AND_INTEGRATION.md): Component topology, video pipeline lifecycle, and database schemas.
-- [REST API Reference Guide](docs/API_DOCUMENTATION.md): Comprehensive endpoint parameters, payloads, responses, and error codes.
-- [Production Deployment Guide](docs/DEPLOYMENT_GUIDE.md): Local Docker Compose, cloud VPS deployment, Nginx SSL/TLS, and database backup/restore.
-- [User & Clinical Workflow Guide](docs/USER_GUIDE.md): Visual walkthroughs for Athletes, Coaches, Physiotherapists, Sports Scientists, and Administrators.
-- [Security & Compliance Architecture](docs/SECURITY_AND_COMPLIANCE.md): HIPAA & GDPR considerations, biometric data privacy, and RBAC matrix.
-- [Google OAuth 2.0 Setup Guide](docs/GOOGLE_AUTH_SETUP.md): Step-by-step Google Cloud Console configuration and authentication testing.
-- [Datasets and Movement Analysis Workflow](docs/DATASETS_AND_WORKFLOW.md): Computer vision datasets (Human3.6M, COCO, etc.) and biomechanical models.
+### Frontend (`frontend/.env` or Cloud Dashboard)
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8000/api/v1` | URL of the deployed FastAPI backend API |
+| `VITE_GOOGLE_CLIENT_ID` | `...` | Optional Google OAuth 2.0 Web Client ID |

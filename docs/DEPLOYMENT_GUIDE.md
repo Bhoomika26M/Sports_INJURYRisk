@@ -14,7 +14,36 @@ This guide details how to build, containerize, and deploy the AthletiQ platform 
 
 ---
 
-## 2. Quick Local Deployment (Docker Compose)
+## 2. Free Cloud Platform Deployment (Zero Cost)
+
+The repository includes pre-configured configurations for zero-cost cloud deployment:
+- [`render.yaml`](../render.yaml): Render Blueprint for deploying both backend and frontend on Render's free tier.
+- [`vercel.json`](../vercel.json): Vercel SPA routing and build configuration for deploying the frontend.
+- [`frontend/public/_redirects`](../frontend/public/_redirects): Netlify and Render Static Site routing fallback.
+
+### Option A: Render 1-Click Blueprint (Backend + Frontend)
+1. Push branch `Aparna-Sasikumar` to GitHub.
+2. Log into [Render Dashboard](https://dashboard.render.com/) and click **New +** > **Blueprint**.
+3. Select this repository.
+4. Render provisions:
+   - `athletiq-backend` (Docker Web Service, 512MB RAM, SQLite on `/tmp`, Uvicorn on port 8000).
+   - `athletiq-frontend` (Static Site, Vite build, automatically injected `VITE_API_URL`).
+5. Click **Apply**.
+
+### Option B: Vercel (Frontend) + Render (Backend)
+1. **Backend**: Deploy on Render as a **Docker Web Service** using `backend/Dockerfile` and root context `backend`.
+   - Set `DATABASE_URL_OVERRIDE=sqlite:////tmp/sports_injury.db`
+   - Set `PORT=8000`
+   - Set `SECRET_KEY=your-secret-key-32-chars-minimum`
+   - Set `UVICORN_WORKERS=1`
+   - Set `BACKEND_CORS_ORIGINS=*`
+2. **Frontend**: Deploy on Vercel as a Vite project from root directory `frontend`.
+   - Set `VITE_API_URL=https://<your-render-backend-url>/api/v1`
+   - SPA routing is managed by `frontend/vercel.json`.
+
+---
+
+## 3. Quick Local Deployment (Docker Compose)
 
 To spin up the entire multi-container stack locally (PostgreSQL 17, FastAPI backend, and Nginx React frontend):
 
