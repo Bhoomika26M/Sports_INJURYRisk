@@ -81,6 +81,7 @@ class Settings(BaseSettings):
     # (scripts/gemini_video.py; needs GEMINI_API_KEY). The result is shown to the user and is NEVER used in scoring.
     # It uploads footage of the athlete to Google, so enable it only with the athlete's consent.
     auto_gemini_observation: bool = False
+    auto_gemini_on_insufficient_baseline: bool = True
 
     # Email (SendGrid)
     sendgrid_api_key: Optional[str] = None

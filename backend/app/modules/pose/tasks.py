@@ -250,41 +250,40 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             metrics, analysis = analyze_frames(frame_results, movement_type, camera_view, fps, diagnostics, auto=auto)
             await store_biomechanical_metrics(db, video_id, metrics)
 
-            # Step 4 (optional, off by default) — qualitative Gemini observation, DISPLAY ONLY: it is stored beside the
-            # analysis for the results page and is never read by scoring (see docs/DECISIONS.md, 2026-10-27).
-            if settings.auto_gemini_observation:
-                try:
-                    import importlib
-                    ai_mod = importlib.import_module("scripts.gemini_video")
-                    ai_key = ai_mod.get_key()
-                    if ai_key:
-                        # Ground the observation with what pose estimation measured on this clip
-                        kin_summary = []
-                        if movement_type:
-                            kin_summary.append(f"Movement: {movement_type}")
-                        if camera_view:
-                            kin_summary.append(f"Camera plane: {camera_view}")
-                        reps_data = (analysis.get("movement") or {}).get("reps")
-                        if reps_data and "reps" in reps_data:
-                            kin_summary.append(f"Pose tracking rep count: {len(reps_data['reps'])}")
-                        q_rep = analysis.get("quality") or {}
-                        if q_rep.get("usable_pct") is not None:
-                            kin_summary.append(f"Landmark visibility coverage: {q_rep.get('usable_pct')}%")
-                        kin_context = "; ".join(kin_summary) if kin_summary else None
+            # Step 4 — Check baseline sufficiency.
+            # If peer baseline videos are insufficient (< min_baseline_videos), automatically engage
+            # Gemini observation so a valid score can be computed immediately without manual user intervention.
+            # If baseline is sufficient (e.g. 2+ videos across athletes), Gemini stays optional.
+            from app.modules.video.ai_service import check_baseline_sufficiency, run_gemini_observation_for_video
 
-                        def _call_ai():
-                            with ai_mod.make_client(ai_key) as client:
-                                return ai_mod.analyze(
-                                    local_path, client, height=480, fps=4.0, media_resolution="high",
-                                    models=ai_mod.MODELS, movement=movement_type, kinematic_context=kin_context,
-                                )
-                        ai_obs = await loop.run_in_executor(None, _call_ai)
-                        if ai_obs:
-                            analysis["gemini_observation"] = ai_obs
-                    else:
-                        logger.info("AUTO_GEMINI_OBSERVATION is on but GEMINI_API_KEY is not set: skipping")
-                except Exception as e:
-                    logger.warning(f"Automatic video observation failed for {video_id}: {e}")
+            val_metric_names = [m["name"] for m in metrics if m.get("confidence") == "validated"]
+            is_sufficient, have_v, need_v, have_a, need_a = await check_baseline_sufficiency(
+                db, movement_type, video_id, val_metric_names
+            )
+
+            should_run_ai = settings.auto_gemini_observation or (
+                settings.auto_gemini_on_insufficient_baseline and not is_sufficient
+            )
+
+            if should_run_ai:
+                if not is_sufficient:
+                    logger.info(
+                        f"Insufficient baseline for '{movement_type}' ({have_v}/{need_v} videos, {have_a}/{need_a} athletes). "
+                        f"Automatically engaging Gemini video observation..."
+                    )
+                else:
+                    logger.info(f"auto_gemini_observation enabled; engaging Gemini observation for video {video_id}")
+
+                ai_obs = await run_gemini_observation_for_video(
+                    db, video, local_path=local_path, kinematic_context=None
+                )
+                if ai_obs:
+                    analysis["gemini_observation"] = ai_obs
+            else:
+                logger.info(
+                    f"Baseline sufficient for '{movement_type}' ({have_v}/{need_v} videos, {have_a}/{need_a} athletes). "
+                    f"Gemini automatic trigger skipped (remains optional)."
+                )
 
             await update_video_status(
                 db, video_id, VideoProcessingStatus.completed,
@@ -296,6 +295,15 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 analysis=analysis,
                 progress_pct=100
             )
+
+            # Pre-compute risk score immediately upon completion
+            try:
+                from app.modules.risk_scoring.service import get_risk_assessment
+                athlete = await db.get(Athlete, video.athlete_id)
+                if athlete:
+                    await get_risk_assessment(db, video, athlete, recompute=True)
+            except Exception as e:
+                logger.warning(f"Initial risk assessment precompute skipped for {video_id}: {e}")
             return {
                 "status": "completed",
                 "frames_processed": len(frame_results),

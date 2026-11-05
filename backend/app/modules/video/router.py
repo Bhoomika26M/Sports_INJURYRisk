@@ -271,44 +271,18 @@ async def ai_observe_video(
     if not _can_access_athlete(current_user, athlete):
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
-    local_path = os.path.join(settings.upload_dir, video.storage_key)
+    local_path = os.path.join(settings.upload_dir, os.path.basename(video.storage_key))
+    if not os.path.exists(local_path):
+        local_path = os.path.join(settings.upload_dir, video.storage_key)
     if not os.path.exists(local_path):
         raise api_error(404, "NOT_FOUND", "Video file not found in storage")
 
-    mod_name = "scripts.gemini_video"
-    try:
-        mod = importlib.import_module(mod_name)
-    except Exception as e:
-        raise api_error(500, "MODULE_LOAD_ERROR", f"Could not load observation module: {e}")
-
-    get_key = getattr(mod, "get_key")
-    make_client = getattr(mod, "make_client")
-    analyze = getattr(mod, "analyze")
-    models = getattr(mod, "MODELS")
-
-    key = get_key()
-    if not key:
-        raise api_error(503, "API_KEY_NOT_CONFIGURED", "API key is not set on the server")
-
-    def _do_observe():
-        with make_client(key) as client:
-            return analyze(
-                local_path, client, height=480, fps=fps, media_resolution="high",
-                chunk_seconds=chunk_seconds, models=models, movement=video.movement_type
-            )
-
-    try:
-        observation = await asyncio.to_thread(_do_observe)
-    except Exception as e:
-        logger.exception(f"Video observation failed for video {video_id}: {e}")
-        raise api_error(502, "OBSERVATION_FAILED", str(e))
-
-    current_analysis = dict(video.analysis or {})
-    obs_key = "gemini_observation"
-    current_analysis[obs_key] = observation
-    video.analysis = current_analysis
-    await db.execute(update(Video).where(Video.id == video_id).values(analysis=current_analysis))
-    await db.commit()
+    from app.modules.video.ai_service import run_gemini_observation_for_video
+    observation = await run_gemini_observation_for_video(
+        db, video, local_path=local_path, fps=fps, chunk_seconds=chunk_seconds
+    )
+    if not observation:
+        raise api_error(502, "OBSERVATION_FAILED", "Video observation could not be completed with Gemini")
 
     return observation
 

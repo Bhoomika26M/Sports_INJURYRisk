@@ -16,6 +16,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
+
 from app.modules.athletes.models import Athlete, InjuryHistory
 from app.modules.athletes.service import compute_acwr, compute_rpe_trend
 from app.modules.biomechanics.movement_analysis import REP_MOVEMENTS, analyze_reps
@@ -203,6 +205,19 @@ async def compute_assessment(db: AsyncSession, video: Video, athlete: Athlete) -
         obs_key = "".join(["gem", "ini_observation"])
         ai_obs = (analysis or {}).get(obs_key)
 
+        # Automatic fallback: if peer baseline is insufficient and no Gemini observation exists yet,
+        # trigger Gemini automatically so the score is calculated every single time.
+        if not has_baseline and not ai_obs and settings.auto_gemini_on_insufficient_baseline:
+            logger.info(
+                f"Video {video.id} has insufficient peer baselines for '{video.movement_type}' "
+                f"({coverage['videos']['have']}/{need} videos). Automatically invoking Gemini observation..."
+            )
+            from app.modules.video.ai_service import run_gemini_observation_for_video
+            ai_obs = await run_gemini_observation_for_video(db, video)
+            if ai_obs:
+                analysis = dict(video.analysis or {})
+                analysis[obs_key] = ai_obs
+
         if has_baseline:
             # sklearn fit is CPU-bound: keep it off the event loop
             anomaly = await asyncio.to_thread(assess_video_anomaly, features, baseline_rows, need)
@@ -373,6 +388,7 @@ async def compute_assessment(db: AsyncSession, video: Video, athlete: Athlete) -
             "athletes": baseline_athletes, "required_athletes": need_athletes,
             "provisional": True if not baseline_rows else (len(baseline_rows) < PROVISIONAL_BELOW_VIDEOS),
             "excluded_incomplete": excluded, "movement_type": video.movement_type,
+            "method": anomaly.get("method"),
         },
         "quality": {k: quality.get(k) for k in ("grade", "warnings", "usable_pct", "jitter_deg", "camera_tilt_deg", "lighting", "frames")} if quality else None,
         "movement": analysis.get("movement") or ({"reps": dynamics} if dynamics else None),
