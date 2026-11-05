@@ -280,17 +280,24 @@ def process_video_pipeline(db: Session, video_id: int):
         raw_fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        # Target dimensions (capped to standard resolution for speed and memory)
-        target_w, target_h = compute_target_dimensions(raw_width, raw_height, max_dim=1280)
+        # Target dimensions (optimized for low-memory cloud free tiers while preserving aspect ratio)
+        target_w, target_h = compute_target_dimensions(raw_width, raw_height, max_dim=720)
         
         import imageio
-        out = imageio.get_writer(output_video_path, fps=raw_fps, codec='libx264', pixelformat='yuv420p', format='FFMPEG')
+        out = imageio.get_writer(
+            output_video_path,
+            fps=raw_fps,
+            codec='libx264',
+            pixelformat='yuv420p',
+            format='FFMPEG',
+            ffmpeg_params=['-preset', 'ultrafast', '-crf', '26']
+        )
 
-        # Model selection: Full model for precision with lite fallback
+        # Model selection: Prefer lite model on cloud environments for minimal RAM footprint
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        full_model_path = os.path.abspath(os.path.join(current_dir, "..", "models_ml", "pose_landmarker_full.task"))
         lite_model_path = os.path.abspath(os.path.join(current_dir, "..", "models_ml", "pose_landmarker_lite.task"))
-        model_path = full_model_path if os.path.exists(full_model_path) else lite_model_path
+        full_model_path = os.path.abspath(os.path.join(current_dir, "..", "models_ml", "pose_landmarker_full.task"))
+        model_path = lite_model_path if os.path.exists(lite_model_path) else full_model_path
 
         if not os.path.exists(model_path):
             raise Exception(f"MediaPipe Pose Landmarker model asset not found at {model_path}")
@@ -440,6 +447,11 @@ def process_video_pipeline(db: Session, video_id: int):
                 out.append_data(annotated_rgb)
 
                 frame_idx += 1
+
+                # Periodically trigger garbage collection to enforce strict 512MB RAM budget
+                if frame_idx % 25 == 0:
+                    import gc
+                    gc.collect()
 
                 # Update progress periodically
                 if total_frames > 0 and frame_idx % max(1, total_frames // 10) == 0:
