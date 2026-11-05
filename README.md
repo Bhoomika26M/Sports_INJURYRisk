@@ -4,6 +4,17 @@ AthletiQ is an enterprise full-stack AI platform that analyzes athletic movement
 
 ---
 
+## 🚀 Live Deployments
+
+| Component | Provider | Live URL | Status |
+|---|---|---|---|
+| **Frontend Web App** | **Vercel** | [sports-injury-detection.vercel.app](https://sports-injury-detection.vercel.app) | 🟢 Live |
+| **Backend API** | **Render (Free Web Service)** | [athletiq-backend-69wv.onrender.com](https://athletiq-backend-69wv.onrender.com) | 🟢 Live |
+| **API Documentation** | **Swagger UI** | [athletiq-backend-69wv.onrender.com/docs](https://athletiq-backend-69wv.onrender.com/docs) | 🟢 Live |
+| **Backend Health** | **REST Check** | [athletiq-backend-69wv.onrender.com/api/v1/health](https://athletiq-backend-69wv.onrender.com/api/v1/health) | 🟢 Live |
+
+---
+
 ## Architecture Overview
 
 ```
