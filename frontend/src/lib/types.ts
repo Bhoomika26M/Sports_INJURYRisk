@@ -254,7 +254,7 @@ export interface RiskScore {
   score_breakdown: Record<string, RiskComponent>;
   sub_scores?: Record<string, RiskSubScore>;
   injury_categories?: Record<string, InjuryCategory>;
-  baseline?: { videos: number; athletes?: number; movement_type: string; provisional?: boolean };
+  baseline?: { videos: number; athletes?: number; movement_type: string; provisional?: boolean; method?: string };
   quality?: VideoQuality;
   /** What the pose pipeline could actually measure on this clip (null fields = nothing to report). */
   data_quality?: { detection_rate: number | null; person_count_detected: number | null; caveat: string | null };

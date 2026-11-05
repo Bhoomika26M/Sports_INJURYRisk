@@ -383,7 +383,14 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         >
           <div className="flex flex-col justify-between sm:flex-row sm:items-start gap-6 flex-1 min-w-0">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Movement pattern score</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-semibold uppercase tracking-wide opacity-80">Movement pattern score</p>
+                {risk.risk.baseline?.method?.includes("Multimodal") && (
+                  <span className="badge badge-info text-[11px] py-0.5 px-2 font-normal" title="Calculated using Multimodal AI observation while peer population dataset builds">
+                    AI-Assisted Baseline
+                  </span>
+                )}
+              </div>
               <p className="mt-1 text-5xl font-bold tracking-tight">
                 {Math.round(risk.risk.overall_score)}<span className="text-2xl font-semibold opacity-70"> / 100</span>
               </p>
