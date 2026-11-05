@@ -126,3 +126,4 @@ Full request/response envelope, error shape, versioning: `/docs/API_CONVENTIONS.
 | `/docs/STATE.md` | What's actually built right now, and the reusable Definition-of-Done checklist |
 | `/docs/REAL_DATA_VALIDATION.md` | Evaluation results of the pipeline across 24 real-world exercise clips |
 | `/docs/FRONTEND_AUDIT.md` | Comprehensive UX, design, and accessibility audit of the Next.js frontend |
+| /docs/DEV_SERVER_GUIDE.md | Quick, step-by-step developer guide for starting local backend & frontend servers |

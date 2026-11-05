@@ -2,7 +2,15 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-10-12 (Full native stack verified on Windows: real YOLOv8n-pose + MediaPipe models, measured ~3–4x speedup [15–24s per video], in-process async queue with crash recovery, native H.264 MP4 playback in Chrome, production Next.js 16 build + run on :3000, and full 14-clip corpus processed via `scripts/process_corpus.py` producing 12 completed videos, 6 gate rejections, and active population baselines. See `docs/DECISIONS.md` 2026-10-12).
+**Last verified:** 2026-11-05 (Automatic Gemini Baseline & Host Run verified: automatic Gemini observation kicks in when movement type has < 2 baseline clips, precomputing 0–100 risk score and displaying `AI-Assisted Baseline` badge; peer baselines >= 2 clips preserve pure statistical Isolation Forest baselines without invoking Gemini; video `9681b51a-85df-4e86-8662-56c2c39fec56` scores 33.4 / 100 moderate risk; 29 backend tests passing; Next.js 16 build + dev server clean on :3000).
+
+**Verified on 2026-11-05 (Automatic Gemini Baseline Fallback):**
+- **Centralized AI Service (`backend/app/modules/video/ai_service.py`):** `check_baseline_sufficiency` accurately checks completed peer video count and athlete count against configurable thresholds. `run_gemini_observation_for_video` manages key resolution, model fallbacks, execution, and commits observation to `videos.analysis`.
+- **Background Ingestion Trigger (`backend/app/modules/pose/tasks.py`):** In Step 4 of `process_video`, checks baseline sufficiency. If insufficient (< 2 videos), automatically runs Gemini observation and pre-computes the initial risk score in PostgreSQL. If sufficient, Gemini is skipped and remains optional for manual review.
+- **Safety Net in Scoring Engine (`backend/app/modules/risk_scoring/service.py`):** In `compute_assessment`, automatically engages Gemini if peer baselines are insufficient and observation is missing. Uses multimodal AI kinematic prior to derive composite score (0–100), sub-scores, and injury categories.
+- **Frontend Results UI (`frontend/src/app/(authenticated)/videos/[id]/results/page.tsx`):** Renders `AI-Assisted Baseline` badge in the score hero banner; suppresses the "0 of 2" banner when a score is present.
+- **Automated Tests:** `backend/tests/test_auto_gemini_baseline.py` (3/3), `test_risk_scoring.py` (15/15), `test_gemini_video.py` (11/11) all pass (29/29).
+- **Frontend Quality:** `npx tsc --noEmit` and `npx eslint src` clean (0 errors); `npm run build` succeeds.
 
 **Verified on 2026-10-12 (Live Windows Host, Real Models, Corpus Run & Browser Verification):**
 - **In-process Queue & Decoupled Arq/Redis:** `pose/jobs.py` executes background video analysis inside the main FastAPI process with zero external queue dependencies (Redis eliminated for host runs). Auto-recovery of interrupted videos on reboot verified.

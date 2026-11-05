@@ -27,6 +27,8 @@ Live status and the reusable Definition-of-Done checklist live in [`/docs/STATE.
 
 ## Quickstart
 
+> 💡 **Looking to run locally on your host?** Check out the step-by-step [Developer Server Guide](docs/DEV_SERVER_GUIDE.md).
+
 1. **Clone and Configure:**
    ```bash
    cp .env.example .env
