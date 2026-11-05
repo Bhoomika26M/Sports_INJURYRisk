@@ -97,7 +97,21 @@ default_origins = [
     "http://127.0.0.1:5174",
     "http://127.0.0.1:3000",
 ]
-configured_origins = [str(origin).rstrip("/") for origin in settings.BACKEND_CORS_ORIGINS] if settings.BACKEND_CORS_ORIGINS else []
+if isinstance(settings.BACKEND_CORS_ORIGINS, str):
+    if settings.BACKEND_CORS_ORIGINS.startswith("["):
+        import json
+        try:
+            raw_origins = json.loads(settings.BACKEND_CORS_ORIGINS)
+        except Exception:
+            raw_origins = [settings.BACKEND_CORS_ORIGINS]
+    else:
+        raw_origins = [o.strip() for o in settings.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
+elif isinstance(settings.BACKEND_CORS_ORIGINS, list):
+    raw_origins = settings.BACKEND_CORS_ORIGINS
+else:
+    raw_origins = []
+
+configured_origins = [str(origin).rstrip("/") for origin in raw_origins]
 cors_origins = list(dict.fromkeys(default_origins + [o for o in configured_origins if o != "*"]))
 
 app.add_middleware(
