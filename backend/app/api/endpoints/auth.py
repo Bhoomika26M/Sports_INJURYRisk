@@ -157,6 +157,20 @@ def google_authenticate(
         "user": user
     }
 
+@router.post("/seed-demo")
+def seed_demo_data() -> Any:
+    """Seeds demo accounts, athlete profiles, and initial kinematic records."""
+    try:
+        import sys
+        curr_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        if curr_dir not in sys.path:
+            sys.path.insert(0, curr_dir)
+        from seed_demo import seed_database
+        seed_database()
+        return {"status": "ok", "message": "Demo data successfully seeded"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to seed demo data: {str(e)}")
+
 @router.post("/register", response_model=UserResponse)
 def register(
     *,

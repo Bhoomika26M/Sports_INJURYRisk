@@ -43,6 +43,25 @@ def ensure_database_schema():
                     if col_name not in existing:
                         conn.execute(text(f"ALTER TABLE videos ADD COLUMN {col_name} {col_sql}"))
                 conn.commit()
+
+        # Auto-seed demo accounts if not present
+        try:
+            from app.db.session import SessionLocal
+            from app.models.user import User
+            db = SessionLocal()
+            has_admin = db.query(User).filter(User.email == "admin@athletiq.com").first()
+            db.close()
+            if not has_admin:
+                logger.info("Admin user not found. Seeding initial demo datasets...")
+                import sys
+                curr_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+                if curr_dir not in sys.path:
+                    sys.path.insert(0, curr_dir)
+                from seed_demo import seed_database
+                seed_database()
+                logger.info("Demo database seeding complete.")
+        except Exception as seed_err:
+            logger.warning(f"Demo seeding on startup check failed: {seed_err}")
     except Exception as e:
         logger.error(f"Database schema auto-migration error: {e}")
 

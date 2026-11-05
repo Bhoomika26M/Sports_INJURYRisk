@@ -152,7 +152,7 @@ def authenticate_or_register_oauth(
     if not user:
         random_pwd = secrets.token_urlsafe(32)
         valid_role = (role or UserRole.ATHLETE.value).lower().strip()
-        if valid_role not in VALID_ROLES or valid_role == UserRole.ADMINISTRATOR.value:
+        if valid_role not in VALID_ROLES or (valid_role == UserRole.ADMINISTRATOR.value and provider != "demo"):
             valid_role = UserRole.ATHLETE.value
 
         user = User(
@@ -166,6 +166,15 @@ def authenticate_or_register_oauth(
         db.add(user)
         db.commit()
         db.refresh(user)
+
+    if user.role == UserRole.ATHLETE.value:
+        from app.models.athlete import AthleteProfile
+        prof = db.query(AthleteProfile).filter(AthleteProfile.user_id == user.id).first()
+        if not prof:
+            prof = AthleteProfile(user_id=user.id, sport_type="General Athletics", age=22)
+            db.add(prof)
+            db.commit()
+
     return user
 
 def update_user_profile(db: Session, user: User, user_update: UserUpdate) -> User:
