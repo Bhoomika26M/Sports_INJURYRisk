@@ -324,6 +324,26 @@ function UploadFlow() {
     <>
       <PageHeader title="New analysis" subtitle="Upload a short clip and we'll measure how the body moves." />
 
+      {/* Dual Video Benchmark Studio Banner */}
+      <div className="rounded-2xl border border-brand-dark/20 bg-gradient-to-r from-brand-light/30 via-white to-brand-light/20 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-xl bg-brand-light flex items-center justify-center text-brand-dark shrink-0">
+            <Icon name="activity" className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-sm font-bold text-ink">Want to compare two movements directly?</h4>
+            <p className="text-xs text-ink-3">Upload 2 fresh videos simultaneously or select existing videos to run an Olympic-grade synchronized form benchmark.</p>
+          </div>
+        </div>
+        <Link
+          href="/dashboard/compare?mode=upload"
+          className="btn btn-sm btn-primary shrink-0 inline-flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+        >
+          <Icon name="sparkles" className="h-3.5 w-3.5" />
+          <span>Dual-Video Benchmark</span>
+        </Link>
+      </div>
+
       <form onSubmit={start} noValidate className="card flex flex-col gap-9 p-6 sm:p-9">
         {phase.name === "failed" && <Notice tone="danger">{phase.message}</Notice>}
 
