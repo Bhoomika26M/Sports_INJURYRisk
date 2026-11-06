@@ -100,6 +100,46 @@ async def list_movement_types(
         })
     return result
 
+async def _get_or_create_benchmark_athlete(db: AsyncSession, current_user: User) -> str:
+    """Finds or creates an athlete record for the current user so benchmark uploads never require manual athlete creation."""
+    from datetime import date
+    if current_user.role == UserRole.athlete:
+        ath = await db.scalar(select(Athlete).where(Athlete.user_id == current_user.id))
+        if ath:
+            return ath.id
+        ath = Athlete(
+            user_id=current_user.id,
+            sport_type="General",
+            date_of_birth=date(2000, 1, 1),
+        )
+        db.add(ath)
+        await db.commit()
+        await db.refresh(ath)
+        return ath.id
+
+    # Coach, physiotherapist, scientist, admin:
+    ath = await db.scalar(select(Athlete).where(
+        Athlete.coach_id == current_user.id,
+        Athlete.sport_type == "Benchmark Reference"
+    ))
+    if ath:
+        return ath.id
+    ath = await db.scalar(select(Athlete).where(Athlete.coach_id == current_user.id))
+    if ath:
+        return ath.id
+
+    ath = Athlete(
+        coach_id=current_user.id,
+        sport_type="Benchmark Reference",
+        position="Reference",
+        date_of_birth=date(2000, 1, 1),
+    )
+    db.add(ath)
+    await db.commit()
+    await db.refresh(ath)
+    return ath.id
+
+
 @router.post("/upload-url", response_model=VideoUploadResponse)
 async def create_upload_url(
     data: VideoUploadRequest,
@@ -108,15 +148,17 @@ async def create_upload_url(
     request: Request,
 ):
     """Generate a mock presigned URL and create a pending video record."""
-    athlete = await db.scalar(select(Athlete).where(Athlete.id == data.athlete_id))
-    if not athlete:
-        raise api_error(404, "NOT_FOUND", "Athlete not found")
-
-    if not _can_access_athlete(current_user, athlete):
-        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-
-    if current_user.role == UserRole.athlete and athlete.user_id != current_user.id:
-        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Athletes can only upload for themselves")
+    target_athlete_id = data.athlete_id
+    if not target_athlete_id:
+        target_athlete_id = await _get_or_create_benchmark_athlete(db, current_user)
+    else:
+        athlete = await db.scalar(select(Athlete).where(Athlete.id == target_athlete_id))
+        if not athlete:
+            raise api_error(404, "NOT_FOUND", "Athlete not found")
+        if not _can_access_athlete(current_user, athlete):
+            raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+        if current_user.role == UserRole.athlete and athlete.user_id != current_user.id:
+            raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Athletes can only upload for themselves")
 
     if data.movement_type != AUTO:  # "auto" (both labels, enforced by the schema) is resolved from the footage by the worker
         # Validate movement_type exists
@@ -131,7 +173,7 @@ async def create_upload_url(
 
     safe_name = _safe_filename(data.original_filename)
     video = Video(
-        athlete_id=data.athlete_id,
+        athlete_id=target_athlete_id,
         uploaded_by=current_user.id,
         movement_type=data.movement_type,
         storage_key=f"{uuid.uuid4()}_{safe_name}",

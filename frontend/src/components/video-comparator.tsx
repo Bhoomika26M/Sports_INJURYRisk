@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearchParams } from "next/navigation";
 import { api, uploadFile } from "@/lib/api-client";
@@ -12,6 +12,7 @@ import { Spinner, ErrorState } from "@/components/feedback";
 import { AuthVideo } from "@/components/auth-media";
 import { PostureVectorCard } from "@/components/posture-vector-card";
 import { CustomVideoSelect, VideoSelectionPreview, type CustomVideoSelectOption } from "@/components/custom-video-select";
+import { CustomMovementSelect } from "@/components/custom-movement-select";
 
 interface VideoComparatorProps {
   initialVideoAId?: string;
@@ -78,23 +79,20 @@ export function VideoComparator({
   const athletesQ = useAllAthletes();
   const athletes = athletesQ.data?.items ?? [];
 
-  // Default athlete assignment
-  const targetAthleteId = selectedAthleteId || (athletes.length > 0 ? athletes[0].id : "");
-
   // Comparison Mutation
   const compareMutation = useMutation({
     mutationFn: (payload: { video_a_id: string; video_b_id: string; run_gemini: boolean }) =>
       api.post<CompareVideosResponse>("/videos/compare", payload),
   });
 
-  const handleRunComparison = (aId: string, bId: string) => {
+  const handleRunComparison = useCallback((aId: string, bId: string) => {
     if (!aId || !bId) return;
     compareMutation.mutate({
       video_a_id: aId,
       video_b_id: bId,
       run_gemini: true,
     });
-  };
+  }, [compareMutation]);
 
   const handleSwapRoles = () => {
     const newA = videoBId;
@@ -104,34 +102,120 @@ export function VideoComparator({
     handleRunComparison(newA, newB);
   };
 
+  // Persistent background polling
+  const pollUntilCompleted = useCallback(async (
+    idA: string,
+    idB: string,
+    labelA = "Benchmark",
+    labelB = "Trainee"
+  ) => {
+    setUploadState({
+      phase: "processing",
+      progressA: 10,
+      progressB: 10,
+      message: `Analyzing joint kinematics with MediaPipe (${labelA} & ${labelB})...`,
+    });
+
+    let doneA = false;
+    let doneB = false;
+
+    for (let attempt = 0; attempt < 60; attempt++) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const [statusA, statusB] = await Promise.all([
+        api.get<Video>(`/videos/${idA}`),
+        api.get<Video>(`/videos/${idB}`),
+      ]);
+
+      if (statusA.processing_status === "completed") doneA = true;
+      if (statusB.processing_status === "completed") doneB = true;
+
+      if (statusA.processing_status === "failed" || statusB.processing_status === "failed") {
+        throw new Error(
+          statusA.error_message ||
+            statusB.error_message ||
+            "One or both videos failed pose estimation. Please check video resolution and format."
+        );
+      }
+
+      const pctA = statusA.progress_pct ?? (doneA ? 100 : Math.min(95, 10 + attempt * 2));
+      const pctB = statusB.progress_pct ?? (doneB ? 100 : Math.min(95, 10 + attempt * 2));
+
+      setUploadState((prev) => ({
+        ...prev,
+        progressA: pctA,
+        progressB: pctB,
+        message: `Extracting 33-point MediaPipe landmarks: ${labelA} (${pctA}%) • ${labelB} (${pctB}%)`,
+      }));
+
+      if (doneA && doneB) break;
+    }
+
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("agy_benchmark_active");
+    }
+
+    await queryClient.invalidateQueries({ queryKey: ["videos"] });
+    setVideoAId(idA);
+    setVideoBId(idB);
+    setUploadState({ phase: "idle", progressA: 0, progressB: 0 });
+
+    handleRunComparison(idA, idB);
+  }, [handleRunComparison, queryClient]);
+
+  // Re-attach to in-progress benchmark session on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const saved = sessionStorage.getItem("agy_benchmark_active");
+    if (!saved) return;
+
+    let active = true;
+    const timer = setTimeout(() => {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.idA && parsed.idB && active) {
+          setSelectionMode("upload");
+          pollUntilCompleted(parsed.idA, parsed.idB, parsed.nameA, parsed.nameB).catch((err) => {
+            if (active) {
+              sessionStorage.removeItem("agy_benchmark_active");
+              setUploadState({
+                phase: "error",
+                progressA: 0,
+                progressB: 0,
+                message: err instanceof Error ? err.message : "Background analysis failed.",
+              });
+            }
+          });
+        }
+      } catch {
+        sessionStorage.removeItem("agy_benchmark_active");
+      }
+    }, 50);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [pollUntilCompleted]);
+
   // Fresh Dual-Video Parallel Upload Handler
   const handleUploadAndCompare = async () => {
     if (!freshFileA || !freshFileB) return;
-    if (!targetAthleteId) {
-      setUploadState({
-        phase: "error",
-        progressA: 0,
-        progressB: 0,
-        message: "Please select an athlete from your roster to associate these clips with.",
-      });
-      return;
-    }
 
     setUploadState({ phase: "uploading", progressA: 0, progressB: 0, message: "Requesting upload tickets..." });
 
     try {
       const cameraView = uploadMovement === "auto" ? "auto" : "sagittal";
 
-      // 1. Request upload tickets in parallel
+      // 1. Request upload tickets in parallel (athlete_id is fully optional)
       const [ticketA, ticketB] = await Promise.all([
         api.post<UploadTicket>("/videos/upload-url", {
-          athlete_id: targetAthleteId,
+          athlete_id: selectedAthleteId || undefined,
           movement_type: uploadMovement,
           camera_view: cameraView,
           original_filename: freshFileA.name,
         }),
         api.post<UploadTicket>("/videos/upload-url", {
-          athlete_id: targetAthleteId,
+          athlete_id: selectedAthleteId || undefined,
           movement_type: uploadMovement,
           camera_view: cameraView,
           original_filename: freshFileB.name,
@@ -164,42 +248,21 @@ export function VideoComparator({
         api.post(`/videos/${ticketB.video_id}/confirm-upload`),
       ]);
 
-      // 4. Poll until both videos finish pose extraction
-      let doneA = false;
-      let doneB = false;
-
-      for (let attempt = 0; attempt < 45; attempt++) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        const [statusA, statusB] = await Promise.all([
-          api.get<Video>(`/videos/${ticketA.video_id}`),
-          api.get<Video>(`/videos/${ticketB.video_id}`),
-        ]);
-
-        if (statusA.processing_status === "completed") doneA = true;
-        if (statusB.processing_status === "completed") doneB = true;
-
-        if (statusA.processing_status === "failed" || statusB.processing_status === "failed") {
-          throw new Error("One or both videos failed pose estimation processing. Please check clip resolution and duration.");
-        }
-
-        const pctA = statusA.progress_pct ?? (doneA ? 100 : 50);
-        const pctB = statusB.progress_pct ?? (doneB ? 100 : 50);
-        setUploadState((prev) => ({
-          ...prev,
-          message: `Kinematic Analysis: Benchmark (${pctA}%) • Trainee (${pctB}%)`,
-        }));
-
-        if (doneA && doneB) break;
+      // 4. Save session for resilient recovery across page navigations/refreshes
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(
+          "agy_benchmark_active",
+          JSON.stringify({
+            idA: ticketA.video_id,
+            idB: ticketB.video_id,
+            nameA: freshFileA.name,
+            nameB: freshFileB.name,
+          })
+        );
       }
 
-      // 5. Invalidate videos cache and set new video IDs
-      await queryClient.invalidateQueries({ queryKey: ["videos"] });
-      setVideoAId(ticketA.video_id);
-      setVideoBId(ticketB.video_id);
-      setUploadState({ phase: "idle", progressA: 0, progressB: 0 });
-
-      // 6. Execute benchmark comparison immediately
-      handleRunComparison(ticketA.video_id, ticketB.video_id);
+      // 5. Poll until completed
+      await pollUntilCompleted(ticketA.video_id, ticketB.video_id, freshFileA.name, freshFileB.name);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Upload or analysis failed.";
       setUploadState({
@@ -531,32 +594,25 @@ export function VideoComparator({
               </div>
             </div>
 
-            {/* Upload Settings Row */}
-            <div className="grid gap-4 sm:grid-cols-2 pt-3 border-t border-slate-100">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-slate-700">Movement Discipline</label>
-                <select
-                  value={uploadMovement}
-                  onChange={(e) => setUploadMovement(e.target.value)}
-                  className="field text-xs h-10"
-                >
-                  <option value="auto">Auto-Detect from Footage (Recommended)</option>
-                  <option value="squatting">Squatting</option>
-                  <option value="running">Running / Sprinting</option>
-                  <option value="jumping">Jumping / Landing</option>
-                  <option value="cutting">Cutting / COD</option>
-                  <option value="throwing">Throwing / Overhead</option>
-                </select>
-              </div>
+            {/* Upload Settings Row with Custom Movement Dropdown & Standalone Mode */}
+            <div className="grid gap-5 sm:grid-cols-2 pt-4 border-t border-slate-100">
+              <CustomMovementSelect
+                value={uploadMovement}
+                onChange={setUploadMovement}
+                label="Movement Discipline"
+              />
 
-              {athletes.length > 0 && (
+              {athletes.length > 0 ? (
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-semibold text-slate-700">Associate with Athlete</label>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Tag to Athlete Profile (Optional)
+                  </label>
                   <select
-                    value={targetAthleteId}
+                    value={selectedAthleteId}
                     onChange={(e) => setSelectedAthleteId(e.target.value)}
-                    className="field text-xs h-10"
+                    className="flex items-center justify-between w-full h-11 px-3.5 rounded-xl border border-slate-300 hover:border-slate-400 bg-white text-xs font-semibold text-slate-800 transition-all cursor-pointer shadow-2xs"
                   >
+                    <option value="">Automatic Benchmark Reference (No athlete profile required)</option>
                     {athletes.map((a) => (
                       <option key={a.id} value={a.id}>
                         {athleteName(a)} ({a.sport_type || "General"})
@@ -564,42 +620,84 @@ export function VideoComparator({
                     ))}
                   </select>
                 </div>
+              ) : (
+                <div className="flex flex-col gap-1.5 justify-center">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                    Benchmark Reference Mode
+                  </label>
+                  <div className="flex items-center gap-2 h-11 px-3.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-medium text-slate-600">
+                    <Icon name="sparkles" className="h-4 w-4 text-brand-dark shrink-0" />
+                    <span>Standalone Dual Comparison · Athlete profile not required</span>
+                  </div>
+                </div>
               )}
             </div>
 
-            {/* Parallel Upload Progress Indicators */}
+            {/* Real-Time Multi-Stage Progress HUD */}
             {uploadState.phase !== "idle" && (
-              <div className="rounded-2xl border border-brand/20 bg-brand-light/20 p-5 flex flex-col gap-3">
-                <div className="flex items-center justify-between text-xs font-semibold text-brand-dark">
-                  <div className="flex items-center gap-2">
-                    <Spinner className="h-4 w-4 text-brand-dark" />
-                    <span>{uploadState.message || "Processing videos..."}</span>
+              <div className="rounded-2xl border border-brand/30 bg-gradient-to-b from-brand-light/30 via-white to-brand-light/10 p-5 sm:p-6 flex flex-col gap-4 shadow-sm animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-dark text-white shadow-2xs">
+                      <Spinner className="h-4 w-4" />
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-brand-dark">
+                        {uploadState.phase === "uploading"
+                          ? "Parallel Direct Upload"
+                          : "AI Pose Landmark Extraction"}
+                      </h4>
+                      <p className="text-xs font-semibold text-slate-800 mt-0.5">
+                        {uploadState.message || "Processing videos..."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                    Live Engine
+                  </span>
+                </div>
+
+                {/* Dual Progress Bars */}
+                <div className="grid gap-3.5 sm:grid-cols-2 pt-2 border-t border-brand/10">
+                  <div className="rounded-xl bg-white border border-slate-200 p-3.5 shadow-2xs">
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="font-bold text-slate-900 truncate max-w-[180px]">
+                        {freshFileA?.name || "1. Benchmark Video"}
+                      </span>
+                      <strong className="text-brand-dark font-extrabold">{uploadState.progressA}%</strong>
+                    </div>
+                    <div className="progress h-2.5 rounded-full overflow-hidden bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadState.progressA}>
+                      <span className="bg-brand-dark transition-all duration-300" style={{ width: `${uploadState.progressA}%` }} />
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl bg-white border border-slate-200 p-3.5 shadow-2xs">
+                    <div className="flex justify-between text-xs mb-1.5">
+                      <span className="font-bold text-slate-900 truncate max-w-[180px]">
+                        {freshFileB?.name || "2. Trainee Video"}
+                      </span>
+                      <strong className="text-brand-dark font-extrabold">{uploadState.progressB}%</strong>
+                    </div>
+                    <div className="progress h-2.5 rounded-full overflow-hidden bg-slate-100" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadState.progressB}>
+                      <span className="bg-brand-dark transition-all duration-300" style={{ width: `${uploadState.progressB}%` }} />
+                    </div>
                   </div>
                 </div>
 
-                {uploadState.phase === "uploading" && (
-                  <div className="grid gap-3 sm:grid-cols-2 text-xs">
-                    <div>
-                      <div className="flex justify-between text-[11px] text-slate-600 mb-1">
-                        <span>Benchmark Clip</span>
-                        <span>{uploadState.progressA}%</span>
-                      </div>
-                      <div className="progress h-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadState.progressA}>
-                        <span style={{ width: `${uploadState.progressA}%` }} />
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-[11px] text-slate-600 mb-1">
-                        <span>Trainee Clip</span>
-                        <span>{uploadState.progressB}%</span>
-                      </div>
-                      <div className="progress h-2" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={uploadState.progressB}>
-                        <span style={{ width: `${uploadState.progressB}%` }} />
-                      </div>
-                    </div>
+                {/* Safe Navigation & Server Background Reassurance Banner */}
+                <div className="rounded-xl bg-slate-900 text-white p-3.5 flex items-start gap-3 mt-1 shadow-sm">
+                  <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+                    <Icon name="shield" className="h-3.5 w-3.5" />
+                  </span>
+                  <div className="text-xs">
+                    <p className="font-bold text-emerald-400">Background Processing Active (Safe to Leave or Change Pages)</p>
+                    <p className="text-slate-300 mt-0.5 leading-relaxed text-[11px]">
+                      Your video processing runs entirely on the backend server. If you close this tab, change pages, or refresh, the MediaPipe joint extraction will continue uninterrupted and your benchmark session will restore automatically.
+                    </p>
                   </div>
-                )}
+                </div>
               </div>
             )}
 
