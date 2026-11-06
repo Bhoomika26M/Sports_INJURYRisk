@@ -12,6 +12,7 @@ from app.core.errors import api_error
 from app.database import get_db
 from app.modules.athletes.schemas import (
     AthleteCreate,
+    AthleteClaimRequest,
     AthleteListResponse,
     AthleteResponse,
     AthleteUpdate,
@@ -101,6 +102,53 @@ async def list_athletes_endpoint(
 
     athletes, total = await list_athletes(db, coach_id=coach_id, page=page, page_size=page_size)
     return AthleteListResponse(items=athletes, total=total, page=page, page_size=page_size)
+
+
+@router.get("/me", response_model=AthleteResponse | None)
+async def get_my_athlete_profile(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Retrieve current user's bound athlete profile."""
+    if current_user.role != UserRole.athlete:
+        return None
+    athlete = await db.scalar(select(Athlete).where(Athlete.user_id == current_user.id))
+    return athlete
+
+
+@router.post("/claim", response_model=AthleteResponse)
+async def claim_or_activate_athlete_profile(
+    data: AthleteClaimRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Allows an athlete user to self-activate or bind their profile to a coach."""
+    existing = await db.scalar(select(Athlete).where(Athlete.user_id == current_user.id))
+    if existing:
+        return existing
+
+    target_coach_id = None
+    if data.coach_email:
+        coach_user = await db.scalar(select(User).where(User.email == data.coach_email.strip().lower()))
+        if coach_user:
+            target_coach_id = coach_user.id
+    elif data.coach_code:
+        coach_user = await db.scalar(select(User).where(User.role == UserRole.coach))
+        if coach_user:
+            target_coach_id = coach_user.id
+
+    from datetime import date
+    new_athlete = Athlete(
+        user_id=current_user.id,
+        coach_id=target_coach_id,
+        sport_type=data.sport_type or "soccer",
+        position=data.position,
+        date_of_birth=date(2000, 1, 1),
+    )
+    db.add(new_athlete)
+    await db.commit()
+    await db.refresh(new_athlete)
+    return new_athlete
 
 
 @router.get("/{athlete_id}", response_model=AthleteResponse)

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -71,6 +71,8 @@ function UploadFlow() {
 
   const abortRef = useRef<AbortController | null>(null);
   const probeToken = useRef(0);
+
+  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
 
   const athletes = athletesQ.data?.items ?? [];
   const movements = movementsQ.data ?? [];
@@ -401,16 +403,31 @@ function UploadFlow() {
               <span className="text-sm text-ink-3">.mp4, .mov, .webm, .avi, .mkv or .m4v · up to 200 MB · 2–60 seconds</span>
             </label>
           ) : (
-            <div className="row !bg-brand-tint/60">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-brand-dark"><Icon name="film" /></span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-ink">{file.name}</p>
-                <p className="text-sm text-ink-2">
-                  {formatBytes(file.size)}
-                  {probe && ` · ${Math.round(probe.duration)} s · ${probe.width}×${probe.height}`}
-                </p>
+            <div className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-brand-tint/60 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white text-brand-dark"><Icon name="film" /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-ink">{file.name}</p>
+                    <p className="text-sm text-ink-2">
+                      {formatBytes(file.size)}
+                      {probe && ` · ${Math.round(probe.duration)} s · ${probe.width}×${probe.height}`}
+                    </p>
+                  </div>
+                </div>
+                <button type="button" onClick={removeFile} aria-label="Remove video" className="btn btn-ghost !h-10 !min-h-10 !w-10 !p-0"><Icon name="x" className="h-5 w-5" /></button>
               </div>
-              <button type="button" onClick={removeFile} aria-label="Remove video" className="btn btn-ghost !h-10 !min-h-10 !w-10 !p-0"><Icon name="x" className="h-5 w-5" /></button>
+
+              {previewUrl && (
+                <div className="overflow-hidden rounded-xl bg-black">
+                  <video
+                    src={previewUrl}
+                    controls
+                    playsInline
+                    className="max-h-48 w-full object-contain mx-auto"
+                  />
+                </div>
+              )}
             </div>
           )}
           {fileError && <Notice tone="danger">{fileError}</Notice>}

@@ -20,6 +20,13 @@ class AthleteCreate(AthleteBase):
     email: Optional[str] = Field(default=None, max_length=255)
 
 
+class AthleteClaimRequest(BaseModel):
+    coach_code: Optional[str] = Field(default=None, max_length=100)
+    coach_email: Optional[str] = Field(default=None, max_length=255)
+    sport_type: Optional[str] = Field(default="soccer", max_length=100)
+    position: Optional[str] = Field(default=None, max_length=100)
+
+
 class AthleteUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, max_length=255)
     email: Optional[str] = Field(default=None, max_length=255)
