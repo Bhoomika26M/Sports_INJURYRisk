@@ -6,12 +6,19 @@ import { Icon } from "@/components/icons";
 
 interface PostureVectorCardProps {
   trainee: VectorPostureData;
-  benchmark?: VectorPostureData;
+  benchmark?: VectorPostureData | null;
   title?: string;
   subtitle?: string;
 }
 
-/** Draws a single skeleton inside an SVG viewport (300 x 400). */
+/**
+ * Renders an SVG stick figure from normalized coordinates.
+ * Features:
+ * - Color-coded fault zones (Red for dynamic valgus / excessive lean)
+ * - Green for textbook standard alignment
+ * - Plumb line from mid-shoulder to ground
+ * - Joint angle arcs and badges
+ */
 function SkeletonFigure({
   data,
   colorScheme = "dynamic",
@@ -30,52 +37,50 @@ function SkeletonFigure({
   const hasValgus = faults.includes("knee_valgus");
   const hasLean = faults.includes("excessive_trunk_lean");
 
-  // Determine colors based on scheme
-  let boneColor = "#10b981"; // Emerald
-  let jointColor = "#059669";
-  let spineColor = "#10b981";
-  let valgusColor = "#10b981";
+  // Key joints
+  const nose = lm.nose;
+  const ls = lm.left_shoulder;
+  const rs = lm.right_shoulder;
+  const le = lm.left_elbow;
+  const re = lm.right_elbow;
+  const lw = lm.left_wrist;
+  const rw = lm.right_wrist;
+  const lh = lm.left_hip;
+  const rh = lm.right_hip;
+  const lk = lm.left_knee;
+  const rk = lm.right_knee;
+  const la = lm.left_ankle;
+  const ra = lm.right_ankle;
+  const ms = lm.mid_shoulder;
+  const mh = lm.mid_hip;
+
+  const groundY = data.ground_y || 360;
+
+  // Color selection
+  let boneColor = "#38bdf8"; // Cyan
+  let jointColor = "#ffffff";
+  let spineColor = "#38bdf8";
+  let valgusColor = "#38bdf8";
 
   if (colorScheme === "benchmark") {
-    boneColor = "#10b981";
-    jointColor = "#059669";
+    boneColor = "#10b981"; // Emerald
+    jointColor = "#ecfdf5";
     spineColor = "#10b981";
     valgusColor = "#10b981";
   } else if (colorScheme === "ghost_trainee") {
     boneColor = "#f43f5e"; // Rose
-    jointColor = "#e11d48";
-    spineColor = hasLean ? "#f59e0b" : "#f43f5e";
-    valgusColor = "#ef4444";
+    jointColor = "#fff1f2";
+    spineColor = "#f43f5e";
+    valgusColor = "#f43f5e";
   } else {
-    // Dynamic
-    boneColor = "#10b981";
-    spineColor = hasLean ? "#f59e0b" : "#10b981";
-    valgusColor = hasValgus ? "#ef4444" : "#10b981";
-    jointColor = hasValgus ? "#dc2626" : "#059669";
+    // Dynamic fault highlighting
+    if (hasLean) {
+      spineColor = "#f59e0b"; // Amber warning
+    }
+    if (hasValgus) {
+      valgusColor = "#ef4444"; // Red fault
+    }
   }
-
-  const p = (name: string): [number, number] | null => {
-    const pt = lm[name];
-    return pt && pt.length >= 2 ? [pt[0], pt[1]] : null;
-  };
-
-  const nose = p("nose");
-  const ls = p("left_shoulder");
-  const rs = p("right_shoulder");
-  const ms = p("mid_shoulder");
-  const le = p("left_elbow");
-  const re = p("right_elbow");
-  const lw = p("left_wrist");
-  const rw = p("right_wrist");
-  const lh = p("left_hip");
-  const rh = p("right_hip");
-  const mh = p("mid_hip");
-  const lk = p("left_knee");
-  const rk = p("right_knee");
-  const la = p("left_ankle");
-  const ra = p("right_ankle");
-
-  const groundY = data.ground_y || 360;
 
   return (
     <g opacity={opacity}>
@@ -86,10 +91,10 @@ function SkeletonFigure({
           y1={ms[1]}
           x2={ms[0]}
           y2={groundY}
-          stroke="#94a3b8"
+          stroke="#64748b"
           strokeWidth="1.2"
-          strokeDasharray="3 3"
-          opacity="0.6"
+          strokeDasharray="4 4"
+          opacity="0.7"
         />
       )}
 
@@ -101,7 +106,7 @@ function SkeletonFigure({
           r="14"
           fill="none"
           stroke={boneColor}
-          strokeWidth="2.5"
+          strokeWidth="2.8"
         />
       )}
 
@@ -167,7 +172,7 @@ function SkeletonFigure({
           y1={rh[1]}
           x2={rk[0]}
           y2={rk[1]}
-          stroke={valgusColor}
+          stroke={boneColor}
           strokeWidth="3.5"
           strokeLinecap="round"
         />
@@ -178,27 +183,47 @@ function SkeletonFigure({
           y1={rk[1]}
           x2={ra[0]}
           y2={ra[1]}
-          stroke={valgusColor}
+          stroke={boneColor}
           strokeWidth="3.5"
           strokeLinecap="round"
         />
       )}
 
       {/* Feet Base */}
-      {la && <line x1={la[0] - 8} y1={la[1]} x2={la[0] + 8} y2={la[1]} stroke={boneColor} strokeWidth="2.5" />}
-      {ra && <line x1={ra[0] - 8} y1={ra[1]} x2={ra[0] + 8} y2={ra[1]} stroke={boneColor} strokeWidth="2.5" />}
+      {la && lm.left_foot_index && (
+        <line
+          x1={la[0]}
+          y1={la[1]}
+          x2={lm.left_foot_index[0]}
+          y2={lm.left_foot_index[1]}
+          stroke={boneColor}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      )}
+      {ra && lm.right_foot_index && (
+        <line
+          x1={ra[0]}
+          y1={ra[1]}
+          x2={lm.right_foot_index[0]}
+          y2={lm.right_foot_index[1]}
+          stroke={boneColor}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+        />
+      )}
 
-      {/* Joint Nodes */}
-      {[ls, rs, le, re, lw, rw, lh, rh, lk, rk, la, ra].map((joint, idx) =>
-        joint ? (
+      {/* Joint Nodes (White circular nodes) */}
+      {[ls, rs, le, re, lw, rw, lh, rh, lk, rk, la, ra].map((pt, i) =>
+        pt ? (
           <circle
-            key={idx}
-            cx={joint[0]}
-            cy={joint[1]}
-            r="4"
-            fill="#ffffff"
+            key={i}
+            cx={pt[0]}
+            cy={pt[1]}
+            r={i >= 6 ? "4" : "3.2"}
+            fill={i === 8 && hasValgus && colorScheme !== "benchmark" ? "#ef4444" : jointColor}
             stroke={jointColor}
-            strokeWidth="2"
+            strokeWidth="1.8"
           />
         ) : null
       )}
@@ -213,11 +238,11 @@ function SkeletonFigure({
       {/* Angle Callout Badges */}
       {colorScheme !== "ghost_trainee" && (
         <>
-          {angles.knee_flexion_left != null && lk && (
-            <g transform={`translate(${lk[0] - 38}, ${lk[1] - 12})`}>
-              <rect x="0" y="0" width="34" height="18" rx="4" fill="#0f172a" fillOpacity="0.85" />
-              <text x="17" y="13" textAnchor="middle" fill="#38bdf8" fontSize="10" fontWeight="bold">
-                {Math.round(Number(angles.knee_flexion_left))}°
+          {(angles.knee_flexion_left != null || angles.knee_flexion_right != null) && lk && (
+            <g transform={`translate(${lk[0] - 40}, ${lk[1] - 12})`}>
+              <rect x="0" y="0" width="36" height="18" rx="4" fill="#0f172a" fillOpacity="0.9" stroke="#38bdf8" strokeWidth="0.8" />
+              <text x="18" y="13" textAnchor="middle" fill="#38bdf8" fontSize="10" fontWeight="bold">
+                {Math.round(Number(angles.knee_flexion_left ?? angles.knee_flexion_right ?? 90))}°
               </text>
             </g>
           )}
@@ -227,13 +252,15 @@ function SkeletonFigure({
               <rect
                 x="0"
                 y="0"
-                width="42"
+                width="46"
                 height="18"
                 rx="4"
-                fill={hasLean ? "#ef4444" : "#0f172a"}
+                fill={hasLean ? "#7f1d1d" : "#0f172a"}
                 fillOpacity="0.9"
+                stroke={hasLean ? "#ef4444" : "#64748b"}
+                strokeWidth="0.8"
               />
-              <text x="21" y="13" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold">
+              <text x="23" y="13" textAnchor="middle" fill="#ffffff" fontSize="10" fontWeight="bold">
                 {Math.round(Number(angles.trunk_lean))}° lean
               </text>
             </g>
@@ -243,7 +270,7 @@ function SkeletonFigure({
 
       {/* Figure Title / Label */}
       {label && (
-        <text x="150" y="30" textAnchor="middle" fill="#334155" fontSize="12" fontWeight="600">
+        <text x="150" y="30" textAnchor="middle" fill="#94a3b8" fontSize="12" fontWeight="600">
           {label}
         </text>
       )}
@@ -254,7 +281,7 @@ function SkeletonFigure({
 export function PostureVectorCard({
   trainee,
   benchmark,
-  title = "Biomechanical Posture Twin",
+  title = "Biomechanical Posture Twin Comparison",
   subtitle = "Inflection Frame Kinematics & Alignment Standard",
 }: PostureVectorCardProps) {
   const [viewMode, setViewMode] = useState<"side_by_side" | "ghost_overlay">("side_by_side");
@@ -262,6 +289,16 @@ export function PostureVectorCard({
   const faults = trainee?.faults || [];
   const hasValgus = faults.includes("knee_valgus");
   const hasLean = faults.includes("excessive_trunk_lean");
+
+  const traineeDepth = Math.round(
+    Number(trainee?.angles?.knee_flexion_left ?? trainee?.angles?.knee_flexion_right ?? 90)
+  );
+  const traineeLean = Math.round(Number(trainee?.angles?.trunk_lean ?? 15));
+
+  const benchmarkDepth = Math.round(
+    Number(benchmark?.angles?.knee_flexion_left ?? benchmark?.angles?.knee_flexion_right ?? 95)
+  );
+  const benchmarkLean = Math.round(Number(benchmark?.angles?.trunk_lean ?? 15));
 
   return (
     <div className="card p-6">
@@ -282,7 +319,7 @@ export function PostureVectorCard({
             <button
               type="button"
               onClick={() => setViewMode("side_by_side")}
-              className={`rounded-lg px-3 py-1.5 transition-all ${
+              className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
                 viewMode === "side_by_side"
                   ? "bg-white text-ink shadow-sm font-bold"
                   : "text-ink-3 hover:text-ink"
@@ -293,7 +330,7 @@ export function PostureVectorCard({
             <button
               type="button"
               onClick={() => setViewMode("ghost_overlay")}
-              className={`rounded-lg px-3 py-1.5 transition-all ${
+              className={`rounded-lg px-3 py-1.5 transition-all cursor-pointer ${
                 viewMode === "ghost_overlay"
                   ? "bg-white text-ink shadow-sm font-bold"
                   : "text-ink-3 hover:text-ink"
@@ -305,67 +342,89 @@ export function PostureVectorCard({
         )}
       </div>
 
-      {/* SVG Canvas Area */}
+      {/* SVG Canvas Stage */}
       <div className="mt-6 flex flex-col items-center">
         {viewMode === "side_by_side" || !benchmark ? (
-          <div className="grid w-full max-w-2xl grid-cols-1 gap-6 sm:grid-cols-2">
-            {/* Trainee Figure */}
-            <div className="flex flex-col items-center rounded-2xl border border-black/5 bg-slate-900/5 p-4 dark:bg-slate-900">
-              <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-slate-200 px-2.5 py-0.5 text-[11px] font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                <span className="h-2 w-2 rounded-full bg-amber-500" />
+          <div className="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+            {/* Trainee Figure Card */}
+            <div className="flex flex-col items-center rounded-2xl bg-[#091122] border border-slate-800 p-5 shadow-sm">
+              <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">
+                <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
                 Observed Posture (Your Clip)
               </span>
-              <svg viewBox="0 0 300 400" className="h-64 w-full max-w-[240px]">
-                {/* Ground Line */}
-                <line x1="20" y1="360" x2="280" y2="360" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-                <SkeletonFigure data={trainee} colorScheme="dynamic" />
-              </svg>
-              <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px]">
-                <span className="text-ink-3">Depth: <strong className="text-ink">{Math.round(trainee.angles.knee_flexion_left ?? 0)}°</strong></span>
-                <span className="text-ink-3">Lean: <strong className="text-ink">{Math.round(trainee.angles.trunk_lean ?? 0)}°</strong></span>
+
+              <div className="w-full flex justify-center py-1">
+                <svg viewBox="0 0 300 400" className="h-68 w-full max-w-[240px]">
+                  {/* Ground Line */}
+                  <line x1="20" y1="360" x2="280" y2="360" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+                  <SkeletonFigure data={trainee} colorScheme="dynamic" />
+                </svg>
+              </div>
+
+              <div className="mt-3 flex items-center justify-around w-full border-t border-slate-800/80 pt-3 text-xs text-slate-300">
+                <span>
+                  Flexion Depth: <strong className="text-cyan-400 font-bold ml-1">{traineeDepth}°</strong>
+                </span>
+                <span>•</span>
+                <span>
+                  Torso Lean: <strong className="text-amber-400 font-bold ml-1">{traineeLean}°</strong>
+                </span>
               </div>
             </div>
 
-            {/* Benchmark Figure */}
+            {/* Benchmark Figure Card */}
             {benchmark && (
-              <div className="flex flex-col items-center rounded-2xl border border-black/5 bg-slate-900/5 p-4 dark:bg-slate-900">
-                <span className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-800 dark:bg-emerald-950 dark:text-emerald-200">
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <div className="flex flex-col items-center rounded-2xl bg-[#091122] border border-slate-800 p-5 shadow-sm">
+                <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 text-xs font-semibold text-emerald-300">
+                  <span className="h-2 w-2 rounded-full bg-emerald-400" />
                   Target Movement Alignment
                 </span>
-                <svg viewBox="0 0 300 400" className="h-64 w-full max-w-[240px]">
-                  {/* Ground Line */}
-                  <line x1="20" y1="360" x2="280" y2="360" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-                  <SkeletonFigure data={benchmark} colorScheme="benchmark" />
-                </svg>
-                <div className="mt-2 flex flex-wrap justify-center gap-2 text-[11px]">
-                  <span className="text-ink-3">Target Depth: <strong className="text-ink">{Math.round(benchmark.angles.knee_flexion_left ?? 98)}°</strong></span>
-                  <span className="text-ink-3">Target Lean: <strong className="text-ink">{Math.round(benchmark.angles.trunk_lean ?? 18)}°</strong></span>
+
+                <div className="w-full flex justify-center py-1">
+                  <svg viewBox="0 0 300 400" className="h-68 w-full max-w-[240px]">
+                    {/* Ground Line */}
+                    <line x1="20" y1="360" x2="280" y2="360" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+                    <SkeletonFigure data={benchmark} colorScheme="benchmark" />
+                  </svg>
+                </div>
+
+                <div className="mt-3 flex items-center justify-around w-full border-t border-slate-800/80 pt-3 text-xs text-slate-300">
+                  <span>
+                    Target Depth: <strong className="text-emerald-400 font-bold ml-1">{benchmarkDepth}°</strong>
+                  </span>
+                  <span>•</span>
+                  <span>
+                    Target Lean: <strong className="text-emerald-400 font-bold ml-1">{benchmarkLean}°</strong>
+                  </span>
                 </div>
               </div>
             )}
           </div>
         ) : (
           /* Ghost Overlay View */
-          <div className="flex flex-col items-center rounded-2xl border border-black/5 bg-slate-900/5 p-6 dark:bg-slate-900">
-            <div className="mb-3 flex items-center gap-4 text-xs font-semibold">
-              <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <div className="flex flex-col items-center rounded-2xl bg-[#091122] border border-slate-800 p-6 shadow-sm w-full max-w-md">
+            <div className="mb-4 flex items-center gap-4 text-xs font-semibold">
+              <span className="inline-flex items-center gap-1.5 text-emerald-400 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-emerald-400" />
                 Benchmark Standard
               </span>
-              <span className="inline-flex items-center gap-1.5 text-rose-500">
-                <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
+              <span className="inline-flex items-center gap-1.5 text-rose-400 bg-rose-500/10 border border-rose-500/30 px-2.5 py-1 rounded-full">
+                <span className="h-2 w-2 rounded-full bg-rose-400" />
                 Your Form (Superimposed)
               </span>
             </div>
-            <svg viewBox="0 0 300 400" className="h-72 w-full max-w-[280px]">
-              <line x1="20" y1="360" x2="280" y2="360" stroke="#cbd5e1" strokeWidth="2" strokeDasharray="4 4" />
-              {/* Benchmark Layer (Green, semi-transparent) */}
-              <SkeletonFigure data={benchmark} colorScheme="benchmark" opacity={0.5} />
-              {/* Trainee Layer (Red, prominent) */}
-              <SkeletonFigure data={trainee} colorScheme="ghost_trainee" opacity={0.9} />
-            </svg>
-            <p className="mt-3 text-center text-xs text-ink-3 max-w-sm">
+
+            <div className="w-full flex justify-center py-2">
+              <svg viewBox="0 0 300 400" className="h-76 w-full max-w-[280px]">
+                <line x1="20" y1="360" x2="280" y2="360" stroke="#334155" strokeWidth="2" strokeDasharray="4 4" />
+                {/* Benchmark Layer (Green, semi-transparent) */}
+                <SkeletonFigure data={benchmark} colorScheme="benchmark" opacity={0.45} />
+                {/* Trainee Layer (Red, prominent) */}
+                <SkeletonFigure data={trainee} colorScheme="ghost_trainee" opacity={0.9} />
+              </svg>
+            </div>
+
+            <p className="mt-3 text-center text-xs text-slate-400 max-w-sm">
               Notice the divergence between the green target alignment and the red trainee pose at peak inflection.
             </p>
           </div>
@@ -373,31 +432,38 @@ export function PostureVectorCard({
 
         {/* Fault Highlights & Actionable Guidance Strip */}
         <div className="mt-6 w-full border-t border-black/5 pt-4">
-          <p className="stat-label text-xs">Biomechanical Key Findings</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <p className="stat-label text-xs uppercase tracking-wider text-slate-500 font-bold">
+            Biomechanical Key Findings
+          </p>
+          <div className="mt-2.5 flex flex-wrap gap-2.5">
             {hasValgus ? (
-              <span className="badge badge-danger text-xs">
-                ⚠️ Knee Dynamic Valgus: Medial collapse during descent
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800">
+                <span>⚠️</span>
+                <span>Knee Dynamic Valgus: Medial collapse during descent</span>
               </span>
             ) : (
-              <span className="badge badge-ok text-xs">
-                ✓ Frontal Alignment: Knees stacked over feet
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800">
+                <span>✓</span>
+                <span>Frontal Alignment: Knees stacked over feet</span>
               </span>
             )}
 
             {hasLean ? (
-              <span className="badge badge-warn text-xs">
-                ⚠️ Excessive Trunk Lean: Forward torso inclination &gt; 35°
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800">
+                <span>⚠️</span>
+                <span>Excessive Trunk Lean: Forward torso inclination &gt; 35°</span>
               </span>
             ) : (
-              <span className="badge badge-ok text-xs">
-                ✓ Upright Torso: Controlled lumbar posture
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800">
+                <span>✓</span>
+                <span>Upright Torso: Controlled lumbar posture</span>
               </span>
             )}
 
             {trainee?.angles?.knee_flexion_left != null && Number(trainee.angles.knee_flexion_left) < 80 && (
-              <span className="badge badge-info text-xs">
-                ℹ️ Depth: Partial depth reached ({Math.round(Number(trainee.angles.knee_flexion_left))}°)
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-50 border border-sky-200 text-sky-800">
+                <span>ℹ️</span>
+                <span>Depth: Partial depth reached ({Math.round(Number(trainee.angles.knee_flexion_left))}°)</span>
               </span>
             )}
           </div>
