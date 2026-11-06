@@ -15,15 +15,27 @@ type NavItem = { label: string; href: string; icon: IconName; match: (p: string)
 
 function navFor(role: string): NavItem[] {
   const under = (base: string) => (p: string) => p === base || p.startsWith(`${base}/`);
-  return [
-    { label: "Home", href: "/dashboard", icon: "home", match: under("/dashboard") },
+  const items: NavItem[] = [
+    { label: "Home", href: "/dashboard", icon: "home", match: (p) => under("/dashboard")(p) && p !== "/dashboard/compare" },
+  ];
+  if (role !== "athlete") {
+    items.push({
+      label: "Benchmark",
+      href: "/dashboard/compare",
+      icon: "activity",
+      match: under("/dashboard/compare"),
+    });
+  }
+  items.push(
     { label: role === "athlete" ? "Profile" : "Athletes", href: "/athletes", icon: "users", match: under("/athletes") },
     { label: "Videos", href: "/videos", icon: "video", match: (p) => under("/videos")(p) && p !== "/videos/upload" },
     { label: "Reports", href: "/reports", icon: "file", match: under("/reports") },
-  ];
+  );
+  return items;
 }
 
 function routeTitle(p: string): string {
+  if (p === "/dashboard/compare") return "Benchmark Studio";
   if (p.startsWith("/dashboard")) return "Home";
   if (p === "/athletes") return "Athletes";
   if (p === "/athletes/new") return "New athlete";

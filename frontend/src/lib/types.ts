@@ -344,3 +344,89 @@ export interface MovementAnalytics {
   baselines: Record<string, { mean: number; std: number; sample_size: number }>;
   anomaly_distribution: { mean?: number | null; p90?: number | null };
 }
+
+export interface VectorPostureData {
+  landmarks: Record<string, [number, number]>;
+  angles: {
+    knee_flexion_left?: number;
+    knee_flexion_right?: number;
+    trunk_lean?: number;
+    knee_valgus_left?: "none" | "mild" | "marked";
+    knee_valgus_right?: "none" | "mild" | "marked";
+    [key: string]: unknown;
+  };
+  faults: string[];
+  ground_y: number;
+  frame_number?: number | null;
+  timestamp_ms?: number | null;
+  movement_type?: string | null;
+  is_textbook_benchmark?: boolean;
+}
+
+export interface KinematicDeltaItem {
+  metric: string;
+  label: string;
+  video_a_val: string | number;
+  video_b_val: string | number;
+  delta: string | number;
+  verdict: "better" | "worse" | "neutral";
+  explanation: string;
+}
+
+export interface PrescribedExercise {
+  name: string;
+  target?: string;
+  target_muscles?: string[];
+  frequency?: string;
+  sets?: number | string;
+  reps?: string;
+  tempo?: string;
+  notes?: string;
+}
+
+export interface GeminiCoachingDebrief {
+  summary: string;
+  verbal_cues: string[];
+  prescribed_exercises: PrescribedExercise[];
+}
+
+export interface CompareVideosResponse {
+  status: string;
+  form_match_score: number;
+  movement_type: string;
+  advisory?: string | null;
+  is_identical: boolean;
+  suggest_swap: boolean;
+  is_cross_activity: boolean;
+  view_mismatch: boolean;
+  video_a_info: {
+    id: string;
+    filename: string;
+    movement_type: string;
+    camera_view: string;
+    duration_seconds?: number | null;
+    risk_score?: number | null;
+  };
+  video_b_info: {
+    id: string;
+    filename: string;
+    movement_type: string;
+    camera_view: string;
+    duration_seconds?: number | null;
+    risk_score?: number | null;
+  };
+  deltas: KinematicDeltaItem[];
+  vector_posture_a: VectorPostureData;
+  vector_posture_b: VectorPostureData;
+  gemini_coaching?: GeminiCoachingDebrief | null;
+}
+
+export interface BenchmarkPreset {
+  id: string;
+  title: string;
+  movement_type: string;
+  camera_view: string;
+  duration_seconds?: number | null;
+  is_builtin: boolean;
+  is_textbook?: boolean;
+}

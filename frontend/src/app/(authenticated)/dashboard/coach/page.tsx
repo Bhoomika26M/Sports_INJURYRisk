@@ -47,6 +47,23 @@ export default function CoachDashboard() {
         <StatCard label="Average score" value={o.avg_risk_score != null ? Math.round(o.avg_risk_score) : "—"} />
       </section>
 
+      {/* Benchmark Studio Quick Launcher */}
+      <section className="card p-6 bg-gradient-to-r from-surface to-brand-light/20 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-dark text-white shadow-sm">
+            <Icon name="activity" className="h-5 w-5" />
+          </span>
+          <div>
+            <h3 className="font-bold text-ink">Form Benchmark &amp; Comparison Studio</h3>
+            <p className="text-xs text-ink-3">Compare two athlete trials or benchmark directly against coach form with synchronized playback and vector posture twins.</p>
+          </div>
+        </div>
+        <Link href="/dashboard/compare" className="btn btn-primary btn-sm inline-flex items-center gap-1.5 shrink-0">
+          <span>Launch Studio</span>
+          <Icon name="chevron-right" className="h-4 w-4" />
+        </Link>
+      </section>
+
       <section className="flex flex-col gap-4">
         <h2 className="text-lg font-semibold text-ink">Athletes</h2>
         {sorted.length === 0 ? (

@@ -8,6 +8,7 @@ import { firstName, formatDate, humanize, initials } from "@/lib/format";
 import type { CoachDashboard } from "@/lib/types";
 import { PageHeader } from "@/components/page-header";
 import { Avatar, RiskBadge } from "@/components/badges";
+import { Icon } from "@/components/icons";
 import { EmptyState, ErrorState, PageSkeleton } from "@/components/feedback";
 import { ActionCard } from "@/components/action-card";
 
@@ -51,6 +52,23 @@ export default function PhysioDashboard() {
           ))}
         </ul>
       )}
+
+      {/* Benchmark Studio Quick Launcher */}
+      <section className="card p-6 bg-gradient-to-r from-surface to-brand-light/20 flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-dark text-white shadow-sm">
+            <Icon name="activity" className="h-5 w-5" />
+          </span>
+          <div>
+            <h3 className="font-bold text-ink">Rehabilitation &amp; Form Benchmark Studio</h3>
+            <p className="text-xs text-ink-3">Track recovery progress, bilateral asymmetry reduction, and posture alignment across sessions.</p>
+          </div>
+        </div>
+        <Link href="/dashboard/compare" className="btn btn-primary btn-sm inline-flex items-center gap-1.5 shrink-0">
+          <span>Launch Studio</span>
+          <Icon name="chevron-right" className="h-4 w-4" />
+        </Link>
+      </section>
 
       <section className="grid gap-4 sm:grid-cols-2">
         <ActionCard href="/athletes" icon="users" title="All athletes" body="Browse everyone's profile." />

@@ -7,13 +7,14 @@ import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, X
 import { api, ApiError } from "@/lib/api-client";
 import { useVideo } from "@/lib/hooks";
 import { breakdownLabel, classificationRows, humanize, LEVEL_TONE, metricLabel, movementLabel, RISK, SUB_SCORE_LABELS, wholeDegrees } from "@/lib/format";
-import type { Biomechanics, InsufficientBaseline, Recommendation, RiskScore, Video, VideoQuality } from "@/lib/types";
+import type { Biomechanics, InsufficientBaseline, Recommendation, RiskScore, Video, VideoQuality, VectorPostureData } from "@/lib/types";
 import { BackLink } from "@/components/back-link";
 import { PageHeader } from "@/components/page-header";
 import { DownloadButton } from "@/components/download-button";
 import { Icon } from "@/components/icons";
 import { ErrorState, Notice, PageSkeleton } from "@/components/feedback";
 import { AuthVideo } from "@/components/auth-media";
+import { PostureVectorCard } from "@/components/posture-vector-card";
 
 type RiskResult =
   | { kind: "scored"; risk: RiskScore }
@@ -225,6 +226,18 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
     queryKey: ["video", id, "recommendations"],
     queryFn: () => api.get<Recommendation[]>(`/videos/${id}/recommendations`),
     enabled: scored,
+  });
+
+  const vectorQ = useQuery({
+    queryKey: ["video", id, "vector-posture"],
+    queryFn: () => api.get<VectorPostureData>(`/videos/${id}/vector-posture`),
+    enabled: completed,
+  });
+
+  const benchmarkVectorQ = useQuery({
+    queryKey: ["benchmark-vector", videoQ.data?.movement_type],
+    queryFn: () => api.get<VectorPostureData>(`/videos/textbook_${videoQ.data?.movement_type}/vector-posture`),
+    enabled: completed && !!videoQ.data?.movement_type,
   });
 
   const [picked, setPicked] = useState<string[] | null>(null);
@@ -459,6 +472,16 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
         caveat={risk.kind === "scored" ? risk.risk.data_quality?.caveat : undefined}
         baseline={risk.kind === "scored" ? risk.risk.baseline : undefined}
       />
+
+      {/* ---------- Biomechanical Posture Twin (SVG Vector Avatar) ---------- */}
+      {vectorQ.data && (
+        <PostureVectorCard
+          trainee={vectorQ.data}
+          benchmark={benchmarkVectorQ.data}
+          title="Biomechanical Posture Twin"
+          subtitle="Observed Inflection Alignment vs. Textbook Biomechanical Standard"
+        />
+      )}
 
       {/* ---------- Visual Movement Screening ---------- */}
       {geminiOverall && (
