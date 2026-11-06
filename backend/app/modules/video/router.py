@@ -28,6 +28,13 @@ from app.modules.video.schemas import (
 )
 from app.modules.biomechanics.calculations import limb_symmetry_index
 from app.modules.biomechanics.classification import AUTO
+from app.modules.video.comparison_schemas import (
+    CompareVideosRequest, CompareVideosResponse, VectorPostureData,
+)
+from app.modules.video.comparison_service import compare_two_videos
+from app.modules.video.vector_service import extract_inflection_vector_for_video, get_textbook_ideal_landmarks
+from app.modules.video.export_service import generate_clinical_pdf_report, generate_telemetry_excel_export
+from app.modules.risk_scoring.models import RiskScore
 
 # One list for the filename gate AND the storage-key gate (main.py): they drifted once (storage PUT still said mp4|mov).
 VIDEO_EXTENSIONS = "mp4|mov|webm|avi|mkv|m4v"
@@ -231,6 +238,69 @@ async def confirm_upload(
     return {"status": "processing"}
 
 
+@router.post("/compare", response_model=CompareVideosResponse)
+async def compare_videos_endpoint(
+    req: CompareVideosRequest,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Deep dual-video form benchmark and kinematic comparison."""
+    try:
+        return await compare_two_videos(
+            db,
+            video_a_id=req.video_a_id,
+            video_b_id=req.video_b_id,
+            run_gemini=req.run_gemini,
+        )
+    except ValueError as e:
+        raise api_error(404, "NOT_FOUND", str(e))
+    except Exception as e:
+        logger.exception("Video comparison failed")
+        raise api_error(500, "COMPARISON_FAILED", f"Comparison failed: {e}")
+
+
+@router.get("/benchmark-presets")
+async def list_benchmark_presets(
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """List pre-loaded benchmark clips and textbook standards for 1-click comparison."""
+    db_videos = list((await db.scalars(
+        select(Video)
+        .where(Video.processing_status == VideoProcessingStatus.completed)
+        .order_by(desc(Video.created_at))
+        .limit(10)
+    )).all())
+
+    presets = [
+        {
+            "id": v.id,
+            "title": f"{v.movement_type.capitalize()} Standard ({v.original_filename or 'Clip'})",
+            "movement_type": v.movement_type,
+            "camera_view": v.camera_view,
+            "duration_seconds": v.duration_seconds,
+            "is_builtin": True,
+        }
+        for v in db_videos
+    ]
+
+    standard_types = ["squatting", "jumping", "sprinting", "landing", "cutting", "throwing"]
+    existing_types = {p["movement_type"] for p in presets}
+    for st in standard_types:
+        if st not in existing_types:
+            presets.append({
+                "id": f"textbook_{st}",
+                "title": f"Textbook Ideal {st.capitalize()} (Biomechanical Standard)",
+                "movement_type": st,
+                "camera_view": "sagittal" if st in ("squatting", "sprinting", "running") else "frontal",
+                "duration_seconds": 3.0,
+                "is_builtin": True,
+                "is_textbook": True,
+            })
+
+    return {"presets": presets}
+
+
 @router.get("/{video_id}", response_model=VideoResponse)
 async def get_video_endpoint(
     video_id: UuidPath,
@@ -248,6 +318,30 @@ async def get_video_endpoint(
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
     return video
+
+
+@router.get("/{video_id}/vector-posture", response_model=VectorPostureData)
+async def get_vector_posture_endpoint(
+    video_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Get the SVG skeletal posture twin coordinates for a video at its peak inflection frame."""
+    if video_id.startswith("textbook_"):
+        movement_type = video_id.replace("textbook_", "")
+        return get_textbook_ideal_landmarks(movement_type)
+
+    video = await db.scalar(select(Video).where(Video.id == video_id))
+    if not video:
+        raise api_error(404, "NOT_FOUND", "Video not found")
+
+    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if athlete and not _can_access_athlete(current_user, athlete):
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+
+    vector_dict = await extract_inflection_vector_for_video(db, video_id)
+    return VectorPostureData(**vector_dict)
+
  
  
 @router.post("/{video_id}/ai-observe")
@@ -501,4 +595,56 @@ async def export_csv(
     return StreamingResponse(
         iter([output.getvalue()]), media_type="text/csv",
         headers={"Content-Disposition": f'attachment; filename="video_{video_id}_metrics.csv"'},
+    )
+
+@router.get("/{video_id}/report.pdf")
+async def export_pdf_report(
+    video_id: UuidPath,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Streams a publication-grade 1-page clinical movement assessment PDF."""
+    video = await db.scalar(select(Video).where(Video.id == video_id))
+    if not video:
+        raise api_error(404, "NOT_FOUND", "Video not found")
+
+    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
+    if not _can_access_athlete(current_user, athlete):
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+
+    risk = await db.scalar(select(RiskScore).where(RiskScore.video_id == video_id))
+    coach = await db.scalar(select(User).where(User.id == athlete.coach_id)) if athlete.coach_id else None
+
+    pdf_bytes = generate_clinical_pdf_report(video, risk, athlete, coach)
+    return StreamingResponse(
+        io.BytesIO(pdf_bytes),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="assessment_report_{video_id[:8]}.pdf"'},
+    )
+
+
+@router.get("/{video_id}/report.xlsx")
+async def export_excel_telemetry(
+    video_id: UuidPath,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Streams research-grade frame-by-frame joint telemetry in Excel format."""
+    video = await db.scalar(select(Video).where(Video.id == video_id))
+    if not video:
+        raise api_error(404, "NOT_FOUND", "Video not found")
+
+    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
+    if not _can_access_athlete(current_user, athlete):
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+
+    xlsx_bytes = generate_telemetry_excel_export(video, athlete)
+    return StreamingResponse(
+        io.BytesIO(xlsx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="kinematic_telemetry_{video_id[:8]}.xlsx"'},
     )
