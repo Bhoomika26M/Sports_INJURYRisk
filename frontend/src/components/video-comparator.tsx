@@ -20,6 +20,68 @@ interface VideoComparatorProps {
   onSwap?: (newA: string, newB: string) => void;
 }
 
+type VideoProbeInfo = {
+  width: number;
+  height: number;
+  duration: number;
+  error?: string;
+};
+
+/**
+ * Pre-flight metadata extraction in the browser: detects resolution & duration
+ * BEFORE upload to immediately flag issues and name the exact file.
+ */
+function probeVideoFile(file: File): Promise<VideoProbeInfo> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.muted = true;
+    let settled = false;
+
+    const finish = (result: VideoProbeInfo) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      URL.revokeObjectURL(url);
+      v.removeAttribute("src");
+      v.load();
+      resolve(result);
+    };
+
+    const timer = setTimeout(() => {
+      finish({
+        width: 0,
+        height: 0,
+        duration: 0,
+      });
+    }, 6000);
+
+    v.onloadedmetadata = () => {
+      const w = v.videoWidth || 0;
+      const h = v.videoHeight || 0;
+      const d = v.duration || 0;
+
+      let err: string | undefined;
+      if (h > 0 && h < 480) {
+        err = `Video resolution is ${w}x${h} (${h}p). Minimum required is 480p for reliable joint tracking.`;
+      } else if (d > 0 && d < 2) {
+        err = `Duration is ${d.toFixed(1)}s (minimum 2.0s required).`;
+      } else if (d > 60) {
+        err = `Duration is ${d.toFixed(1)}s (maximum 60.0s allowed).`;
+      }
+
+      finish({ width: w, height: h, duration: d, error: err });
+    };
+
+    v.onerror = () => {
+      finish({ width: 0, height: 0, duration: 0 });
+    };
+
+    v.src = url;
+  });
+}
+
 export function VideoComparator({
   initialVideoAId,
   initialVideoBId,
@@ -41,6 +103,10 @@ export function VideoComparator({
   const [freshFileB, setFreshFileB] = useState<File | null>(null);
   const [uploadMovement, setUploadMovement] = useState<string>("auto");
   const [selectedAthleteId, setSelectedAthleteId] = useState<string>("");
+  const [probeA, setProbeA] = useState<VideoProbeInfo | null>(null);
+  const [probeB, setProbeB] = useState<VideoProbeInfo | null>(null);
+  const [fileErrorA, setFileErrorA] = useState<string | null>(null);
+  const [fileErrorB, setFileErrorB] = useState<string | null>(null);
   const [uploadState, setUploadState] = useState<{
     phase: "idle" | "uploading" | "processing" | "error";
     progressA: number;
@@ -130,11 +196,18 @@ export function VideoComparator({
       if (statusB.processing_status === "completed") doneB = true;
 
       if (statusA.processing_status === "failed" || statusB.processing_status === "failed") {
-        throw new Error(
-          statusA.error_message ||
-            statusB.error_message ||
-            "One or both videos failed pose estimation. Please check video resolution and format."
-        );
+        const failA = statusA.processing_status === "failed" ? (statusA.error_message || "Pose extraction failed") : null;
+        const failB = statusB.processing_status === "failed" ? (statusB.error_message || "Pose extraction failed") : null;
+        if (failA) setFileErrorA(failA);
+        if (failB) setFileErrorB(failB);
+
+        const failMsg =
+          failA && failB
+            ? `Both videos failed pose tracking:\n• Benchmark (${labelA}): ${failA}\n• Trainee (${labelB}): ${failB}`
+            : failA
+            ? `Benchmark video issue (${labelA}): ${failA}. Trainee video (${labelB}) succeeded.`
+            : `Trainee video issue (${labelB}): ${failB}. Benchmark video (${labelA}) succeeded.`;
+        throw new Error(failMsg);
       }
 
       const pctA = statusA.progress_pct ?? (doneA ? 100 : Math.min(95, 10 + attempt * 2));
@@ -201,6 +274,23 @@ export function VideoComparator({
   const handleUploadAndCompare = async () => {
     if (!freshFileA || !freshFileB) return;
 
+    setFileErrorA(null);
+    setFileErrorB(null);
+
+    // Pre-flight validation from client-side probe
+    if (probeA?.error || probeB?.error) {
+      if (probeA?.error) setFileErrorA(probeA.error);
+      if (probeB?.error) setFileErrorB(probeB.error);
+      const preflightMsg =
+        probeA?.error && probeB?.error
+          ? `Both clips have resolution/duration issues:\n• Benchmark (${freshFileA.name}): ${probeA.error}\n• Trainee (${freshFileB.name}): ${probeB.error}`
+          : probeA?.error
+          ? `Benchmark clip issue (${freshFileA.name}): ${probeA.error}\nTrainee clip (${freshFileB.name}) is valid.`
+          : `Trainee clip issue (${freshFileB.name}): ${probeB?.error || "Resolution/duration error"}\nBenchmark clip (${freshFileA.name}) is valid.`;
+      setUploadState({ phase: "error", progressA: 0, progressB: 0, message: preflightMsg });
+      return;
+    }
+
     setUploadState({ phase: "uploading", progressA: 0, progressB: 0, message: "Requesting upload tickets..." });
 
     try {
@@ -240,13 +330,39 @@ export function VideoComparator({
         }),
       ]);
 
-      // 3. Confirm uploads and trigger pose pipeline in backend
-      setUploadState({ phase: "processing", progressA: 100, progressB: 100, message: "Analyzing joint kinematics with MediaPipe..." });
+      // 3. Confirm uploads individually to identify the EXACT failing video
+      setUploadState({ phase: "processing", progressA: 100, progressB: 100, message: "Validating video formats and resolution..." });
 
-      await Promise.all([
+      const [confirmA, confirmB] = await Promise.allSettled([
         api.post(`/videos/${ticketA.video_id}/confirm-upload`),
         api.post(`/videos/${ticketB.video_id}/confirm-upload`),
       ]);
+
+      const errA =
+        confirmA.status === "rejected"
+          ? confirmA.reason instanceof Error
+            ? confirmA.reason.message
+            : "Validation failed"
+          : null;
+      const errB =
+        confirmB.status === "rejected"
+          ? confirmB.reason instanceof Error
+            ? confirmB.reason.message
+            : "Validation failed"
+          : null;
+
+      if (errA || errB) {
+        if (errA) setFileErrorA(errA);
+        if (errB) setFileErrorB(errB);
+
+        const detailedMsg =
+          errA && errB
+            ? `Both clips rejected by validator:\n• Benchmark (${freshFileA.name}): ${errA}\n• Trainee (${freshFileB.name}): ${errB}`
+            : errA
+            ? `Benchmark clip issue (${freshFileA.name}): ${errA}. Trainee clip (${freshFileB.name}) passed validation.`
+            : `Trainee clip issue (${freshFileB.name}): ${errB}. Benchmark clip (${freshFileA.name}) passed validation.`;
+        throw new Error(detailedMsg);
+      }
 
       // 4. Save session for resilient recovery across page navigations/refreshes
       if (typeof window !== "undefined") {
@@ -489,12 +605,21 @@ export function VideoComparator({
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) setFreshFileA(f);
+                    if (f) {
+                      setFreshFileA(f);
+                      setFileErrorA(null);
+                      probeVideoFile(f).then((p) => {
+                        setProbeA(p);
+                        if (p.error) setFileErrorA(p.error);
+                      });
+                    }
                   }}
                 />
 
                 {freshFileA && previewUrlA ? (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs flex flex-col gap-2">
+                  <div className={`rounded-2xl border p-3.5 shadow-xs flex flex-col gap-2.5 transition-all ${
+                    fileErrorA ? "border-rose-400 bg-rose-50/20" : "border-slate-200 bg-white"
+                  }`}>
                     <video
                       src={previewUrlA}
                       controls
@@ -502,21 +627,45 @@ export function VideoComparator({
                       className="w-full h-40 rounded-xl bg-black object-contain"
                     />
                     <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="font-semibold text-slate-900 truncate max-w-[220px]">
-                        {freshFileA.name}
-                      </span>
+                      <div className="flex items-center gap-2 truncate max-w-[210px]">
+                        <span className="font-bold text-slate-900 truncate">
+                          {freshFileA.name}
+                        </span>
+                        {probeA && probeA.height > 0 && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
+                            probeA.error
+                              ? "bg-rose-100 text-rose-800 border border-rose-300"
+                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          }`}>
+                            {probeA.height}p {probeA.error ? "(Below 480p)" : ""}
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
                           setFreshFileA(null);
+                          setProbeA(null);
+                          setFileErrorA(null);
                           if (fileInputARef.current) fileInputARef.current.value = "";
                         }}
-                        className="text-rose-600 hover:text-rose-800 cursor-pointer font-semibold flex items-center gap-1"
+                        className="text-rose-600 hover:text-rose-800 cursor-pointer font-semibold flex items-center gap-1 shrink-0"
                       >
                         <Icon name="x" className="h-3.5 w-3.5" />
                         <span>Remove</span>
                       </button>
                     </div>
+
+                    {/* Benchmark File Error Banner */}
+                    {fileErrorA && (
+                      <div className="rounded-xl bg-rose-50 border border-rose-300 p-2.5 text-xs text-rose-900 flex items-start gap-2 shadow-2xs">
+                        <Icon name="alert" className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-rose-950">Benchmark Clip Rejected ({freshFileA.name})</p>
+                          <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">{fileErrorA}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div
@@ -527,7 +676,7 @@ export function VideoComparator({
                       <Icon name="upload" className="h-5 w-5" />
                     </div>
                     <p className="text-sm font-bold text-slate-900">Choose Benchmark Video</p>
-                    <p className="text-xs text-slate-500 mt-0.5">MP4, MOV, or WEBM (Max 200MB)</p>
+                    <p className="text-xs text-slate-500 mt-0.5">MP4, MOV, or WEBM (Min 480p, Max 200MB)</p>
                   </div>
                 )}
               </div>
@@ -550,12 +699,21 @@ export function VideoComparator({
                   className="hidden"
                   onChange={(e) => {
                     const f = e.target.files?.[0];
-                    if (f) setFreshFileB(f);
+                    if (f) {
+                      setFreshFileB(f);
+                      setFileErrorB(null);
+                      probeVideoFile(f).then((p) => {
+                        setProbeB(p);
+                        if (p.error) setFileErrorB(p.error);
+                      });
+                    }
                   }}
                 />
 
                 {freshFileB && previewUrlB ? (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-xs flex flex-col gap-2">
+                  <div className={`rounded-2xl border p-3.5 shadow-xs flex flex-col gap-2.5 transition-all ${
+                    fileErrorB ? "border-rose-400 bg-rose-50/20" : "border-slate-200 bg-white"
+                  }`}>
                     <video
                       src={previewUrlB}
                       controls
@@ -563,21 +721,45 @@ export function VideoComparator({
                       className="w-full h-40 rounded-xl bg-black object-contain"
                     />
                     <div className="flex items-center justify-between text-xs pt-1">
-                      <span className="font-semibold text-slate-900 truncate max-w-[220px]">
-                        {freshFileB.name}
-                      </span>
+                      <div className="flex items-center gap-2 truncate max-w-[210px]">
+                        <span className="font-bold text-slate-900 truncate">
+                          {freshFileB.name}
+                        </span>
+                        {probeB && probeB.height > 0 && (
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md shrink-0 ${
+                            probeB.error
+                              ? "bg-rose-100 text-rose-800 border border-rose-300"
+                              : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                          }`}>
+                            {probeB.height}p {probeB.error ? "(Below 480p)" : ""}
+                          </span>
+                        )}
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
                           setFreshFileB(null);
+                          setProbeB(null);
+                          setFileErrorB(null);
                           if (fileInputBRef.current) fileInputBRef.current.value = "";
                         }}
-                        className="text-rose-600 hover:text-rose-800 cursor-pointer font-semibold flex items-center gap-1"
+                        className="text-rose-600 hover:text-rose-800 cursor-pointer font-semibold flex items-center gap-1 shrink-0"
                       >
                         <Icon name="x" className="h-3.5 w-3.5" />
                         <span>Remove</span>
                       </button>
                     </div>
+
+                    {/* Trainee File Error Banner */}
+                    {fileErrorB && (
+                      <div className="rounded-xl bg-rose-50 border border-rose-300 p-2.5 text-xs text-rose-900 flex items-start gap-2 shadow-2xs">
+                        <Icon name="alert" className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold text-rose-950">Trainee Clip Rejected ({freshFileB.name})</p>
+                          <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">{fileErrorB}</p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div
@@ -588,7 +770,7 @@ export function VideoComparator({
                       <Icon name="upload" className="h-5 w-5" />
                     </div>
                     <p className="text-sm font-bold text-slate-900">Choose Trainee Video</p>
-                    <p className="text-xs text-slate-500 mt-0.5">MP4, MOV, or WEBM (Max 200MB)</p>
+                    <p className="text-xs text-slate-500 mt-0.5">MP4, MOV, or WEBM (Min 480p, Max 200MB)</p>
                   </div>
                 )}
               </div>
@@ -702,9 +884,12 @@ export function VideoComparator({
             )}
 
             {uploadState.phase === "error" && (
-              <div className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs font-medium text-rose-800 flex items-center gap-2">
-                <Icon name="alert" className="h-4 w-4 shrink-0 text-rose-600" />
-                <span>{uploadState.message}</span>
+              <div className="rounded-xl border border-rose-300 bg-rose-50/95 p-4 text-xs font-medium text-rose-900 flex items-start gap-3 shadow-xs animate-in fade-in duration-200">
+                <Icon name="alert" className="h-5 w-5 shrink-0 text-rose-600 mt-0.5" />
+                <div className="flex-1 space-y-1">
+                  <p className="font-bold text-rose-950 text-xs">Video Validation Issue Detected</p>
+                  <p className="text-rose-800 whitespace-pre-line leading-relaxed text-xs">{uploadState.message}</p>
+                </div>
               </div>
             )}
 
@@ -712,14 +897,19 @@ export function VideoComparator({
             <div className="flex items-center justify-end pt-3 border-t border-slate-100">
               <button
                 type="button"
-                disabled={!freshFileA || !freshFileB || uploadState.phase !== "idle"}
+                disabled={!freshFileA || !freshFileB || !!fileErrorA || !!fileErrorB || uploadState.phase !== "idle"}
                 onClick={handleUploadAndCompare}
-                className="btn btn-primary inline-flex items-center gap-2 cursor-pointer shadow-sm hover:shadow"
+                className="btn btn-primary inline-flex items-center gap-2 cursor-pointer shadow-sm hover:shadow disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {uploadState.phase !== "idle" ? (
                   <>
                     <Spinner className="h-4 w-4" />
                     <span>Uploading &amp; Analyzing...</span>
+                  </>
+                ) : fileErrorA || fileErrorB ? (
+                  <>
+                    <Icon name="alert" className="h-4 w-4" />
+                    <span>Replace Invalid Video to Benchmark</span>
                   </>
                 ) : (
                   <>

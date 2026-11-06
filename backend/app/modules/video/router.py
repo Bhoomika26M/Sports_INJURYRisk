@@ -258,14 +258,15 @@ async def confirm_upload(
     # Validate limits
     file_size_mb = os.path.getsize(local_path) / (1024 * 1024)
     if file_size_mb > settings.max_upload_mb:
-        await _reject_upload(db, video, "file_too_large", f"File exceeds {settings.max_upload_mb} MB", local_path)
+        await _reject_upload(db, video, "file_too_large", f"File size is {file_size_mb:.1f} MB (exceeds {settings.max_upload_mb} MB limit)", local_path)
 
     if duration < settings.min_video_seconds or duration > settings.max_video_seconds:
         await _reject_upload(db, video, "duration_out_of_range",
-                             f"Duration must be between {settings.min_video_seconds:g} and {settings.max_video_seconds:g} seconds", local_path)
+                             f"Video duration is {duration:.1f}s (must be between {settings.min_video_seconds:g}s and {settings.max_video_seconds:g}s)", local_path)
 
     if height < settings.min_video_height:
-        await _reject_upload(db, video, "resolution_too_low", f"Minimum height is {settings.min_video_height}p", local_path)
+        await _reject_upload(db, video, "resolution_too_low",
+                             f"Video resolution is {width}x{height} ({height}p). Minimum height required for biomechanical tracking is {settings.min_video_height}p.", local_path)
 
     video.resolution_width = width
     video.resolution_height = height
