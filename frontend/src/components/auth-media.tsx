@@ -71,3 +71,39 @@ export function AuthVideo({ path, label }: { path: string; label: string }) {
     />
   );
 }
+
+/**
+ * <img> can't attach an Authorization header, so we fetch the thumbnail with the
+ * signed-in session and display it from a blob URL.
+ */
+export function AuthThumbnail({
+  path,
+  alt,
+  className = "w-full h-full object-cover",
+}: {
+  path: string;
+  alt: string;
+  className?: string;
+}) {
+  const { url, loading, error } = useBlobUrl(path, 0);
+
+  if (loading) {
+    return (
+      <div className={`flex items-center justify-center bg-slate-900 ${className}`}>
+        <Spinner className="h-4 w-4 text-slate-400" />
+      </div>
+    );
+  }
+
+  if (error || !url) {
+    return (
+      <div className={`flex flex-col items-center justify-center bg-slate-900 text-slate-500 p-2 ${className}`}>
+        <Icon name="film" className="h-5 w-5 mb-1" />
+        <span className="text-[10px]">Preview</span>
+      </div>
+    );
+  }
+
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={url} alt={alt} className={className} />;
+}

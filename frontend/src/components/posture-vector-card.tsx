@@ -438,31 +438,31 @@ export function PostureVectorCard({
           <div className="mt-2.5 flex flex-wrap gap-2.5">
             {hasValgus ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 border border-rose-200 text-rose-800">
-                <span>⚠️</span>
+                <Icon name="alert" className="h-3.5 w-3.5 text-rose-600 shrink-0" />
                 <span>Knee Dynamic Valgus: Medial collapse during descent</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800">
-                <span>✓</span>
+                <Icon name="check" className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                 <span>Frontal Alignment: Knees stacked over feet</span>
               </span>
             )}
 
             {hasLean ? (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-800">
-                <span>⚠️</span>
+                <Icon name="alert" className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                 <span>Excessive Trunk Lean: Forward torso inclination &gt; 35°</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800">
-                <span>✓</span>
+                <Icon name="check" className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                 <span>Upright Torso: Controlled lumbar posture</span>
               </span>
             )}
 
             {trainee?.angles?.knee_flexion_left != null && Number(trainee.angles.knee_flexion_left) < 80 && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-50 border border-sky-200 text-sky-800">
-                <span>ℹ️</span>
+                <Icon name="info" className="h-3.5 w-3.5 text-sky-600 shrink-0" />
                 <span>Depth: Partial depth reached ({Math.round(Number(trainee.angles.knee_flexion_left))}°)</span>
               </span>
             )}

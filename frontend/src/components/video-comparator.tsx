@@ -238,8 +238,14 @@ export function VideoComparator({
               }`}
             >
               <div className="flex items-start gap-3">
-                <span className="mt-0.5 text-base">
-                  {result.suggest_swap ? "💡" : result.is_identical ? "ℹ️" : "⚠️"}
+                <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-white/80">
+                  {result.suggest_swap ? (
+                    <Icon name="lightbulb" className="h-4 w-4 text-amber-600" />
+                  ) : result.is_identical ? (
+                    <Icon name="info" className="h-4 w-4 text-sky-600" />
+                  ) : (
+                    <Icon name="alert" className="h-4 w-4 text-rose-600" />
+                  )}
                 </span>
                 <p className="text-xs font-medium leading-relaxed max-w-2xl">
                   {result.advisory}
@@ -465,9 +471,21 @@ export function VideoComparator({
                         </span>
                       </td>
                       <td className="py-3 capitalize font-semibold">
-                        {item.verdict === "better" && <span className="text-emerald-600">✓ Aligned</span>}
-                        {item.verdict === "worse" && <span className="text-rose-600">⚠️ Divergent</span>}
-                        {item.verdict === "neutral" && <span className="text-slate-500">— Equivalent</span>}
+                        {item.verdict === "better" && (
+                          <span className="inline-flex items-center gap-1 text-emerald-600">
+                            <Icon name="check" className="h-3.5 w-3.5" />
+                            <span>Aligned</span>
+                          </span>
+                        )}
+                        {item.verdict === "worse" && (
+                          <span className="inline-flex items-center gap-1 text-rose-600">
+                            <Icon name="alert" className="h-3.5 w-3.5" />
+                            <span>Divergent</span>
+                          </span>
+                        )}
+                        {item.verdict === "neutral" && (
+                          <span className="text-slate-500">— Equivalent</span>
+                        )}
                       </td>
                     </tr>
                   ))}

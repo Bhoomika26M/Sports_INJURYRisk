@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { Icon } from "@/components/icons";
 import { movementLabel } from "@/lib/format";
+import { AuthThumbnail } from "@/components/auth-media";
 import type { BenchmarkPreset, Video } from "@/lib/types";
 
 export interface CustomVideoSelectOption {
@@ -136,7 +138,13 @@ export function CustomVideoSelect({
                 : "bg-slate-100 text-slate-400"
             }`}
           >
-            {selectedOption?.is_preset ? "⭐" : selectedOption ? "📹" : "📁"}
+            {selectedOption?.is_preset ? (
+              <Icon name="star" className="h-4 w-4 text-amber-600" />
+            ) : selectedOption ? (
+              <Icon name="video" className="h-4 w-4 text-brand-dark" />
+            ) : (
+              <Icon name="folder" className="h-4 w-4 text-slate-400" />
+            )}
           </div>
 
           {selectedOption ? (
@@ -166,15 +174,10 @@ export function CustomVideoSelect({
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0 text-slate-400">
-          <svg
+          <Icon
+            name="chevron-down"
             className={`h-4 w-4 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-          </svg>
+          />
         </div>
       </button>
 
@@ -183,25 +186,25 @@ export function CustomVideoSelect({
         <div className="absolute top-full left-0 right-0 z-50 mt-1.5 rounded-2xl border border-slate-200 bg-white shadow-xl max-h-84 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
           {/* Search Input Filter */}
           <div className="p-2.5 border-b border-slate-100 bg-slate-50/70">
-            <div className="relative">
+            <div className="relative flex items-center">
+              <span className="absolute left-2.5 text-slate-400 pointer-events-none">
+                <Icon name="search" className="h-3.5 w-3.5" />
+              </span>
               <input
                 type="text"
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by movement, clip title, or angle..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand"
+                className="w-full pl-8 pr-7 py-1.5 rounded-lg border border-slate-200 bg-white text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-brand-dark focus:ring-1 focus:ring-brand"
               />
-              <span className="absolute left-2.5 top-2 text-slate-400 text-xs">
-                🔍
-              </span>
               {search && (
                 <button
                   type="button"
                   onClick={() => setSearch("")}
-                  className="absolute right-2.5 top-1.5 text-xs text-slate-400 hover:text-slate-600"
+                  className="absolute right-2 text-slate-400 hover:text-slate-600 cursor-pointer"
                 >
-                  ✕
+                  <Icon name="x" className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
@@ -213,7 +216,7 @@ export function CustomVideoSelect({
             {filteredPresets.length > 0 && (
               <div>
                 <p className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50/70 rounded-md mb-1 flex items-center gap-1.5">
-                  <span>⭐</span>
+                  <Icon name="star" className="h-3.5 w-3.5 text-amber-600" />
                   <span>Pre-Loaded Benchmark Standards</span>
                 </p>
                 <div className="space-y-0.5">
@@ -248,7 +251,7 @@ export function CustomVideoSelect({
                           </p>
                         </div>
                         {isSelected && (
-                          <span className="text-brand-dark font-bold text-sm">✓</span>
+                          <Icon name="check" className="h-4 w-4 text-brand-dark shrink-0" />
                         )}
                       </button>
                     );
@@ -261,7 +264,7 @@ export function CustomVideoSelect({
             {filteredVideos.length > 0 && (
               <div>
                 <p className="px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100/80 rounded-md mb-1 flex items-center gap-1.5">
-                  <span>📹</span>
+                  <Icon name="video" className="h-3.5 w-3.5 text-slate-600" />
                   <span>Analyzed Videos in Database</span>
                 </p>
                 <div className="space-y-0.5">
@@ -291,7 +294,7 @@ export function CustomVideoSelect({
                           </p>
                         </div>
                         {isSelected && (
-                          <span className="text-brand-dark font-bold text-sm">✓</span>
+                          <Icon name="check" className="h-4 w-4 text-brand-dark shrink-0" />
                         )}
                       </button>
                     );
@@ -314,7 +317,7 @@ export function CustomVideoSelect({
 
 /**
  * Instant Video Selection Preview Card
- * Displays real-time playable preview or textbook badge before benchmark execution.
+ * Displays real-time thumbnail or textbook badge before benchmark execution.
  */
 export function VideoSelectionPreview({
   option,
@@ -326,7 +329,9 @@ export function VideoSelectionPreview({
   if (!option) {
     return (
       <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-6 flex flex-col items-center justify-center text-center min-h-[140px]">
-        <span className="text-2xl mb-1 text-slate-300">📹</span>
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-400 mb-2">
+          <Icon name="video" className="h-5 w-5" />
+        </div>
         <p className="text-xs font-semibold text-slate-500">No {label} Selected</p>
         <p className="text-[11px] text-slate-400 mt-0.5">
           Choose a clip above to preview kinematics
@@ -342,35 +347,26 @@ export function VideoSelectionPreview({
           {label} Preview
         </span>
         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full">
-          <span>●</span>
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           <span>Ready for Benchmark</span>
         </span>
       </div>
 
       <div className="flex items-start gap-3">
-        {/* Thumbnail or Video Preview */}
-        <div className="w-24 h-18 shrink-0 rounded-xl overflow-hidden bg-slate-900 border border-slate-200 flex items-center justify-center relative">
+        {/* Real Thumbnail from DB or Textbook Model */}
+        <div className="w-24 h-18 shrink-0 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative">
           {option.is_textbook ? (
-            <div className="flex flex-col items-center justify-center text-center p-1">
-              <span className="text-lg">📐</span>
-              <span className="text-[9px] font-bold text-cyan-300 uppercase">
+            <div className="flex flex-col items-center justify-center text-center p-2 bg-gradient-to-br from-brand-light/30 to-surface w-full h-full">
+              <Icon name="target" className="h-5 w-5 text-brand-dark mb-1" />
+              <span className="text-[9px] font-bold text-slate-700 uppercase">
                 Textbook
               </span>
             </div>
           ) : (
-            <video
-              src={`/api/v1/videos/${option.id}/file`}
-              controls={false}
-              muted
-              playsInline
-              preload="metadata"
+            <AuthThumbnail
+              path={`/videos/${option.id}/thumbnail`}
+              alt={option.title}
               className="w-full h-full object-cover"
-              onMouseEnter={(e) => (e.currentTarget as HTMLVideoElement).play().catch(() => {})}
-              onMouseLeave={(e) => {
-                const v = e.currentTarget as HTMLVideoElement;
-                v.pause();
-                v.currentTime = 0;
-              }}
             />
           )}
         </div>
@@ -400,7 +396,7 @@ export function VideoSelectionPreview({
           <p className="text-[10px] text-slate-400 mt-1 italic">
             {option.is_textbook
               ? "Synthesized from gold-standard clinical motion analysis."
-              : "Hover thumbnail to preview motion."}
+              : "Capture frame extracted from video."}
           </p>
         </div>
       </div>
