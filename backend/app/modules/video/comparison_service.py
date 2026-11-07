@@ -367,3 +367,162 @@ async def compare_two_videos(
         summary=summary_text,
         caveats=caveats,
     )
+
+
+async def compare_video_to_athlete_history(
+    db: AsyncSession,
+    target_video: Video,
+) -> CompareVideosResponse | dict[str, Any]:
+    """Compare target video against median of athlete's prior N >= 3 completed videos.
+
+    If fewer than 3 eligible priors exist, returns dict with status 'history_building'.
+    """
+    if target_video.processing_status != VideoProcessingStatus.completed:
+        raise api_error(422, "VIDEO_NOT_COMPLETED", "Target video processing is not completed")
+
+    stmt = (
+        select(Video)
+        .where(
+            Video.athlete_id == target_video.athlete_id,
+            Video.id != target_video.id,
+            Video.created_at < target_video.created_at,
+            Video.processing_status == VideoProcessingStatus.completed,
+            Video.movement_type == target_video.movement_type,
+            Video.camera_view == target_video.camera_view,
+        )
+        .order_by(Video.created_at.desc())
+    )
+    priors = (await db.scalars(stmt)).all()
+
+    eligible_priors = [
+        v for v in priors
+        if (v.analysis or {}).get("quality", {}).get("grade") in ("good", "fair")
+        and not v.coverage_caveat
+        and not (v.analysis or {}).get("quality", {}).get("coverage_caveat")
+    ]
+
+    if len(eligible_priors) < 3:
+        return {
+            "status": "history_building",
+            "message": (
+                f"Fewer than 3 prior completed baseline clips available for this movement and camera view "
+                f"(found {len(eligible_priors)}, need 3)."
+            ),
+            "have": len(eligible_priors),
+            "need": 3,
+            "movement_type": target_video.movement_type,
+            "camera_view": target_video.camera_view,
+        }
+
+    import statistics
+
+    priors_metrics: dict[str, list[float]] = {}
+    for pv in eligible_priors:
+        m_dict = _movement_metrics(pv)
+        for k, v in m_dict.items():
+            if isinstance(v, (int, float)):
+                priors_metrics.setdefault(k, []).append(float(v))
+
+    target_metrics = _movement_metrics(target_video)
+    deltas: list[MetricDelta] = []
+
+    if target_video.camera_view == "sagittal":
+        target_kf_l = target_metrics.get("knee_flexion_angle_left")
+        target_kf_r = target_metrics.get("knee_flexion_angle_right")
+        prior_kf_l = statistics.median(priors_metrics["knee_flexion_angle_left"]) if priors_metrics.get("knee_flexion_angle_left") else None
+        prior_kf_r = statistics.median(priors_metrics["knee_flexion_angle_right"]) if priors_metrics.get("knee_flexion_angle_right") else None
+
+        if target_kf_l is not None or prior_kf_l is not None:
+            deltas.append(
+                _metric_delta(
+                    "knee_flexion_angle_left",
+                    "Left Knee Flexion",
+                    "deg",
+                    prior_kf_l,
+                    target_kf_l,
+                    is_angular=True,
+                )
+            )
+        if target_kf_r is not None or prior_kf_r is not None:
+            deltas.append(
+                _metric_delta(
+                    "knee_flexion_angle_right",
+                    "Right Knee Flexion",
+                    "deg",
+                    prior_kf_r,
+                    target_kf_r,
+                    is_angular=True,
+                )
+            )
+
+        target_tl = target_metrics.get("trunk_lean_angle") or target_metrics.get("trunk_lean")
+        prior_tl = statistics.median(priors_metrics["trunk_lean_angle"]) if priors_metrics.get("trunk_lean_angle") else (
+            statistics.median(priors_metrics["trunk_lean"]) if priors_metrics.get("trunk_lean") else None
+        )
+        if target_tl is not None or prior_tl is not None:
+            deltas.append(
+                _metric_delta(
+                    "trunk_lean_angle",
+                    "Trunk Lean Angle",
+                    "deg",
+                    prior_tl,
+                    target_tl,
+                    is_angular=True,
+                )
+            )
+
+    for k, v in target_metrics.items():
+        if k in ("knee_flexion_angle_left", "knee_flexion_angle_right", "trunk_lean_angle", "trunk_lean"):
+            continue
+        if isinstance(v, (int, float)):
+            prior_vals = priors_metrics.get(k)
+            prior_med = statistics.median(prior_vals) if prior_vals else None
+            is_ang = k in ANGULAR_METRIC_KEYS
+            unit = "deg" if is_ang else ("pct" if "asymmetry" in k or "pct" in k else None)
+            label = k.replace("_", " ").title()
+            deltas.append(
+                _metric_delta(
+                    k,
+                    label,
+                    unit,
+                    prior_med,
+                    float(v),
+                    is_angular=is_ang,
+                )
+            )
+
+    vec_target = await extract_inflection_vector_for_video(db, target_video.id)
+    snapshot_target = build_posture_snapshot(vec_target)
+
+    summary_text = (
+        f"Longitudinal history comparison for athlete's {target_video.movement_type} "
+        f"against median of {len(eligible_priors)} prior baseline sessions. "
+        f"Evaluates whether current mechanics deviate from individual baseline."
+    )
+
+    return CompareVideosResponse(
+        movement_type=target_video.movement_type,
+        video_a_info=VideoSummary(
+            id=f"history_baseline_{target_video.athlete_id}",
+            filename=f"Median of {len(eligible_priors)} Prior Sessions",
+            movement_type=target_video.movement_type,
+            camera_view=target_video.camera_view,
+            duration_seconds=None,
+            quality_grade="fair",
+            coverage_caveat=None,
+        ),
+        video_b_info=VideoSummary(
+            id=target_video.id,
+            filename=target_video.original_filename,
+            movement_type=target_video.movement_type,
+            camera_view=target_video.camera_view,
+            duration_seconds=target_video.duration_seconds,
+            quality_grade=(target_video.analysis or {}).get("quality", {}).get("grade"),
+            coverage_caveat=target_video.coverage_caveat,
+        ),
+        deltas=deltas,
+        snapshot_a=None,
+        snapshot_b=snapshot_target,
+        summary=summary_text,
+        caveats=[],
+    )

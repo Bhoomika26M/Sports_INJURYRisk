@@ -1,18 +1,20 @@
 """Athlete router — CRUD, RBAC, injury history, training load, ACWR."""
 
 import logging
-from typing import Annotated
+from typing import Annotated, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.deps import get_current_user, require_role
+from app.core.deps import get_current_user, require_role, UuidPath
 from app.core.errors import api_error
 from app.database import get_db
 from app.modules.athletes.schemas import (
     AthleteCreate,
     AthleteClaimRequest,
+    AthleteHistoryResponse,
+    AthleteHistoryVideo,
     AthleteListResponse,
     AthleteResponse,
     AthleteUpdate,
@@ -348,3 +350,59 @@ async def get_acwr_endpoint(
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
     return await compute_acwr(db, athlete_id)
+
+
+@router.get("/{athlete_id}/history", response_model=AthleteHistoryResponse)
+async def get_athlete_history_endpoint(
+    athlete_id: UuidPath,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    movement_type: Optional[str] = Query(None),
+):
+    """Within-athlete movement metric history across completed videos (newest first)."""
+    from app.modules.video.models import Video
+
+    athlete = await get_athlete(db, athlete_id)
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
+
+    if not _can_access_athlete(current_user, athlete):
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+
+    stmt = (
+        select(Video)
+        .where(Video.athlete_id == athlete_id, Video.processing_status == "completed")
+        .order_by(Video.created_at.desc())
+    )
+    if movement_type:
+        stmt = stmt.where(Video.movement_type == movement_type)
+
+    videos = (await db.scalars(stmt)).all()
+
+    history_items: list[AthleteHistoryVideo] = []
+    for v in videos:
+        analysis = v.analysis or {}
+        quality = analysis.get("quality") or {}
+        grade = quality.get("grade")
+        caveat = bool(v.coverage_caveat or (analysis.get("quality") or {}).get("coverage_caveat"))
+        mov_metrics = (analysis.get("movement") or {}).get("metrics") or {}
+
+        history_items.append(
+            AthleteHistoryVideo(
+                video_id=v.id,
+                created_at=v.created_at,
+                movement_type=v.movement_type,
+                camera_view=v.camera_view,
+                quality_grade=grade,
+                coverage_caveat=caveat,
+                metrics=mov_metrics,
+            )
+        )
+
+    return AthleteHistoryResponse(
+        athlete_id=athlete_id,
+        movement_type=movement_type,
+        total_videos=len(history_items),
+        videos=history_items,
+    )
+

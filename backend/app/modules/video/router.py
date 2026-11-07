@@ -10,7 +10,7 @@ import subprocess
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request, status
-from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.responses import StreamingResponse, FileResponse, JSONResponse
 from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -287,6 +287,25 @@ async def get_vector_posture_endpoint(
     if not vector_dict:
         raise api_error(404, "NO_POSE_DATA", "No pose tracking data available for this clip")
     return VectorPostureData(**vector_dict)
+
+
+@router.get("/{video_id}/history-comparison")
+async def get_video_history_comparison(
+    video_id: UuidPath,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Compare this video to the median of the athlete's prior N >= 3 completed videos.
+
+    Fewer than 3 prior videos returns HTTP 202 'history_building'.
+    """
+    video, athlete = await load_accessible_video(db, video_id, current_user)
+    from app.modules.video.comparison_service import compare_video_to_athlete_history
+
+    result = await compare_video_to_athlete_history(db, video)
+    if isinstance(result, dict) and result.get("status") == "history_building":
+        return JSONResponse(status_code=status.HTTP_202_ACCEPTED, content=result)
+    return result
 
  
  

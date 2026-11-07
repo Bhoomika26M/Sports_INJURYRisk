@@ -11,6 +11,7 @@ import {
   athleteName, canManageAthletes, formatDate, formatDateTime, humanize, initials, movementLabel,
 } from "@/lib/format";
 import { EditAthleteModal, InjuryModal, TrainingModal } from "@/components/athlete-forms";
+import { AthleteHistorySparklines } from "@/components/athlete-history-sparklines";
 import { BackLink } from "@/components/back-link";
 import { Avatar, Badge, StatusBadge } from "@/components/badges";
 import { ConfirmDialog } from "@/components/dialog";
@@ -174,6 +175,9 @@ export default function AthleteDetailPage({ params }: { params: Promise<{ id: st
           )}
         </div>
       </section>
+
+      {/* Longitudinal Kinematic Sparklines */}
+      <AthleteHistorySparklines athleteId={a.id} />
 
       {/* ---------- Tabs ---------- */}
       <section className="flex flex-col gap-5">

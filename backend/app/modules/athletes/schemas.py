@@ -111,3 +111,20 @@ class TrainingLoadListResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class AthleteHistoryVideo(BaseModel):
+    video_id: str
+    created_at: datetime
+    movement_type: str
+    camera_view: str
+    quality_grade: Optional[str] = None
+    coverage_caveat: bool = False
+    metrics: dict[str, float | str | None] = Field(default_factory=dict)
+
+
+class AthleteHistoryResponse(BaseModel):
+    athlete_id: str
+    movement_type: Optional[str] = None
+    total_videos: int
+    videos: list[AthleteHistoryVideo] = Field(default_factory=list)
