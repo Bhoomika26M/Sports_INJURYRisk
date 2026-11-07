@@ -9,7 +9,7 @@ from app.modules.biomechanics.classification import AUTO
 
 
 class VideoUploadRequest(BaseModel):
-    athlete_id: str | None = None
+    athlete_id: str = Field(min_length=1)
     movement_type: str = Field(min_length=1, max_length=50)
     camera_view: str = Field(pattern="^(sagittal|frontal|other|auto)$")
     original_filename: str = Field(min_length=1, max_length=255)

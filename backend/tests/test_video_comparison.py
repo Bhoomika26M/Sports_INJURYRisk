@@ -1,31 +1,17 @@
-"""Unit and Integration Tests for Dual-Video Form Benchmark & Comparison Studio."""
+"""Unit and Integration Tests for Dual-Video Form Benchmark & Comparison Studio (Phase 2 Spec)."""
 
 import pytest
 from httpx import AsyncClient
 
-from app.modules.risk_scoring.models import RiskScore
 from app.modules.users.models import UserRole
-from app.modules.video.clinical_catalog import get_corrective_protocol_for_faults
 from app.modules.video.comparison_service import compare_two_videos
+from app.modules.video.models import PoseFrame, VideoProcessingStatus
 from app.modules.video.vector_service import (
-    get_textbook_ideal_landmarks,
+    extract_inflection_vector_for_video,
     normalize_landmarks_to_svg,
 )
 from tests.conftest import auth_header, register_and_login
 from tests.factories import make_athlete, make_user, make_video
-
-
-def test_textbook_ideal_landmarks_structure():
-    """Verify textbook ideal standards return valid geometry for key movements."""
-    for mv in ("squatting", "jumping", "sprinting"):
-        data = get_textbook_ideal_landmarks(mv)
-        assert data["is_textbook_benchmark"] is True
-        assert "landmarks" in data
-        assert "mid_shoulder" in data["landmarks"]
-        assert "mid_hip" in data["landmarks"]
-        assert "angles" in data
-        assert "knee_flexion_left" in data["angles"]
-        assert data["ground_y"] > 300.0
 
 
 def test_normalize_landmarks_to_svg_detects_valgus_and_lean():
@@ -48,132 +34,203 @@ def test_normalize_landmarks_to_svg_detects_valgus_and_lean():
     assert "knee_valgus" in svg_data["faults"]
 
 
-def test_clinical_catalog_returns_prioritized_protocols():
-    """Verify that corrective exercise protocol catalog returns clinical drills."""
-    protocols = get_corrective_protocol_for_faults(["knee_valgus", "excessive_trunk_lean"])
-    assert len(protocols) >= 2
-    names = [p["title"] for p in protocols]
-    assert any("Valgus" in n for n in names)
-    assert any("Trunk" in n for n in names)
-
-
 @pytest.mark.asyncio
-async def test_compare_identical_videos(db_session):
-    """Test comparing identical videos produces 100% match and identical advisory."""
-    coach = await make_user(db_session, "comp_coach1@test.com", role=UserRole.coach)
+async def test_no_pose_frames_returns_no_snapshot_not_textbook(db_session):
+    """F07: Videos without pose frames return None (UI renders 'no pose data'), never textbook figures."""
+    coach = await make_user(db_session, "nopose_coach@test.com", role=UserRole.coach)
     athlete = await make_athlete(db_session, coach_id=coach.id)
     video = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    await db_session.commit()
 
-    res = await compare_two_videos(db_session, video.id, video.id, run_gemini=False)
-    assert res.is_identical is True
-    assert res.form_match_score == 100.0
-    assert "Self-Comparison Mode" in res.advisory
-    assert res.suggest_swap is False
-    assert len(res.deltas) >= 4
+    vec = await extract_inflection_vector_for_video(db_session, video.id)
+    assert vec is None, f"Expected None for video without pose frames, got {vec}"
 
 
 @pytest.mark.asyncio
-async def test_compare_swapped_videos(db_session):
-    """Test that if student has cleaner form than trainer, role swap is suggested."""
-    coach = await make_user(db_session, "comp_coach2@test.com", role=UserRole.coach)
+async def test_compare_uses_real_analysis_shape(db_session):
+    """F05: Compare reads from video.analysis['movement']['metrics'] without hardcoded defaults."""
+    coach = await make_user(db_session, "real_coach@test.com", role=UserRole.coach)
     athlete = await make_athlete(db_session, coach_id=coach.id)
 
-    # Video A: Trainer (bad mechanics, high risk)
     video_a = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    video_a.processing_status = VideoProcessingStatus.completed
+    video_a.camera_view = "sagittal"
     video_a.analysis = {
-        "metrics": {"max_knee_flexion": 60.0, "max_trunk_lean": 45.0, "knee_valgus_flag": "mild"}
+        "version": "2.3",
+        "quality": {"grade": "good", "warnings": []},
+        "movement": {
+            "metrics": {
+                "max_knee_flexion": 105.0,
+                "max_trunk_lean": 22.0,
+                "knee_valgus_flag": "none",
+            },
+            "reps": {"n_reps": 3, "rep_peaks": [103.0, 105.0, 104.0]},
+        },
     }
-    risk_a = RiskScore(
-        video_id=video_a.id,
-        athlete_id=athlete.id,
-        overall_score=75.0,
-        risk_category="high",
-        score_breakdown={},
-        assessment={"drivers": []},
-    )
-    db_session.add(risk_a)
 
-    # Video B: Trainee (clean mechanics, low risk)
     video_b = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    video_b.processing_status = VideoProcessingStatus.completed
+    video_b.camera_view = "sagittal"
     video_b.analysis = {
-        "metrics": {"max_knee_flexion": 98.0, "max_trunk_lean": 15.0, "knee_valgus_flag": "none"}
+        "version": "2.3",
+        "quality": {"grade": "fair", "warnings": []},
+        "movement": {
+            "metrics": {
+                "max_knee_flexion": 85.0,
+                "max_trunk_lean": 36.0,
+                "knee_valgus_flag": "mild",
+            },
+            "reps": {"n_reps": 3, "rep_peaks": [82.0, 85.0, 84.0]},
+        },
     }
-    risk_b = RiskScore(
-        video_id=video_b.id,
-        athlete_id=athlete.id,
-        overall_score=20.0,
-        risk_category="low",
-        score_breakdown={},
-        assessment={"drivers": []},
-    )
-    db_session.add(risk_b)
     await db_session.commit()
 
-    res = await compare_two_videos(db_session, video_a.id, video_b.id, run_gemini=False)
-    assert res.suggest_swap is True
-    assert "Role Inversion Advisory" in res.advisory
-    assert res.is_identical is False
+    res = await compare_two_videos(db_session, video_a, video_b)
+    assert res.movement_type == "squatting"
+    assert res.video_a_info.id == video_a.id
+    assert res.video_b_info.id == video_b.id
+
+    deltas_by_key = {d.metric: d for d in res.deltas}
+    assert "knee_flexion_depth" in deltas_by_key
+    assert deltas_by_key["knee_flexion_depth"].video_a == 105
+    assert deltas_by_key["knee_flexion_depth"].video_b == 85
+    assert deltas_by_key["knee_flexion_depth"].delta == -20
+    assert deltas_by_key["knee_flexion_depth"].verdict == "lower"
+
+    assert "trunk_lean" in deltas_by_key
+    assert deltas_by_key["trunk_lean"].video_a == 22
+    assert deltas_by_key["trunk_lean"].video_b == 36
+    assert deltas_by_key["trunk_lean"].delta == 14
+    assert deltas_by_key["trunk_lean"].verdict == "higher"
+
+    # Knee valgus is qualitative
+    assert "knee_valgus" in deltas_by_key
+    assert deltas_by_key["knee_valgus"].unit == "qualitative"
+    assert deltas_by_key["knee_valgus"].video_a == "none"
+    assert deltas_by_key["knee_valgus"].video_b == "mild"
 
 
 @pytest.mark.asyncio
-async def test_compare_api_endpoint(client: AsyncClient, db_session):
-    """Test POST /api/v1/videos/compare endpoint via HTTP client."""
-    token = await register_and_login(client, "api_coach@test.com", "coach")
-    headers = auth_header(token)
-
-    coach = await make_user(db_session, "comp_coach3@test.com", role=UserRole.coach)
+async def test_compare_missing_metric_is_none_not_default(db_session):
+    """F05: Missing metrics return None and 'not_comparable', never hardcoded defaults (98/75/18/38)."""
+    coach = await make_user(db_session, "missing_coach@test.com", role=UserRole.coach)
     athlete = await make_athlete(db_session, coach_id=coach.id)
+
     video_a = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
-    video_b = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
-    await db_session.commit()
-
-    payload = {
-        "video_a_id": video_a.id,
-        "video_b_id": video_b.id,
-        "run_gemini": False,
+    video_a.processing_status = VideoProcessingStatus.completed
+    video_a.camera_view = "sagittal"
+    video_a.analysis = {
+        "quality": {"grade": "good"},
+        "movement": {"metrics": {}},
     }
-    resp = await client.post("/api/v1/videos/compare", json=payload, headers=headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "form_match_score" in body
-    assert "deltas" in body
-    assert "vector_posture_a" in body
-    assert "vector_posture_b" in body
-    assert "gemini_coaching" in body
 
-
-@pytest.mark.asyncio
-async def test_get_vector_posture_endpoint(client: AsyncClient, db_session):
-    """Test GET /api/v1/videos/{video_id}/vector-posture."""
-    token = await register_and_login(client, "admin_vec@test.com", "admin")
-    headers = auth_header(token)
-
-    coach = await make_user(db_session, "comp_coach4@test.com", role=UserRole.coach)
-    athlete = await make_athlete(db_session, coach_id=coach.id)
-    video = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    video_b = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    video_b.processing_status = VideoProcessingStatus.completed
+    video_b.camera_view = "sagittal"
+    video_b.analysis = {
+        "quality": {"grade": "good"},
+        "movement": {"metrics": {}},
+    }
     await db_session.commit()
 
-    # 1. For a real video
-    resp = await client.get(f"/api/v1/videos/{video.id}/vector-posture", headers=headers)
-    assert resp.status_code == 200
-    body = resp.json()
-    assert "landmarks" in body
-    assert "angles" in body
+    res = await compare_two_videos(db_session, video_a, video_b)
+    deltas_by_key = {d.metric: d for d in res.deltas}
 
-    # 2. For a textbook standard
-    resp_textbook = await client.get("/api/v1/videos/textbook_squatting/vector-posture", headers=headers)
-    assert resp_textbook.status_code == 200
-    body_tb = resp_textbook.json()
-    assert body_tb["is_textbook_benchmark"] is True
+    # Must be None, not 98.0 / 75.0
+    assert deltas_by_key["knee_flexion_depth"].video_a is None
+    assert deltas_by_key["knee_flexion_depth"].video_b is None
+    assert deltas_by_key["knee_flexion_depth"].delta is None
+    assert deltas_by_key["knee_flexion_depth"].verdict == "not_comparable"
 
 
 @pytest.mark.asyncio
-async def test_benchmark_presets_endpoint(client: AsyncClient, db_session):
-    """Test GET /api/v1/videos/benchmark-presets."""
-    token = await register_and_login(client, "preset_coach_login@test.com", "coach")
+async def test_compare_refuses_movement_view_quality_mismatch(client: AsyncClient, db_session):
+    """F15: Compare endpoint refuses movement mismatch, view mismatch, and poor quality with 422."""
+    token = await register_and_login(client, "mismatch_coach@test.com", "coach")
     headers = auth_header(token)
-    resp = await client.get("/api/v1/videos/benchmark-presets", headers=headers)
-    assert resp.status_code == 200
-    presets = resp.json()["presets"]
-    assert len(presets) >= 1
-    assert any(p["movement_type"] == "squatting" for p in presets)
+
+    from sqlalchemy import select
+    from app.modules.users.models import User
+    coach = await db_session.scalar(select(User).where(User.email == "mismatch_coach@test.com"))
+    athlete = await make_athlete(db_session, coach_id=coach.id)
+
+    # 1. Movement mismatch
+    v_squat = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    v_squat.processing_status = VideoProcessingStatus.completed
+    v_squat.camera_view = "sagittal"
+
+    v_jump = await make_video(db_session, athlete.id, coach.id, movement_type="jumping")
+    v_jump.processing_status = VideoProcessingStatus.completed
+    v_jump.camera_view = "sagittal"
+    await db_session.commit()
+
+    r1 = await client.post("/api/v1/videos/compare", json={"video_a_id": v_squat.id, "video_b_id": v_jump.id}, headers=headers)
+    assert r1.status_code == 422
+    assert "movement" in r1.text.lower()
+
+    # 2. View mismatch
+    v_frontal = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    v_frontal.processing_status = VideoProcessingStatus.completed
+    v_frontal.camera_view = "frontal"
+    await db_session.commit()
+
+    r2 = await client.post("/api/v1/videos/compare", json={"video_a_id": v_squat.id, "video_b_id": v_frontal.id}, headers=headers)
+    assert r2.status_code == 422
+    assert "view" in r2.text.lower()
+
+    # 3. Poor quality
+    v_poor = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    v_poor.processing_status = VideoProcessingStatus.completed
+    v_poor.camera_view = "sagittal"
+    v_poor.analysis = {"quality": {"grade": "poor"}}
+    await db_session.commit()
+
+    r3 = await client.post("/api/v1/videos/compare", json={"video_a_id": v_squat.id, "video_b_id": v_poor.id}, headers=headers)
+    assert r3.status_code == 422
+    assert "quality" in r3.text.lower()
+
+
+@pytest.mark.asyncio
+async def test_compare_authorized_coach_succeeds(client: AsyncClient, db_session):
+    """Test POST /api/v1/videos/compare returns typed CompareVideosResponse for authorized caller."""
+    token = await register_and_login(client, "auth_coach_compare@test.com", "coach")
+    headers = auth_header(token)
+
+    from sqlalchemy import select
+    from app.modules.users.models import User
+    coach = await db_session.scalar(select(User).where(User.email == "auth_coach_compare@test.com"))
+    athlete = await make_athlete(db_session, coach_id=coach.id)
+
+    video_a = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    video_a.processing_status = VideoProcessingStatus.completed
+    video_a.camera_view = "sagittal"
+    video_a.analysis = {
+        "quality": {"grade": "good"},
+        "movement": {"metrics": {"max_knee_flexion": 95.0, "max_trunk_lean": 20.0}},
+    }
+
+    video_b = await make_video(db_session, athlete.id, coach.id, movement_type="squatting")
+    video_b.processing_status = VideoProcessingStatus.completed
+    video_b.camera_view = "sagittal"
+    video_b.analysis = {
+        "quality": {"grade": "good"},
+        "movement": {"metrics": {"max_knee_flexion": 98.0, "max_trunk_lean": 21.0}},
+    }
+    await db_session.commit()
+
+    resp = await client.post(
+        "/api/v1/videos/compare",
+        json={"video_a_id": video_a.id, "video_b_id": video_b.id},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["movement_type"] == "squatting"
+    assert "video_a_info" in body
+    assert "video_b_info" in body
+    assert "deltas" in body
+    assert "summary" in body
+    assert "differences under about 7°" in body["summary"].lower() or "within standard monocular pose-tracking error" in body["summary"].lower()
+    # 98 - 95 = 3 deg, which is within the 6.5 deg noise floor
+    knee_delta = next(d for d in body["deltas"] if d["metric"] == "knee_flexion_depth")
+    assert knee_delta["verdict"] == "within_noise"

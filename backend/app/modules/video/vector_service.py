@@ -4,10 +4,10 @@ Transforms 3D MediaPipe pose landmarks at the critical movement inflection frame
 into normalized 2D SVG canvas coordinates with joint angle annotations,
 plumb-line balance indicators, and color-coded biomechanical fault zones.
 
-Biomechanically Validated Inflection Selection:
+Inflection Selection:
 - Squatting / Landing / Jumping: Peak eccentric depth (sitting turnaround / ground absorption)
 - Running / Sprinting: Peak stride extension (maximum inter-ankle stride separation)
-- Throwing: Peak release extension (maximum throwing arm reach)
+- Throwing: Peak release extension (maximum reach)
 - Cutting: Deceleration plant step (widest lateral foot placement relative to pelvis)
 """
 
@@ -19,8 +19,8 @@ import numpy as np
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.video.comparison_schemas import PostureSnapshot
 from app.modules.video.models import PoseFrame, Video
-
 
 # MediaPipe Landmark Index Mapping
 LM = {
@@ -71,13 +71,10 @@ def normalize_landmarks_to_svg(
     raw_landmarks: dict[str, list[float]],
     target_width: float = 300.0,
     target_height: float = 400.0,
-    padding: float = 40.0
+    padding: float = 40.0,
 ) -> dict[str, Any]:
-    """
-    Normalizes 3D MediaPipe coordinates into a scaled 2D SVG bounding box.
+    """Normalizes 3D MediaPipe coordinates into a scaled 2D SVG bounding box.
     Centers the subject horizontally and anchors feet to the ground line.
-
-    GUARANTEE: The head is guaranteed to be in the upper canvas and feet grounded.
     """
     keypoint_coords: dict[str, tuple[float, float]] = {}
 
@@ -89,10 +86,6 @@ def normalize_landmarks_to_svg(
     if len(keypoint_coords) < 6:
         return {}
 
-    # Strict Anatomical Orientation Check:
-    # In MediaPipe world coordinates, Y is positive downward:
-    # Head Y should be LESS than hip Y, and hip Y should be LESS than ankle Y.
-    # If the frame had inverted/flipped coordinates, invert Y so head is on top.
     nose_pt = keypoint_coords.get("nose")
     la_pt = keypoint_coords.get("left_ankle") or keypoint_coords.get("right_ankle")
     lh_pt = keypoint_coords.get("left_hip") or keypoint_coords.get("right_hip")
@@ -119,10 +112,8 @@ def normalize_landmarks_to_svg(
     scale_y = (target_height - 2 * padding) / height_span
     scale = min(scale_x, scale_y)
 
-    # Ground line at target_height - padding
     ground_y = round(target_height - padding, 1)
 
-    # Centering offsets
     center_x = (min_x + max_x) / 2
     offset_x = (target_width / 2) - (center_x * scale)
     offset_y = ground_y - (max_y * scale)
@@ -133,14 +124,11 @@ def normalize_landmarks_to_svg(
         norm_y = round(orig_y * scale + offset_y, 1)
         normalized[name] = [norm_x, norm_y]
 
-    # Final absolute sanity check: Ensure head is in upper half of canvas
     if normalized.get("nose") and normalized.get("left_ankle"):
         if normalized["nose"][1] > normalized["left_ankle"][1]:
-            # Emergency flip to guarantee head is never on ground
             for name in normalized:
                 normalized[name][1] = round(ground_y - (normalized[name][1] - padding), 1)
 
-    # Compute mid-points
     ls = normalized.get("left_shoulder")
     rs = normalized.get("right_shoulder")
     lh = normalized.get("left_hip")
@@ -151,11 +139,9 @@ def normalize_landmarks_to_svg(
     if lh and rh:
         normalized["mid_hip"] = [round((lh[0] + rh[0]) / 2, 1), round((lh[1] + rh[1]) / 2, 1)]
 
-    # Compute Kinematic Angles
     angles: dict[str, Any] = {}
     faults: list[str] = []
 
-    # Left Knee Flexion
     if lh and normalized.get("left_knee") and normalized.get("left_ankle"):
         k_angle = _calculate_angle_2d(
             (lh[0], lh[1]),
@@ -166,7 +152,6 @@ def normalize_landmarks_to_svg(
         if k_angle > 140:
             faults.append("insufficient_depth")
 
-    # Right Knee Flexion
     if rh and normalized.get("right_knee") and normalized.get("right_ankle"):
         k_angle_r = _calculate_angle_2d(
             (rh[0], rh[1]),
@@ -175,7 +160,6 @@ def normalize_landmarks_to_svg(
         )
         angles["knee_flexion_right"] = k_angle_r
 
-    # Trunk Lean
     if normalized.get("mid_hip") and normalized.get("mid_shoulder"):
         trunk_lean = _calculate_trunk_lean(
             (normalized["mid_hip"][0], normalized["mid_hip"][1]),
@@ -185,7 +169,6 @@ def normalize_landmarks_to_svg(
         if trunk_lean > 35.0:
             faults.append("excessive_trunk_lean")
 
-    # Frontal Knee Valgus Check
     if normalized.get("left_knee") and lh and normalized.get("left_ankle"):
         lk_x = normalized["left_knee"][0]
         lh_x = lh[0]
@@ -215,187 +198,11 @@ def normalize_landmarks_to_svg(
     }
 
 
-def get_textbook_ideal_landmarks(movement_type: str = "squatting") -> dict[str, Any]:
-    """
-    Returns pre-calculated textbook biomechanical alignment coordinates
-    at the true peak inflection moment for clean comparison.
-    """
-    mv = (movement_type or "").lower()
-
-    if "jump" in mv or "land" in mv:
-        # Athletic landing posture: 90 deg knee flexion, upright balanced trunk, knees tracked over feet
-        landmarks = {
-            "nose": [150.0, 70.0],
-            "left_shoulder": [128.0, 115.0],
-            "right_shoulder": [172.0, 115.0],
-            "left_elbow": [108.0, 160.0],
-            "right_elbow": [192.0, 160.0],
-            "left_wrist": [112.0, 205.0],
-            "right_wrist": [188.0, 205.0],
-            "left_hip": [134.0, 220.0],
-            "right_hip": [166.0, 220.0],
-            "left_knee": [130.0, 290.0],
-            "right_knee": [170.0, 290.0],
-            "left_ankle": [130.0, 360.0],
-            "right_ankle": [170.0, 360.0],
-            "left_heel": [125.0, 365.0],
-            "right_heel": [175.0, 365.0],
-            "left_foot_index": [130.0, 370.0],
-            "right_foot_index": [170.0, 370.0],
-            "mid_shoulder": [150.0, 115.0],
-            "mid_hip": [150.0, 220.0],
-        }
-        angles = {
-            "knee_flexion_left": 95.0,
-            "knee_flexion_right": 95.0,
-            "trunk_lean": 15.0,
-            "knee_valgus_left": "none",
-            "knee_valgus_right": "none",
-        }
-    elif "sprint" in mv or "run" in mv:
-        # High knee drive running stride extension: front leg high drive, trailing leg extended
-        landmarks = {
-            "nose": [150.0, 60.0],
-            "left_shoulder": [135.0, 105.0],
-            "right_shoulder": [165.0, 105.0],
-            "left_elbow": [110.0, 150.0],
-            "right_elbow": [190.0, 140.0],
-            "left_wrist": [125.0, 185.0],
-            "right_wrist": [175.0, 95.0],
-            "left_hip": [140.0, 205.0],
-            "right_hip": [160.0, 205.0],
-            "left_knee": [185.0, 235.0],  # Drive leg
-            "right_knee": [155.0, 285.0], # Stance leg
-            "left_ankle": [175.0, 310.0],
-            "right_ankle": [155.0, 360.0],
-            "left_heel": [170.0, 315.0],
-            "right_heel": [150.0, 365.0],
-            "left_foot_index": [180.0, 320.0],
-            "right_foot_index": [160.0, 370.0],
-            "mid_shoulder": [150.0, 105.0],
-            "mid_hip": [150.0, 205.0],
-        }
-        angles = {
-            "knee_flexion_left": 85.0,
-            "knee_flexion_right": 165.0,
-            "trunk_lean": 8.0,
-            "knee_valgus_left": "none",
-            "knee_valgus_right": "none",
-        }
-    elif "throw" in mv:
-        # Peak throwing release extension: right arm extended high forward, athletic staggered base
-        landmarks = {
-            "nose": [145.0, 65.0],
-            "left_shoulder": [130.0, 110.0],
-            "right_shoulder": [165.0, 110.0],
-            "left_elbow": [105.0, 140.0],
-            "right_elbow": [195.0, 85.0],
-            "left_wrist": [95.0, 175.0],
-            "right_wrist": [220.0, 60.0],  # Extended high release
-            "left_hip": [135.0, 215.0],
-            "right_hip": [165.0, 215.0],
-            "left_knee": [125.0, 285.0],
-            "right_knee": [175.0, 290.0],
-            "left_ankle": [120.0, 360.0],
-            "right_ankle": [180.0, 360.0],
-            "left_heel": [115.0, 365.0],
-            "right_heel": [185.0, 365.0],
-            "left_foot_index": [120.0, 370.0],
-            "right_foot_index": [185.0, 370.0],
-            "mid_shoulder": [148.0, 110.0],
-            "mid_hip": [150.0, 215.0],
-        }
-        angles = {
-            "knee_flexion_left": 150.0,
-            "knee_flexion_right": 145.0,
-            "trunk_lean": 12.0,
-            "knee_valgus_left": "none",
-            "knee_valgus_right": "none",
-        }
-    elif "cut" in mv:
-        # Cutting / COD: Wide deceleration plant step, low athletic stance, stable knee tracking
-        landmarks = {
-            "nose": [150.0, 80.0],
-            "left_shoulder": [130.0, 125.0],
-            "right_shoulder": [170.0, 125.0],
-            "left_elbow": [110.0, 160.0],
-            "right_elbow": [190.0, 160.0],
-            "left_wrist": [115.0, 195.0],
-            "right_wrist": [185.0, 195.0],
-            "left_hip": [135.0, 225.0],
-            "right_hip": [165.0, 225.0],
-            "left_knee": [115.0, 290.0],
-            "right_knee": [195.0, 285.0],  # Wide plant leg
-            "left_ankle": [125.0, 360.0],
-            "right_ankle": [215.0, 360.0],  # Lateral plant foot
-            "left_heel": [120.0, 365.0],
-            "right_heel": [220.0, 365.0],
-            "left_foot_index": [125.0, 370.0],
-            "right_foot_index": [225.0, 370.0],
-            "mid_shoulder": [150.0, 125.0],
-            "mid_hip": [150.0, 225.0],
-        }
-        angles = {
-            "knee_flexion_left": 130.0,
-            "knee_flexion_right": 115.0,
-            "trunk_lean": 16.0,
-            "knee_valgus_left": "none",
-            "knee_valgus_right": "none",
-        }
-    else:
-        # Standard Deep Squat: Hips parallel, knees over 2nd toe, upright neutral spine (sitting turnaround)
-        landmarks = {
-            "nose": [150.0, 80.0],
-            "left_shoulder": [125.0, 125.0],
-            "right_shoulder": [175.0, 125.0],
-            "left_elbow": [105.0, 170.0],
-            "right_elbow": [195.0, 170.0],
-            "left_wrist": [115.0, 210.0],
-            "right_wrist": [185.0, 210.0],
-            "left_hip": [132.0, 235.0],
-            "right_hip": [168.0, 235.0],
-            "left_knee": [118.0, 295.0],
-            "right_knee": [182.0, 295.0],
-            "left_ankle": [122.0, 360.0],
-            "right_ankle": [178.0, 360.0],
-            "left_heel": [116.0, 365.0],
-            "right_heel": [184.0, 365.0],
-            "left_foot_index": [122.0, 370.0],
-            "right_foot_index": [178.0, 370.0],
-            "mid_shoulder": [150.0, 125.0],
-            "mid_hip": [150.0, 235.0],
-        }
-        angles = {
-            "knee_flexion_left": 98.0,
-            "knee_flexion_right": 98.0,
-            "trunk_lean": 18.0,
-            "knee_valgus_left": "none",
-            "knee_valgus_right": "none",
-        }
-
-    return {
-        "landmarks": landmarks,
-        "angles": angles,
-        "faults": [],
-        "ground_y": 360.0,
-        "is_textbook_benchmark": True,
-    }
-
-
 def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) -> PoseFrame | None:
-    """
-    Intelligently identifies the biomechanically significant inflection frame
-    tailored specifically to the movement discipline:
-    - Squatting: Sitting turnaround (deepest knee flexion)
-    - Running / Sprinting: Peak stride extension (maximum inter-ankle separation)
-    - Throwing: Peak release extension (maximum throwing reach)
-    - Cutting: Deceleration plant step (widest lateral foot excursion)
-    - Landing / Jumping: Ground impact shock absorption (peak landing knee flexion)
-    """
+    """Identifies the biomechanically significant inflection frame from pose frames."""
     if not frames:
         return None
 
-    # Step 1: Filter anatomically valid upright frames
     valid: list[PoseFrame] = []
     for fr in frames:
         kp = fr.keypoints or {}
@@ -413,19 +220,15 @@ def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) ->
         mid_hip_y = (float(lh[1]) + float(rh[1])) / 2
         mid_ank_y = (float(la[1]) + float(ra[1])) / 2
 
-        # In MediaPipe world coordinates, Y is positive downward:
-        # Upright posture: head Y < hip Y < ankle Y
         if float(n[1]) < mid_hip_y and mid_hip_y < mid_ank_y:
             valid.append(fr)
 
     if not valid:
-        # Fallback to middle frame if no frame passes strict filter
         return frames[len(frames) // 2]
 
     mv = (movement_type or "").lower()
 
     if "squat" in mv:
-        # 1. SQUATTING: Peak sitting depth (minimum knee interior angle / deepest hip descent)
         def knee_depth(f: PoseFrame) -> float:
             kp = f.keypoints or {}
             k_left = _calculate_angle_2d(
@@ -442,7 +245,6 @@ def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) ->
         return min(valid, key=knee_depth)
 
     elif "run" in mv or "sprint" in mv:
-        # 2. RUNNING / SPRINTING: Peak stride extension (maximum inter-ankle distance)
         def stride_extension(f: PoseFrame) -> float:
             kp = f.keypoints or {}
             la = np.array([float(kp["27"][0]), float(kp["27"][1])])
@@ -451,11 +253,9 @@ def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) ->
         return max(valid, key=stride_extension)
 
     elif "throw" in mv:
-        # 3. THROWING: Hand extended release / max arm reach
         def throwing_reach(f: PoseFrame) -> float:
             kp = f.keypoints or {}
-            reach_r = 0.0
-            reach_l = 0.0
+            reach_r, reach_l = 0.0, 0.0
             if "16" in kp and "12" in kp:
                 rw = np.array([float(kp["16"][0]), float(kp["16"][1])])
                 rs = np.array([float(kp["12"][0]), float(kp["12"][1])])
@@ -468,7 +268,6 @@ def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) ->
         return max(valid, key=throwing_reach)
 
     elif "cut" in mv:
-        # 4. CUTTING: Deceleration plant step (widest lateral foot placement relative to pelvis)
         def cutting_plant(f: PoseFrame) -> float:
             kp = f.keypoints or {}
             lh_x = float(kp["23"][0])
@@ -480,7 +279,6 @@ def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) ->
         return max(valid, key=cutting_plant)
 
     elif "land" in mv or "jump" in mv:
-        # 5. JUMPING / LANDING: Impact shock absorption (peak knee flexion at landing)
         def landing_impact(f: PoseFrame) -> float:
             kp = f.keypoints or {}
             k_left = _calculate_angle_2d(
@@ -496,19 +294,19 @@ def select_peak_inflection_frame(frames: list[PoseFrame], movement_type: str) ->
             return min(k_left, k_right)
         return min(valid, key=landing_impact)
 
-    # General default: middle valid frame
     return valid[len(valid) // 2]
 
 
-async def extract_inflection_vector_for_video(db: AsyncSession, video_id: str) -> dict[str, Any]:
-    """
-    Extracts the keypoint coordinates and angles at the peak inflection frame of a video.
-    Falls back to textbook standard if pose frames are missing.
+async def extract_inflection_vector_for_video(db: AsyncSession, video_id: str) -> dict[str, Any] | None:
+    """Extracts normalized keypoint coordinates and angles at the peak inflection frame of a video.
+    Returns None if no pose tracking frames are available. Never fabricates textbook data.
     """
     video = await db.scalar(select(Video).where(Video.id == video_id))
+    if not video:
+        return None
+
     movement_type = video.movement_type if video else "squatting"
 
-    # Query all pose frames for this video
     frames = list((await db.scalars(
         select(PoseFrame)
         .where(PoseFrame.video_id == video_id)
@@ -516,19 +314,36 @@ async def extract_inflection_vector_for_video(db: AsyncSession, video_id: str) -
     )).all())
 
     if not frames:
-        return get_textbook_ideal_landmarks(movement_type)
+        return None
 
-    # Movement-tailored peak inflection selection
     best_frame = select_peak_inflection_frame(frames, movement_type)
-    if not best_frame:
-        return get_textbook_ideal_landmarks(movement_type)
+    if not best_frame or not best_frame.keypoints:
+        return None
 
-    raw_kp = best_frame.keypoints or {}
-    vector_data = normalize_landmarks_to_svg(raw_kp)
-    if not vector_data:
-        return get_textbook_ideal_landmarks(movement_type)
+    vector_data = normalize_landmarks_to_svg(best_frame.keypoints)
+    if not vector_data or not vector_data.get("landmarks"):
+        return None
 
     vector_data["frame_number"] = best_frame.frame_number
     vector_data["timestamp_ms"] = best_frame.timestamp_ms
     vector_data["movement_type"] = movement_type
     return vector_data
+
+
+def build_posture_snapshot(vector_dict: dict[str, Any] | None, valgus_flag: str | None = None) -> PostureSnapshot | None:
+    """Converts raw vector dict to typed PostureSnapshot."""
+    if not vector_dict or not vector_dict.get("landmarks"):
+        return None
+    ts_ms = vector_dict.get("timestamp_ms")
+    ts_s = round(float(ts_ms) / 1000.0, 2) if ts_ms is not None else None
+    angles_clean: dict[str, float] = {}
+    for k, v in (vector_dict.get("angles") or {}).items():
+        if isinstance(v, (int, float)):
+            angles_clean[k] = round(float(v))
+    return PostureSnapshot(
+        frame_number=vector_dict.get("frame_number"),
+        timestamp_s=ts_s,
+        landmarks=vector_dict.get("landmarks", {}),
+        angles=angles_clean,
+        valgus_flag=valgus_flag,
+    )

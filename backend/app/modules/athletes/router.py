@@ -45,14 +45,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/athletes", tags=["athletes"])
 
 
-def _can_access_athlete(user: User, athlete: Athlete) -> bool:
-    if user.role in (UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist):
-        return True
-    if user.role == UserRole.coach and athlete.coach_id == user.id:
-        return True
-    if user.role == UserRole.athlete and athlete.user_id == user.id:
-        return True
-    return False
+from app.core.access import can_access_athlete as _can_access_athlete
 
 
 @router.post("", response_model=AthleteResponse, status_code=status.HTTP_201_CREATED)
@@ -116,34 +109,23 @@ async def get_my_athlete_profile(
     return athlete
 
 
-@router.post("/claim", response_model=AthleteResponse)
+@router.post("/claim", response_model=AthleteResponse, status_code=status.HTTP_201_CREATED)
 async def claim_or_activate_athlete_profile(
     data: AthleteClaimRequest,
-    current_user: Annotated[User, Depends(get_current_user)],
+    current_user: Annotated[User, Depends(require_role(UserRole.athlete))],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Allows an athlete user to self-activate or bind their profile to a coach."""
+    """Allows an athlete user to self-activate an unlinked profile without coach spoofing."""
     existing = await db.scalar(select(Athlete).where(Athlete.user_id == current_user.id))
     if existing:
         return existing
 
-    target_coach_id = None
-    if data.coach_email:
-        coach_user = await db.scalar(select(User).where(User.email == data.coach_email.strip().lower()))
-        if coach_user:
-            target_coach_id = coach_user.id
-    elif data.coach_code:
-        coach_user = await db.scalar(select(User).where(User.role == UserRole.coach))
-        if coach_user:
-            target_coach_id = coach_user.id
-
-    from datetime import date
     new_athlete = Athlete(
         user_id=current_user.id,
-        coach_id=target_coach_id,
-        sport_type=data.sport_type or "soccer",
+        coach_id=None,
+        sport_type=data.sport_type,
         position=data.position,
-        date_of_birth=date(2000, 1, 1),
+        date_of_birth=data.date_of_birth,
     )
     db.add(new_athlete)
     await db.commit()
@@ -366,13 +348,3 @@ async def get_acwr_endpoint(
         raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
 
     return await compute_acwr(db, athlete_id)
-
-
-def _can_access_athlete(user: User, athlete) -> bool:
-    if user.role in (UserRole.admin, UserRole.physiotherapist, UserRole.sports_scientist):
-        return True
-    if user.role == UserRole.coach and athlete.coach_id == user.id:
-        return True
-    if user.role == UserRole.athlete and athlete.user_id == user.id:
-        return True
-    return False

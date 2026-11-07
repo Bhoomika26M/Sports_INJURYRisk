@@ -15,7 +15,7 @@ from sqlalchemy import select, func, desc, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
-from app.core.access import can_access_athlete as _can_access_athlete
+from app.core.access import can_access_athlete as _can_access_athlete, load_accessible_video
 from app.core.deps import UuidPath, get_current_user, require_role
 from app.core.errors import api_error
 from app.database import get_db
@@ -32,7 +32,7 @@ from app.modules.video.comparison_schemas import (
     CompareVideosRequest, CompareVideosResponse, VectorPostureData,
 )
 from app.modules.video.comparison_service import compare_two_videos
-from app.modules.video.vector_service import extract_inflection_vector_for_video, get_textbook_ideal_landmarks
+from app.modules.video.vector_service import extract_inflection_vector_for_video
 from app.modules.risk_scoring.models import RiskScore
 
 # One list for the filename gate AND the storage-key gate (main.py): they drifted once (storage PUT still said mp4|mov).
@@ -99,46 +99,6 @@ async def list_movement_types(
         })
     return result
 
-async def _get_or_create_benchmark_athlete(db: AsyncSession, current_user: User) -> str:
-    """Finds or creates an athlete record for the current user so benchmark uploads never require manual athlete creation."""
-    from datetime import date
-    if current_user.role == UserRole.athlete:
-        ath = await db.scalar(select(Athlete).where(Athlete.user_id == current_user.id))
-        if ath:
-            return ath.id
-        ath = Athlete(
-            user_id=current_user.id,
-            sport_type="General",
-            date_of_birth=date(2000, 1, 1),
-        )
-        db.add(ath)
-        await db.commit()
-        await db.refresh(ath)
-        return ath.id
-
-    # Coach, physiotherapist, scientist, admin:
-    ath = await db.scalar(select(Athlete).where(
-        Athlete.coach_id == current_user.id,
-        Athlete.sport_type == "Benchmark Reference"
-    ))
-    if ath:
-        return ath.id
-    ath = await db.scalar(select(Athlete).where(Athlete.coach_id == current_user.id))
-    if ath:
-        return ath.id
-
-    ath = Athlete(
-        coach_id=current_user.id,
-        sport_type="Benchmark Reference",
-        position="Reference",
-        date_of_birth=date(2000, 1, 1),
-    )
-    db.add(ath)
-    await db.commit()
-    await db.refresh(ath)
-    return ath.id
-
-
 @router.post("/upload-url", response_model=VideoUploadResponse)
 async def create_upload_url(
     data: VideoUploadRequest,
@@ -147,17 +107,13 @@ async def create_upload_url(
     request: Request,
 ):
     """Generate a mock presigned URL and create a pending video record."""
-    target_athlete_id = data.athlete_id
-    if not target_athlete_id:
-        target_athlete_id = await _get_or_create_benchmark_athlete(db, current_user)
-    else:
-        athlete = await db.scalar(select(Athlete).where(Athlete.id == target_athlete_id))
-        if not athlete:
-            raise api_error(404, "NOT_FOUND", "Athlete not found")
-        if not _can_access_athlete(current_user, athlete):
-            raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-        if current_user.role == UserRole.athlete and athlete.user_id != current_user.id:
-            raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Athletes can only upload for themselves")
+    athlete = await db.scalar(select(Athlete).where(Athlete.id == data.athlete_id))
+    if not athlete:
+        raise api_error(404, "NOT_FOUND", "Athlete not found")
+    if not _can_access_athlete(current_user, athlete):
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
+    if current_user.role == UserRole.athlete and athlete.user_id != current_user.id:
+        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Athletes can only upload for themselves")
 
     if data.movement_type != AUTO:  # "auto" (both labels, enforced by the schema) is resolved from the footage by the worker
         # Validate movement_type exists
@@ -172,7 +128,7 @@ async def create_upload_url(
 
     safe_name = _safe_filename(data.original_filename)
     video = Video(
-        athlete_id=target_athlete_id,
+        athlete_id=data.athlete_id,
         uploaded_by=current_user.id,
         movement_type=data.movement_type,
         storage_key=f"{uuid.uuid4()}_{safe_name}",
@@ -287,60 +243,17 @@ async def compare_videos_endpoint(
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Deep dual-video form benchmark and kinematic comparison."""
-    try:
-        return await compare_two_videos(
-            db,
-            video_a_id=req.video_a_id,
-            video_b_id=req.video_b_id,
-            run_gemini=req.run_gemini,
-        )
-    except ValueError as e:
-        raise api_error(404, "NOT_FOUND", str(e))
-    except Exception as e:
-        logger.exception("Video comparison failed")
-        raise api_error(500, "COMPARISON_FAILED", f"Comparison failed: {e}")
+    if req.video_a_id == req.video_b_id:
+        raise api_error(422, "SAME_VIDEO", "Cannot compare a video with itself")
 
+    video_a, _ = await load_accessible_video(db, req.video_a_id, current_user)
+    video_b, _ = await load_accessible_video(db, req.video_b_id, current_user)
 
-@router.get("/benchmark-presets")
-async def list_benchmark_presets(
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    """List pre-loaded benchmark clips and textbook standards for 1-click comparison."""
-    db_videos = list((await db.scalars(
-        select(Video)
-        .where(Video.processing_status == VideoProcessingStatus.completed)
-        .order_by(desc(Video.created_at))
-        .limit(10)
-    )).all())
-
-    presets = [
-        {
-            "id": v.id,
-            "title": f"{v.movement_type.capitalize()} Standard ({v.original_filename or 'Clip'})",
-            "movement_type": v.movement_type,
-            "camera_view": v.camera_view,
-            "duration_seconds": v.duration_seconds,
-            "is_builtin": True,
-        }
-        for v in db_videos
-    ]
-
-    standard_types = ["squatting", "jumping", "sprinting", "landing", "cutting", "throwing"]
-    existing_types = {p["movement_type"] for p in presets}
-    for st in standard_types:
-        if st not in existing_types:
-            presets.append({
-                "id": f"textbook_{st}",
-                "title": f"Textbook Ideal {st.capitalize()} (Biomechanical Standard)",
-                "movement_type": st,
-                "camera_view": "sagittal" if st in ("squatting", "sprinting", "running") else "frontal",
-                "duration_seconds": 3.0,
-                "is_builtin": True,
-                "is_textbook": True,
-            })
-
-    return {"presets": presets}
+    return await compare_two_videos(
+        db,
+        video_a=video_a,
+        video_b=video_b,
+    )
 
 
 @router.get("/{video_id}", response_model=VideoResponse)
@@ -364,24 +277,15 @@ async def get_video_endpoint(
 
 @router.get("/{video_id}/vector-posture", response_model=VectorPostureData)
 async def get_vector_posture_endpoint(
-    video_id: str,
+    video_id: UuidPath,
     current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
     """Get the SVG skeletal posture twin coordinates for a video at its peak inflection frame."""
-    if video_id.startswith("textbook_"):
-        movement_type = video_id.replace("textbook_", "")
-        return get_textbook_ideal_landmarks(movement_type)
-
-    video = await db.scalar(select(Video).where(Video.id == video_id))
-    if not video:
-        raise api_error(404, "NOT_FOUND", "Video not found")
-
-    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
-    if athlete and not _can_access_athlete(current_user, athlete):
-        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-
-    vector_dict = await extract_inflection_vector_for_video(db, video_id)
+    video, athlete = await load_accessible_video(db, video_id, current_user)
+    vector_dict = await extract_inflection_vector_for_video(db, video.id)
+    if not vector_dict:
+        raise api_error(404, "NO_POSE_DATA", "No pose tracking data available for this clip")
     return VectorPostureData(**vector_dict)
 
  

@@ -21,7 +21,7 @@ export default function AthleteDashboard() {
   const athlete = athletesQ.data?.items[0];
 
   const [sportType, setSportType] = useState("soccer");
-  const [coachEmail, setCoachEmail] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("2000-01-01");
   const [isActivating, setIsActivating] = useState(false);
   const [activateError, setActivateError] = useState<string | null>(null);
 
@@ -32,7 +32,7 @@ export default function AthleteDashboard() {
     try {
       await api.post("/athletes/claim", {
         sport_type: sportType,
-        coach_email: coachEmail.trim() || undefined,
+        date_of_birth: dateOfBirth,
       });
       await athletesQ.refetch();
     } catch (err: unknown) {
@@ -94,15 +94,14 @@ export default function AthleteDashboard() {
             </div>
 
             <div>
-              <label className="text-xs font-bold uppercase tracking-wider text-ink-3">Coach Email or Team Code (Optional)</label>
+              <label className="text-xs font-bold uppercase tracking-wider text-ink-3">Date of Birth</label>
               <input
-                type="text"
-                placeholder="coach@example.com (leave blank for self-managed)"
-                value={coachEmail}
-                onChange={(e) => setCoachEmail(e.target.value)}
+                type="date"
+                required
+                value={dateOfBirth}
+                onChange={(e) => setDateOfBirth(e.target.value)}
                 className="field text-sm mt-1"
               />
-              <p className="text-[11px] text-ink-3 mt-1">If your coach already created an account for your team, enter their email to link automatically.</p>
             </div>
 
             <button
