@@ -57,9 +57,9 @@ async def test_insufficient_baseline_with_mocked_gemini_produces_score(client: A
         "recommendations": ["Focus on hip abductor strengthening"],
     }
 
-    # Mock run_gemini_observation_for_video so it returns mock_observation
+    # Mock execute_gemini_observation_for_video so it returns mock_observation
     with patch(
-        "app.modules.video.ai_service.run_gemini_observation_for_video",
+        "app.modules.video.ai_service.execute_gemini_observation_for_video",
         new=AsyncMock(return_value=mock_observation),
     ):
         resp = await client.get(
@@ -92,7 +92,7 @@ async def test_sufficient_baseline_does_not_trigger_gemini(client: AsyncClient, 
     target_video = videos[0]
 
     with patch(
-        "app.modules.video.ai_service.run_gemini_observation_for_video",
+        "app.modules.video.ai_service.execute_gemini_observation_for_video",
         new=AsyncMock(),
     ) as mock_gemini:
         resp = await client.get(
@@ -100,7 +100,7 @@ async def test_sufficient_baseline_does_not_trigger_gemini(client: AsyncClient, 
             headers=auth_header(token),
         )
 
-        # Baseline was sufficient, so run_gemini_observation_for_video should NOT be called
+        # Baseline was sufficient, so execute_gemini_observation_for_video should NOT be called
         mock_gemini.assert_not_called()
         assert resp.status_code == 200
         body = resp.json()

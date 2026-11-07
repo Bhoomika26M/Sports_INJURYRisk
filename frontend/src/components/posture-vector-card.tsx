@@ -15,7 +15,7 @@ interface PostureVectorCardProps {
  * Renders an SVG stick figure from normalized coordinates.
  * Features:
  * - Color-coded fault zones (Red for dynamic valgus / excessive lean)
- * - Green for textbook standard alignment
+ * - Reference alignment
  * - Plumb line from mid-shoulder to ground
  * - Joint angle arcs and badges
  */
@@ -345,7 +345,7 @@ export function PostureVectorCard({
       {/* SVG Canvas Stage */}
       <div className="mt-6 flex flex-col items-center">
         {viewMode === "side_by_side" || !benchmark ? (
-          <div className="grid w-full max-w-3xl grid-cols-1 gap-6 sm:grid-cols-2">
+          <div className={`w-full max-w-3xl ${benchmark ? "grid grid-cols-1 gap-6 sm:grid-cols-2" : "flex justify-center"}`}>
             {/* Trainee Figure Card */}
             <div className="flex flex-col items-center rounded-2xl bg-[#091122] border border-slate-800 p-5 shadow-sm">
               <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 px-3 py-1 text-xs font-semibold text-amber-300">

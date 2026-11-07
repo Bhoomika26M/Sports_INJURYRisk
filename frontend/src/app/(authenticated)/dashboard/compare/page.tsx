@@ -9,7 +9,7 @@ export default function BenchmarkStudioPage() {
     <>
       <PageHeader
         back={<BackLink href="/dashboard">Dashboard</BackLink>}
-        title="Form Benchmark Studio"
+        title="Form Comparison Studio"
         subtitle="Side-by-side video kinematics, synchronized inflection scrub, and vector posture twins."
       />
       <VideoComparator />

@@ -13,3 +13,4 @@ def test_no_duplicate_routes():
         if count > 1:
             collisions.append(f"{method} {path} (registered {count} times)")
     assert not collisions, f"Duplicate routes found: {collisions}"
+

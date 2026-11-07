@@ -40,8 +40,8 @@ async def test_vector_posture_forbidden_and_uuid_validated(client: AsyncClient, 
     resp_idor = await client.get(f"/api/v1/videos/{video.id}/vector-posture", headers=auth_header(attacker_token))
     assert resp_idor.status_code == 403, f"Expected 403, got {resp_idor.status_code}"
 
-    # String identifiers such as textbook_squatting must be rejected with 422
-    resp_invalid_uuid = await client.get("/api/v1/videos/textbook_squatting/vector-posture", headers=auth_header(attacker_token))
+    # String identifiers such as non_uuid_preset_slug must be rejected with 422
+    resp_invalid_uuid = await client.get("/api/v1/videos/non_uuid_preset_slug/vector-posture", headers=auth_header(attacker_token))
     assert resp_invalid_uuid.status_code == 422, f"Expected 422 for non-UUID, got {resp_invalid_uuid.status_code}"
 
 
@@ -91,3 +91,4 @@ async def test_upload_requires_athlete_id(client: AsyncClient, db_session):
     }
     resp = await client.post("/api/v1/videos/upload-url", json=payload, headers=headers)
     assert resp.status_code == 422, f"Expected 422 when athlete_id is omitted, got {resp.status_code}"
+

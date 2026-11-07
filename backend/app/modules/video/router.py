@@ -317,8 +317,8 @@ async def ai_observe_video(
     if not os.path.exists(local_path):
         raise api_error(404, "NOT_FOUND", "Video file not found in storage")
 
-    from app.modules.video.ai_service import run_gemini_observation_for_video
-    observation = await run_gemini_observation_for_video(
+    from app.modules.video.ai_service import execute_gemini_observation_for_video
+    observation = await execute_gemini_observation_for_video(
         db, video, local_path=local_path, fps=fps, chunk_seconds=chunk_seconds
     )
     if not observation:

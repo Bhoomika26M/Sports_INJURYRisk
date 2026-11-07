@@ -68,7 +68,7 @@ def _build_kinematic_context(video: Video, analysis: dict[str, Any] | None) -> s
     return "; ".join(kin_summary) if kin_summary else None
 
 
-async def run_gemini_observation_for_video(
+async def execute_gemini_observation_for_video(
     db: AsyncSession,
     video: Video,
     local_path: str | None = None,

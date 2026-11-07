@@ -254,7 +254,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
             # If peer baseline videos are insufficient (< min_baseline_videos), automatically engage
             # Gemini observation so a valid score can be computed immediately without manual user intervention.
             # If baseline is sufficient (e.g. 2+ videos across athletes), Gemini stays optional.
-            from app.modules.video.ai_service import check_baseline_sufficiency, run_gemini_observation_for_video
+            from app.modules.video.ai_service import check_baseline_sufficiency, execute_gemini_observation_for_video
 
             val_metric_names = [m["name"] for m in metrics if m.get("confidence") == "validated"]
             is_sufficient, have_v, need_v, have_a, need_a = await check_baseline_sufficiency(
@@ -274,7 +274,7 @@ async def process_video(ctx: dict, video_id: str) -> dict:
                 else:
                     logger.info(f"auto_gemini_observation enabled; engaging Gemini observation for video {video_id}")
 
-                ai_obs = await run_gemini_observation_for_video(
+                ai_obs = await execute_gemini_observation_for_video(
                     db, video, local_path=local_path, kinematic_context=None
                 )
                 if ai_obs:

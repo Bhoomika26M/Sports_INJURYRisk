@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -72,7 +72,21 @@ function UploadFlow() {
   const abortRef = useRef<AbortController | null>(null);
   const probeToken = useRef(0);
 
-  const previewUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file]);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const applyFile = useCallback((newFile: File | null) => {
+    setPreviewUrl((oldUrl) => {
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      return newFile ? URL.createObjectURL(newFile) : null;
+    });
+    setFile(newFile);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
 
   const athletes = athletesQ.data?.items ?? [];
   const movements = movementsQ.data ?? [];
@@ -116,21 +130,21 @@ function UploadFlow() {
     setErrors((e) => ({ ...e, file: undefined }));
     const ext = f.name.toLowerCase();
     if (!ext.endsWith(".mp4") && !ext.endsWith(".mov") && !ext.endsWith(".webm") && !ext.endsWith(".avi") && !ext.endsWith(".mkv") && !ext.endsWith(".m4v")) {
-      setFile(null); setProbe(null);
+      applyFile(null); setProbe(null);
       return setFileError("That file type isn't supported. Please choose an .mp4, .mov, .webm, .avi, .mkv or .m4v video.");
     }
     if (f.size > MAX_BYTES) {
-      setFile(null); setProbe(null);
+      applyFile(null); setProbe(null);
       return setFileError(`That file is ${formatBytes(f.size)}. Videos can be up to 200 MB.`);
     }
     const token = ++probeToken.current;
     setFileError(null);
-    setFile(f);
+    applyFile(f);
     setProbe(null);
     const info = await probeVideo(f);
     if (token !== probeToken.current) return; // a newer file was chosen meanwhile
     if (info && (info.duration < MIN_SECONDS || info.duration > MAX_SECONDS)) {
-      setFile(null);
+      applyFile(null);
       return setFileError(
         `This clip is ${Math.round(info.duration)} seconds long. Clips need to be between ${MIN_SECONDS} and ${MAX_SECONDS} seconds.`,
       );
@@ -140,7 +154,7 @@ function UploadFlow() {
 
   function removeFile() {
     probeToken.current++;
-    setFile(null); setProbe(null); setFileError(null);
+    applyFile(null); setProbe(null); setFileError(null);
   }
 
   function focusSection(id: string) {
@@ -191,7 +205,7 @@ function UploadFlow() {
 
   function reset() {
     abortRef.current = null;
-    setFile(null); setProbe(null); setFileError(null); setErrors({});
+    applyFile(null); setProbe(null); setFileError(null); setErrors({});
     setPhase({ name: "form" });
   }
 
@@ -332,15 +346,15 @@ function UploadFlow() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-ink">Want to compare two movements directly?</h4>
-            <p className="text-xs text-ink-3">Upload 2 fresh videos simultaneously or select existing videos to run an Olympic-grade synchronized form benchmark.</p>
+            <p className="text-xs text-ink-3">Upload 2 fresh videos simultaneously or select existing videos to run synchronized form comparison.</p>
           </div>
         </div>
         <Link
           href="/dashboard/compare?mode=upload"
           className="btn btn-sm btn-primary shrink-0 inline-flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
         >
-          <Icon name="sparkles" className="h-3.5 w-3.5" />
-          <span>Dual-Video Benchmark</span>
+          <Icon name="activity" className="h-3.5 w-3.5" />
+          <span>Dual-Video Comparison</span>
         </Link>
       </div>
 

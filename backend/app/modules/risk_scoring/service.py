@@ -212,8 +212,8 @@ async def compute_assessment(db: AsyncSession, video: Video, athlete: Athlete) -
                 f"Video {video.id} has insufficient peer baselines for '{video.movement_type}' "
                 f"({coverage['videos']['have']}/{need} videos). Automatically invoking Gemini observation..."
             )
-            from app.modules.video.ai_service import run_gemini_observation_for_video
-            ai_obs = await run_gemini_observation_for_video(db, video)
+            from app.modules.video.ai_service import execute_gemini_observation_for_video
+            ai_obs = await execute_gemini_observation_for_video(db, video)
             if ai_obs:
                 analysis = dict(video.analysis or {})
                 analysis[obs_key] = ai_obs

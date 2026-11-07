@@ -360,73 +360,44 @@ export interface VectorPostureData {
   frame_number?: number | null;
   timestamp_ms?: number | null;
   movement_type?: string | null;
-  is_textbook_benchmark?: boolean;
 }
 
-export interface KinematicDeltaItem {
+export interface MetricDelta {
   metric: string;
   label: string;
-  video_a_val: string | number;
-  video_b_val: string | number;
-  delta: string | number;
-  verdict: "better" | "worse" | "neutral";
-  explanation: string;
+  unit?: "deg" | "deg_s" | "m" | "pct" | "count" | "qualitative" | "s" | null;
+  video_a?: number | string | null;
+  video_b?: number | string | null;
+  delta?: number | null;
+  verdict: "within_noise" | "higher" | "lower" | "no_verdict" | "not_comparable";
+  reason?: string | null;
 }
 
-export interface PrescribedExercise {
-  name: string;
-  target?: string;
-  target_muscles?: string[];
-  frequency?: string;
-  sets?: number | string;
-  reps?: string;
-  tempo?: string;
-  notes?: string;
-}
-
-export interface GeminiCoachingDebrief {
-  summary: string;
-  verbal_cues: string[];
-  prescribed_exercises: PrescribedExercise[];
-}
-
-export interface CompareVideosResponse {
-  status: string;
-  form_match_score: number;
-  movement_type: string;
-  advisory?: string | null;
-  is_identical: boolean;
-  suggest_swap: boolean;
-  is_cross_activity: boolean;
-  view_mismatch: boolean;
-  video_a_info: {
-    id: string;
-    filename: string;
-    movement_type: string;
-    camera_view: string;
-    duration_seconds?: number | null;
-    risk_score?: number | null;
-  };
-  video_b_info: {
-    id: string;
-    filename: string;
-    movement_type: string;
-    camera_view: string;
-    duration_seconds?: number | null;
-    risk_score?: number | null;
-  };
-  deltas: KinematicDeltaItem[];
-  vector_posture_a: VectorPostureData;
-  vector_posture_b: VectorPostureData;
-  gemini_coaching?: GeminiCoachingDebrief | null;
-}
-
-export interface BenchmarkPreset {
+export interface VideoSummary {
   id: string;
-  title: string;
+  filename?: string | null;
   movement_type: string;
   camera_view: string;
   duration_seconds?: number | null;
-  is_builtin: boolean;
-  is_textbook?: boolean;
+  quality_grade?: string | null;
+  coverage_caveat?: string | null;
+}
+
+export interface PostureSnapshot {
+  frame_number?: number | null;
+  timestamp_s?: number | null;
+  landmarks: Record<string, [number, number] | number[]>;
+  angles: Record<string, number>;
+  valgus_flag?: string | null;
+}
+
+export interface CompareVideosResponse {
+  movement_type: string;
+  video_a_info: VideoSummary;
+  video_b_info: VideoSummary;
+  deltas: MetricDelta[];
+  snapshot_a?: PostureSnapshot | null;
+  snapshot_b?: PostureSnapshot | null;
+  summary: string;
+  caveats: string[];
 }

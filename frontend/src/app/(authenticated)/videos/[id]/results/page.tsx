@@ -234,12 +234,6 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
     enabled: completed,
   });
 
-  const benchmarkVectorQ = useQuery({
-    queryKey: ["benchmark-vector", videoQ.data?.movement_type],
-    queryFn: () => api.get<VectorPostureData>(`/videos/textbook_${videoQ.data?.movement_type}/vector-posture`),
-    enabled: completed && !!videoQ.data?.movement_type,
-  });
-
   const [picked, setPicked] = useState<string[] | null>(null);
   const [showJointDetails, setShowJointDetails] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
@@ -477,9 +471,8 @@ export default function ResultsPage({ params }: { params: Promise<{ id: string }
       {vectorQ.data && (
         <PostureVectorCard
           trainee={vectorQ.data}
-          benchmark={benchmarkVectorQ.data}
-          title="Biomechanical Posture Twin"
-          subtitle="Observed Inflection Alignment vs. Textbook Biomechanical Standard"
+          title="Biomechanical Posture Vector"
+          subtitle="Observed vector alignment at peak eccentric inflection"
         />
       )}
 
