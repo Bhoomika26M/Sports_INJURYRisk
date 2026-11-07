@@ -7,6 +7,7 @@ import { useVideos, useAllAthletes } from "@/lib/hooks";
 import { useAuth } from "@/lib/auth-context";
 import type { Video, CompareVideosResponse } from "@/lib/types";
 import { Icon } from "@/components/icons";
+import { Spinner } from "@/components/feedback";
 import { AuthVideo } from "@/components/auth-media";
 import { VideoPairSelector } from "@/components/comparison/video-pair-selector";
 import { ComparisonMetricsTable } from "@/components/comparison/comparison-metrics-table";
@@ -33,14 +34,22 @@ export function VideoComparator({
   const [pollingStatus, setPollingStatus] = useState<{
     isPolling: boolean;
     message: string;
+    labelA: string;
+    labelB: string;
     progressA: number;
     progressB: number;
+    statusA: "pending" | "processing" | "completed" | "failed";
+    statusB: "pending" | "processing" | "completed" | "failed";
     error: string | null;
   }>({
     isPolling: false,
     message: "",
+    labelA: "",
+    labelB: "",
     progressA: 0,
     progressB: 0,
+    statusA: "pending",
+    statusB: "pending",
     error: null,
   });
 
@@ -95,9 +104,13 @@ export function VideoComparator({
 
       setPollingStatus({
         isPolling: true,
-        message: `Queuing ${labelA} and ${labelB} for MediaPipe analysis...`,
+        message: `Queuing ${labelA} and ${labelB} for pose extraction...`,
+        labelA,
+        labelB,
         progressA: 0,
         progressB: 0,
+        statusA: "pending",
+        statusB: "pending",
         error: null,
       });
 
@@ -116,39 +129,56 @@ export function VideoComparator({
             api.get<Video>(`/videos/${idB}`),
           ]);
 
-          if (vA.processing_status === "completed") doneA = true;
-          if (vB.processing_status === "completed") doneB = true;
+          const stA = vA.processing_status;
+          const stB = vB.processing_status;
 
-          if (vA.processing_status === "failed" || vB.processing_status === "failed") {
-            const errA = vA.processing_status === "failed" ? `${labelA}: ${vA.error_message || "Processing failed"}` : null;
-            const errB = vB.processing_status === "failed" ? `${labelB}: ${vB.error_message || "Processing failed"}` : null;
+          if (stA === "completed") doneA = true;
+          if (stB === "completed") doneB = true;
+
+          if (stA === "failed" || stB === "failed") {
+            const errA = stA === "failed" ? `${labelA}: ${vA.error_message || "Processing failed"}` : null;
+            const errB = stB === "failed" ? `${labelB}: ${vB.error_message || "Processing failed"}` : null;
             throw new Error(errA || errB || "Video processing failed");
           }
 
-          const pctA = vA.processing_status === "completed" ? 100 : (vA.progress_pct || 0);
-          const pctB = vB.processing_status === "completed" ? 100 : (vB.progress_pct || 0);
+          const pctA = stA === "completed" ? 100 : (vA.progress_pct || 0);
+          const pctB = stB === "completed" ? 100 : (vB.progress_pct || 0);
 
-          let statusText = `Processing: ${labelA} (${pctA}%) • ${labelB} (${pctB}%)`;
+          const statusA: "pending" | "processing" | "completed" = doneA
+            ? "completed"
+            : pctA > 0
+            ? "processing"
+            : "pending";
+
+          const statusB: "pending" | "processing" | "completed" = doneB
+            ? "completed"
+            : pctB > 0
+            ? "processing"
+            : "pending";
+
+          let statusText = `Analyzing: ${labelA} (${pctA}%) • ${labelB} (${pctB}%)`;
           if (!doneA) {
             if (pctA === 0) {
               statusText = `Reference clip (${labelA}) queued for analysis • ${labelB} queued next`;
             } else {
-              statusText = `Analyzing Reference clip: ${labelA} (${pctA}%) • ${labelB} queued next`;
+              statusText = `Extracting pose landmarks: ${labelA} (${pctA}%) • ${labelB} queued next`;
             }
           } else if (doneA && !doneB) {
             if (pctB === 0) {
               statusText = `${labelA} analysis complete (100%) • Comparison clip (${labelB}) queued for analysis`;
             } else {
-              statusText = `${labelA} analysis complete (100%) • Analyzing Comparison clip: ${labelB} (${pctB}%)`;
+              statusText = `${labelA} analysis complete (100%) • Extracting pose landmarks: ${labelB} (${pctB}%)`;
             }
           } else if (doneA && doneB) {
-            statusText = `Finalizing kinematic comparison: ${labelA} (100%) • ${labelB} (100%)`;
+            statusText = `Pose extraction complete (100%) • Generating synchronized kinematic comparison...`;
           }
 
           setPollingStatus((prev) => ({
             ...prev,
             progressA: pctA,
             progressB: pctB,
+            statusA,
+            statusB,
             message: statusText,
           }));
 
@@ -165,8 +195,12 @@ export function VideoComparator({
         setPollingStatus({
           isPolling: false,
           message: "",
+          labelA: "",
+          labelB: "",
           progressA: 100,
           progressB: 100,
+          statusA: "completed",
+          statusB: "completed",
           error: null,
         });
 
@@ -176,8 +210,12 @@ export function VideoComparator({
           setPollingStatus({
             isPolling: false,
             message: "",
+            labelA: "",
+            labelB: "",
             progressA: 0,
             progressB: 0,
+            statusA: "failed",
+            statusB: "failed",
             error: err instanceof Error ? err.message : "Processing failed",
           });
         }
@@ -213,23 +251,182 @@ export function VideoComparator({
         onSwap={handleSwap}
         onCompare={() => runCompare(videoAId, videoBId)}
         onUploadSuccess={pollCompletedClips}
-        isLoading={compareMutation.isPending}
+        isLoading={compareMutation.isPending || pollingStatus.isPolling}
       />
 
-      {/* Polling / Processing Banner */}
+      {/* Dual Video Pose Landmark Extraction Progress HUD */}
       {pollingStatus.isPolling && (
-        <div
-          className="rounded-2xl border border-brand-dark/20 bg-brand-light/30 p-5 space-y-3"
+        <section
+          className="card p-6 border-2 border-brand/20 bg-surface shadow-sm rounded-2xl flex flex-col gap-5"
           aria-live="polite"
         >
-          <div className="flex items-center gap-2.5 text-ink font-semibold">
-            <Icon name="activity" className="h-4 w-4 text-brand-dark animate-pulse" />
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/5 pb-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-tint text-brand-dark">
+                <Spinner className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="font-bold text-ink text-sm sm:text-base">
+                  Biomechanical Pose Landmark Extraction
+                </h3>
+                <p className="text-xs text-ink-3">
+                  MediaPipe 33-point joint tracking and kinematic calculation in progress.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-auto">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-200">
+                <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live Engine Active
+              </span>
+            </div>
+          </div>
+
+          {/* Active Status Banner */}
+          <div className="rounded-xl bg-brand-light/40 border border-brand/20 px-3.5 py-2.5 flex items-center gap-2 text-xs font-medium text-ink">
+            <Icon name="activity" className="h-4 w-4 text-brand-dark shrink-0 animate-pulse" />
             <span>{pollingStatus.message}</span>
           </div>
-          <p className="text-xs text-ink-3">
-            Pose extraction runs asynchronously. You can remain on this page while MediaPipe extracts joint kinematics.
-          </p>
-        </div>
+
+          {/* Dual Progress Tracks Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Reference Video Progress Card */}
+            <div className="rounded-xl border border-black/10 bg-surface-2 p-4 flex flex-col justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface border border-black/5 text-ink-2">
+                    <Icon name="video" className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3 block">
+                      Reference Clip
+                    </span>
+                    <span className="text-xs font-semibold text-ink truncate block max-w-[200px]" title={pollingStatus.labelA}>
+                      {pollingStatus.labelA || "Reference Video"}
+                    </span>
+                  </div>
+                </div>
+
+                {pollingStatus.statusA === "completed" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <Icon name="check" className="h-3 w-3" />
+                    Ready
+                  </span>
+                ) : pollingStatus.statusA === "processing" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-tint px-2 py-0.5 text-[10px] font-bold text-brand-dark">
+                    <Spinner className="h-2.5 w-2.5" />
+                    {pollingStatus.progressA}%
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                    Queued
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div>
+                <div className="flex justify-between items-center text-[11px] text-ink-3 mb-1.5 font-medium">
+                  <span>Joint tracking & inflection detection</span>
+                  <span className="font-bold text-ink">{pollingStatus.progressA}%</span>
+                </div>
+                <div
+                  className={`progress w-full ${
+                    pollingStatus.statusA === "pending" && pollingStatus.progressA === 0
+                      ? "progress--indeterminate"
+                      : ""
+                  }`}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pollingStatus.progressA}
+                >
+                  <span
+                    style={{
+                      width: `${Math.max(
+                        pollingStatus.progressA,
+                        pollingStatus.statusA === "completed" ? 100 : 5
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Comparison Video Progress Card */}
+            <div className="rounded-xl border border-black/10 bg-surface-2 p-4 flex flex-col justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-surface border border-black/5 text-ink-2">
+                    <Icon name="video" className="h-3.5 w-3.5" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-3 block">
+                      Comparison Clip
+                    </span>
+                    <span className="text-xs font-semibold text-ink truncate block max-w-[200px]" title={pollingStatus.labelB}>
+                      {pollingStatus.labelB || "Comparison Video"}
+                    </span>
+                  </div>
+                </div>
+
+                {pollingStatus.statusB === "completed" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
+                    <Icon name="check" className="h-3 w-3" />
+                    Ready
+                  </span>
+                ) : pollingStatus.statusB === "processing" ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-tint px-2 py-0.5 text-[10px] font-bold text-brand-dark">
+                    <Spinner className="h-2.5 w-2.5" />
+                    {pollingStatus.progressB}%
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+                    {pollingStatus.statusA === "completed" ? "Starting..." : "Queued"}
+                  </span>
+                )}
+              </div>
+
+              {/* Progress bar */}
+              <div>
+                <div className="flex justify-between items-center text-[11px] text-ink-3 mb-1.5 font-medium">
+                  <span>Joint tracking & inflection detection</span>
+                  <span className="font-bold text-ink">{pollingStatus.progressB}%</span>
+                </div>
+                <div
+                  className={`progress w-full ${
+                    pollingStatus.statusB === "pending" && pollingStatus.progressB === 0
+                      ? "progress--indeterminate"
+                      : ""
+                  }`}
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={pollingStatus.progressB}
+                >
+                  <span
+                    style={{
+                      width: `${Math.max(
+                        pollingStatus.progressB,
+                        pollingStatus.statusB === "completed" ? 100 : 5
+                      )}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Reassurance Notice */}
+          <div className="flex items-center gap-2 text-xs text-ink-3 pt-1">
+            <Icon name="shield" className="h-4 w-4 text-brand-dark shrink-0" />
+            <span>
+              Background processing is active on the server. You can safely stay on this page or navigate to other tabs — comparison will trigger automatically once both clips finish.
+            </span>
+          </div>
+        </section>
       )}
 
       {pollingStatus.error && (

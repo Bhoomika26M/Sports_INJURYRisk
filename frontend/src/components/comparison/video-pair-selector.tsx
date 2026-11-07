@@ -208,7 +208,8 @@ export function VideoPairSelector({
     (!isAthleteRequired || !!athleteId) &&
     !errorA &&
     !errorB &&
-    !uploading;
+    !uploading &&
+    !isLoading;
 
   return (
     <div className="card p-6 flex flex-col gap-6">
@@ -225,11 +226,10 @@ export function VideoPairSelector({
           <button
             type="button"
             onClick={() => setMode("library")}
-            className={`rounded-lg px-3 py-1 cursor-pointer transition-all flex items-center gap-1.5 ${
-              mode === "library"
+            className={`rounded-lg px-3 py-1 cursor-pointer transition-all flex items-center gap-1.5 ${mode === "library"
                 ? "bg-white text-ink shadow-sm font-bold"
                 : "text-ink-3 hover:text-ink"
-            }`}
+              }`}
           >
             <Icon name="folder" className="h-3.5 w-3.5" />
             <span>Select from Library</span>
@@ -237,11 +237,10 @@ export function VideoPairSelector({
           <button
             type="button"
             onClick={() => setMode("upload")}
-            className={`rounded-lg px-3 py-1 cursor-pointer transition-all flex items-center gap-1.5 ${
-              mode === "upload"
+            className={`rounded-lg px-3 py-1 cursor-pointer transition-all flex items-center gap-1.5 ${mode === "upload"
                 ? "bg-white text-ink shadow-sm font-bold"
                 : "text-ink-3 hover:text-ink"
-            }`}
+              }`}
           >
             <Icon name="upload" className="h-3.5 w-3.5" />
             <span>Upload 2 Fresh Videos</span>
@@ -450,10 +449,10 @@ export function VideoPairSelector({
               type="button"
               onClick={handleUpload}
               disabled={!canUpload}
-              className="btn btn-sm btn-primary cursor-pointer flex items-center gap-2 w-full justify-center"
+              className="btn btn-sm btn-primary cursor-pointer flex items-center gap-2 w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Icon name="activity" className="h-4 w-4" />
-              <span>Upload & Analyze Form</span>
+              <Icon name="activity" className={`h-4 w-4 ${isLoading ? "animate-pulse" : ""}`} />
+              <span>{isLoading ? "Analysis in Progress..." : "Upload & Analyze Form"}</span>
             </button>
           </div>
         </div>
