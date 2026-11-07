@@ -58,3 +58,44 @@ This is a deliberate simplicity trade-off (see `/docs/DECISIONS.md`): one casing
 ## Source of truth
 
 FastAPI's auto-generated docs (`/docs`, `/openapi.json` on the running server) are the live contract. If this file and the running server disagree, the code has a bug — fix the code, don't edit this file to match it.
+
+---
+
+## Comparison & Hardened Platform Endpoints (Engine 2.3 / Hardened Build)
+
+### Dual-Video Comparison
+- `POST /api/v1/videos/compare`
+  - Body: `{"reference_video_id": "...", "comparison_video_id": "..."}`
+  - Access: Caller must have access to both videos.
+  - Returns: Real biomechanical metric deltas, inflection frames, qualitative valgus assessment, 6.5° noise floor flags.
+
+### Within-Athlete History & Rolling Baseline
+- `GET /api/v1/athletes/{id}/history`
+  - Access: Athlete, or coach/physio assigned to athlete.
+  - Returns: Chronological list of completed video metrics for trend sparklines.
+- `GET /api/v1/videos/{video_id}/history-comparison`
+  - Access: Same as video.
+  - Returns: Deviations against the athlete's personal rolling baseline across $\ge 3$ eligible prior sessions. Returns HTTP 202 `history_building` if $< 3$ priors exist.
+
+### Video Processing Retries
+- `POST /api/v1/videos/{video_id}/retry`
+  - Access: Video owner / athlete's coach.
+  - Returns: Queues failed video for reprocessing. Rejects fatal non-retryable errors (`resolution_too_low`, `duration_too_short`, `duration_too_long`) with HTTP 422.
+
+### Password Reset Flow
+- `POST /api/v1/auth/password/forgot`
+  - Body: `{"email": "..."}`
+  - Returns: Constant HTTP 202 `{"message": "If this email is registered, a password reset code has been sent."}` (no user enumeration). Rate limited to 3 req/min.
+- `POST /api/v1/auth/password/reset`
+  - Body: `{"email": "...", "otp": "...", "new_password": "..."}`
+  - Returns: HTTP 200 on success. Revokes active refresh tokens. Rate limited to 5 req/min.
+
+### Athlete Claiming & Profile
+- `GET /api/v1/athletes/me`
+  - Access: Athlete role.
+  - Returns: Current user's athlete profile.
+- `POST /api/v1/athletes/claim`
+  - Body: `{"athlete_id": "..."}`
+  - Access: Unclaimed athlete user.
+  - Returns: Links logged-in user to unassigned athlete record.
+

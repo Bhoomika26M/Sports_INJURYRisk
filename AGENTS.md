@@ -72,7 +72,7 @@ docker compose up --build
 
 - **Backend Test Suite**:
   ```bash
-  cd backend && pytest   # 553 passed (needs Postgres on :5433 only)
+  cd backend && pytest   # 662 passed, 1 skipped, 0 failed
   ```
 - **Frontend Type & Lint Check**:
   ```bash

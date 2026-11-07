@@ -2,7 +2,16 @@
 
 The single source of truth for "what actually exists right now." Update this after every verified task — not from memory, from actually re-running the checks below against the real repo. If this file and reality disagree, reality wins; fix this file.
 
-**Last verified:** 2026-11-05 (Automatic Gemini Baseline & Host Run verified: automatic Gemini observation kicks in when movement type has < 2 baseline clips, precomputing 0–100 risk score and displaying `AI-Assisted Baseline` badge; peer baselines >= 2 clips preserve pure statistical Isolation Forest baselines without invoking Gemini; video `9681b51a-85df-4e86-8662-56c2c39fec56` scores 33.4 / 100 moderate risk; 29 backend tests passing; Next.js 16 build + dev server clean on :3000).
+**Last verified:** 2026-11-07 (Hardened Comparison Platform & Security Verification: 662 backend tests passing, 1 skipped, 0 failures; frontend compiles cleanly across 21 routes with 0 TS/ESLint errors; Section 9 acceptance greps 100% clean; exhaustive 39-route authorization matrix passed; within-athlete history U1, password reset U2 with OTP and refresh token revocation, CI workflow U3, production docker-compose U7, accuracy docs U5, why-different U9).
+
+**Verified on 2026-11-07 (Form Benchmark Hardening & Security Isolation):**
+- **Dual-Video Comparison Hardening:** `POST /api/v1/videos/compare` computes honest metric deltas strictly from real engine output (`videos.analysis["movement"]["metrics"]`). Differences $<6.5^\circ$ carry `within_noise_floor=True`. Frontal knee valgus is strictly qualitative (`none`, `mild`, `marked`). Synthetic textbook skeletons and hardcoded defaults deleted.
+- **Strict Authorization Matrix:** Enforced `load_accessible_video` across all video routes. Exhaustive dynamic 39-route test suite (`backend/tests/test_authorization_matrix.py`) verifies 403 Forbidden or 404 Not Found for cross-user video and athlete access.
+- **Route Hygiene:** Removed shadowed report endpoints in `video/router.py`. All report exports route cleanly through canonical handlers in `analytics/router.py` with zero route collisions.
+- **Within-Athlete History (U1):** `GET /api/v1/athletes/{id}/history` and `GET /api/v1/videos/{video_id}/history-comparison` provide longitudinal history and rolling personal baselines ($\ge 3$ eligible priors required).
+- **Password Reset via Email OTP (U2):** Migration `0006_password_reset_otp`, in-memory sliding-window rate limiting, constant HTTP 202 forgot-password response (no email enumeration), and refresh token revocation upon password reset.
+- **Test Suite Health:** Backend pytest runs 663 items with **662 passed, 1 skipped, 0 failed** in 903.77s. Frontend `npx tsc --noEmit`, `npx eslint src`, and `npm run build` all pass with code 0.
+
 
 **Verified on 2026-11-05 (Automatic Gemini Baseline Fallback):**
 - **Centralized AI Service (`backend/app/modules/video/ai_service.py`):** `check_baseline_sufficiency` accurately checks completed peer video count and athlete count against configurable thresholds. `run_gemini_observation_for_video` manages key resolution, model fallbacks, execution, and commits observation to `videos.analysis`.

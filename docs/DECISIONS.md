@@ -391,3 +391,35 @@ Mentor asked for a Gemini video route (downscale, fewer frames, chunking, joints
 - **Corpus table**: `backend/scripts/gemini_corpus_table.py` tabulates reports against the repo's clip labels and measures repeat-run agreement. It makes no API calls.
 - **OPEN**: partly verified live (2026-10-14: whole-clip runs and model probing on a free key). Still to confirm on the current build: chunked runs, a frontal-view valgus run, and that `--fps`/resolution are applied (token line). Do not cite output from this script as validated: nothing compares it with a physio's judgement.
 
+---
+
+## 2026-11-07 — Hardening the comparison build and eliminating synthetic/fake data (Build A Hardening)
+
+### Removal of Benchmark Presets and Synthetic Textbooks (F02, F05, F07)
+- **Decision:** Deleted `GET /api/v1/videos/benchmark-presets` and removed `vector_service.py`, `clinical_catalog.py`, `export_service.py`, `audioCue.ts`, and `custom-video-select.tsx`.
+- **Why:** `GET /benchmark-presets` leaked uploaded videos across all users with no tenant isolation. The vector service and clinical catalog returned hardcoded synthetic 2D coordinates ("Olympic Squat", etc.) and manufactured clinical findings ("Normal flexion with excellent lumbar stiffness") disconnected from actual video processing.
+- **Replacement:** The comparator now pairs two real user-accessible videos (`reference_video_id` and `comparison_video_id`) or allows uploading two fresh clips. Metric deltas are calculated strictly from real pipeline outputs (`videos.analysis["movement"]["metrics"]`).
+
+### Strict Authorization & Tenant Isolation (F01, F03, F12, F17)
+- **Decision:** Enforced `load_accessible_video` in `app/core/access.py` across all video endpoints including `POST /api/v1/videos/compare` and `GET /api/v1/videos/{video_id}/vector-posture`. Path parameters strictly use `video_id: UuidPath` instead of string lookups.
+- **Why:** Any user could previously pass another coach's video IDs into `/compare` or string IDs into `/vector-posture` to extract pose landmarks and filenames.
+- **Verification:** Exhaustive 39-route authorization matrix test suite (`backend/tests/test_authorization_matrix.py`) verifies 403 Forbidden or 404 Not Found for unassigned athletes and unrelated coaches across all scoped endpoints.
+
+### Real Biomechanical Comparison & 6.5° Noise Floor (F05, F13, F14, F15)
+- **Decision:** Comparison metrics calculate actual deltas between real engine analysis outputs (`reference_value` vs `comparison_value`). Differences smaller than 6.5° are explicitly annotated with `within_noise_floor=True` per the validated test-retest precision limit in `docs/SCIENCE_CONSTRAINTS.md`. Frontal knee valgus is strictly qualitative (`none`, `mild`, `marked`), never an angle. Missing metrics return `None` (rendered as "Unavailable"), never hardcoded defaults.
+- **Why:** Presenting sub-6.5° deltas as meaningful technique differences misleads coaches. Claiming numerical frontal valgus violates scientific validation standards.
+
+### Elimination of Duplicate Report Routes (F04)
+- **Decision:** Removed shadowed report route definitions (`GET /api/v1/videos/{video_id}/report.pdf` and `report.xlsx`) in `video/router.py`. All report exports route through canonical implementations in `app/modules/analytics/router.py`.
+
+### Within-Athlete Longitudinal History & Rolling Baseline (Upgrade U1)
+- **Decision:** Added `GET /api/v1/athletes/{id}/history` and `GET /api/v1/videos/{video_id}/history-comparison`. If an athlete has $\ge 3$ eligible completed prior videos for the same movement type and camera view, deviations are computed against their personal rolling baseline. Below 3 priors, the endpoint honestly returns HTTP 202 `history_building`.
+- **Why:** Within-athlete comparison isolates genuine technique changes from individual anthropometric variances and outside population norms.
+
+### Password Reset via Email OTP with Enumeration Parity (Upgrade U2)
+- **Decision:** Added migration `0006_password_reset_otp`, `PasswordResetOtp` model, and in-memory rate-limited endpoints `POST /api/v1/auth/password/forgot` and `POST /api/v1/auth/password/reset`. Forgot password returns constant HTTP 202 regardless of whether the email exists. Password reset verifies 6-digit OTP, updates Argon2 hash, and revokes all active refresh tokens.
+
+### Video Retry Endpoint with Safety Gates (Upgrade U4)
+- **Decision:** Added `POST /api/v1/videos/{video_id}/retry` allowing coaches and athletes to re-queue failed processing jobs. Rejects retry attempts for fatal non-retryable errors (`resolution_too_low`, `duration_too_short`, `duration_too_long`) with HTTP 422.
+
+
