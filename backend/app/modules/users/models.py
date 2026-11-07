@@ -6,7 +6,7 @@ Matches /docs/SCHEMA.md exactly — field names, types, constraints.
 import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Enum, String, func, ForeignKey
+from sqlalchemy import Boolean, DateTime, Enum, String, func, ForeignKey, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -79,3 +79,25 @@ class NotificationPreference(Base):
     email: Mapped[bool] = mapped_column(Boolean, nullable=False, server_default="false")
 
     user = relationship("User", back_populates="notification_prefs")
+
+
+class PasswordResetOtp(Base):
+    __tablename__ = "password_reset_otps"
+
+    id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False), primary_key=True, server_default=func.gen_random_uuid()
+    )
+    user_id: Mapped[str] = mapped_column(
+        UUID(as_uuid=False),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    code_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=func.now()
+    )
+
+    user = relationship("User")

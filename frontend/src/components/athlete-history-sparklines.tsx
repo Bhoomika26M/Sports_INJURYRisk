@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Line, LineChart, ResponsiveContainer, Tooltip } from "recharts";
 import { api } from "@/lib/api-client";
-import { Icon } from "@/components/icons";
+
 import { formatDate } from "@/lib/format";
 
 interface HistoryVideo {

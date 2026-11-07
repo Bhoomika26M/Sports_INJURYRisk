@@ -2,21 +2,28 @@
 
 import logging
 import secrets
+import time
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
 from typing import Annotated
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Query, Request, Response, status
+from fastapi.responses import JSONResponse, RedirectResponse
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.core.deps import get_current_user
 from app.core.errors import api_error
+from app.core.security import hash_password, verify_password
 from app.database import get_db
 from app.modules.auth.schemas import (
+    ForgotPasswordRequest,
     LoginRequest,
     MessageResponse,
     RegisterRequest,
+    ResetPasswordRequest,
     TokenResponse,
     UserResponse,
 )
@@ -39,9 +46,26 @@ from app.modules.auth.service import (
     refresh_access_token,
     revoke_refresh_token,
 )
-from app.modules.users.models import User
+from app.modules.users.models import PasswordResetOtp, RefreshToken, User
 
 logger = logging.getLogger(__name__)
+
+# In-process rate limiting map: key -> list of timestamp epochs
+_rate_limits: dict[str, list[float]] = defaultdict(list)
+
+
+def _check_rate_limit(key: str, max_calls: int = 5, window_sec: float = 300.0) -> bool:
+    """Sliding-window rate limiter in process memory."""
+    now = time.time()
+    cutoff = now - window_sec
+    calls = [t for t in _rate_limits[key] if t > cutoff]
+    if len(calls) >= max_calls:
+        _rate_limits[key] = calls
+        return False
+    calls.append(now)
+    _rate_limits[key] = calls
+    return True
+
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -112,6 +136,107 @@ async def logout(
     clear_refresh_cookie(response)
     clear_session_hint_cookie(response)
     return MessageResponse(message="Logged out successfully")
+
+
+@router.post("/password/forgot", status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password_endpoint(
+    data: ForgotPasswordRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Request a password reset OTP by email.
+
+    Always returns 202 with identical body to prevent user enumeration attacks.
+    """
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(f"forgot_{client_ip}", max_calls=5, window_sec=300.0):
+        raise api_error(429, "RATE_LIMIT_EXCEEDED", "Too many requests. Please wait a few minutes.")
+
+    user = await db.scalar(select(User).where(User.email == data.email.lower().strip()))
+    if user and user.is_active:
+        code = f"{secrets.randbelow(1_000_000):06d}"
+        code_hash = hash_password(code)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+        otp = PasswordResetOtp(
+            user_id=user.id,
+            code_hash=code_hash,
+            expires_at=expires_at,
+            attempts=0,
+        )
+        db.add(otp)
+        await db.commit()
+
+        # In development or when SendGrid is absent, log OTP to console
+        logger.info("[AUTH_OTP] Password reset OTP for %s: %s (expires in 10m)", user.email, code)
+
+        if settings.sendgrid_api_key:
+            try:
+                from sendgrid import SendGridAPIClient
+                from sendgrid.helpers.mail import Mail
+                message = Mail(
+                    from_email=settings.sendgrid_from_email,
+                    to_emails=user.email,
+                    subject="Your Sports Injury Risk Platform Reset Code",
+                    plain_text_content=f"Your verification code is: {code}\n\nThis code expires in 10 minutes.",
+                )
+                sg = SendGridAPIClient(settings.sendgrid_api_key)
+                sg.send(message)
+            except Exception as e:
+                logger.warning("SendGrid dispatch failed: %s", e)
+
+    return JSONResponse(
+        status_code=status.HTTP_202_ACCEPTED,
+        content={"message": "If that email address is registered, a password reset code has been sent."},
+    )
+
+
+@router.post("/password/reset", response_model=MessageResponse)
+async def reset_password_endpoint(
+    data: ResetPasswordRequest,
+    request: Request,
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Verify OTP and reset password. Revokes all active refresh tokens on success."""
+    client_ip = request.client.host if request.client else "unknown"
+    if not _check_rate_limit(f"reset_{client_ip}", max_calls=10, window_sec=300.0):
+        raise api_error(429, "RATE_LIMIT_EXCEEDED", "Too many reset attempts. Please wait a few minutes.")
+
+    user = await db.scalar(select(User).where(User.email == data.email.lower().strip()))
+    if not user:
+        raise api_error(400, "INVALID_CODE", "Invalid or expired reset code")
+
+    now = datetime.now(timezone.utc)
+    stmt = (
+        select(PasswordResetOtp)
+        .where(
+            PasswordResetOtp.user_id == user.id,
+            PasswordResetOtp.used_at.is_(None),
+            PasswordResetOtp.expires_at > now,
+        )
+        .order_by(PasswordResetOtp.created_at.desc())
+    )
+    otp = await db.scalar(stmt)
+    if not otp:
+        raise api_error(400, "INVALID_CODE", "Invalid or expired reset code")
+
+    if otp.attempts >= 5:
+        raise api_error(429, "TOO_MANY_ATTEMPTS", "Too many failed attempts. Please request a new code.")
+
+    if not verify_password(data.code, otp.code_hash):
+        otp.attempts += 1
+        await db.commit()
+        raise api_error(400, "INVALID_CODE", "Invalid or expired reset code")
+
+    # Code is valid! Mark used, update password, and revoke refresh tokens
+    otp.used_at = now
+    user.password_hash = hash_password(data.new_password)
+    await db.execute(
+        update(RefreshToken).where(RefreshToken.user_id == user.id).values(revoked=True)
+    )
+    await db.commit()
+
+    return MessageResponse(message="Password reset successful. Please log in with your new password.")
 
 
 @router.get("/me", response_model=UserResponse)

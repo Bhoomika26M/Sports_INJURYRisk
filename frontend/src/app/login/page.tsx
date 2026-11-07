@@ -90,6 +90,12 @@ function LoginForm() {
             )}
           </Field>
 
+          <div className="-mt-2 flex justify-end">
+            <Link href="/forgot-password" className="text-xs font-semibold text-brand-dark hover:underline">
+              Forgot password?
+            </Link>
+          </div>
+
           <button type="submit" disabled={busy || !hydrated} className="btn btn-primary mt-1 w-full">
             {busy && <Spinner className="h-4 w-4" />} {busy ? "Signing in…" : "Sign in"}
           </button>
