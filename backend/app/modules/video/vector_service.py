@@ -72,19 +72,40 @@ def normalize_landmarks_to_svg(
     target_width: float = 300.0,
     target_height: float = 400.0,
     padding: float = 40.0,
+    camera_view: str = "frontal",
 ) -> dict[str, Any]:
     """Normalizes 3D MediaPipe coordinates into a scaled 2D SVG bounding box.
     Centers the subject horizontally and anchors feet to the ground line.
+    Respects landmark visibility gating (<0.5 is occluded/unreliable) and camera view.
     """
     keypoint_coords: dict[str, tuple[float, float]] = {}
+    vis_list = raw_landmarks.get("_vis") or []
+    visibilities: dict[str, float] = {}
 
     for name, idx in LM.items():
         val = raw_landmarks.get(str(idx)) or raw_landmarks.get(idx)
         if val and len(val) >= 2:
             keypoint_coords[name] = (float(val[0]), float(val[1]))
+            vis = float(vis_list[idx]) if idx < len(vis_list) else 1.0
+            visibilities[name] = round(vis, 3)
 
     if len(keypoint_coords) < 6:
         return {}
+
+    # In sagittal view, identify which side of the body is facing the camera
+    left_leg_vis = (visibilities.get("left_hip", 1.0) + visibilities.get("left_knee", 1.0) + visibilities.get("left_ankle", 1.0)) / 3.0
+    right_leg_vis = (visibilities.get("right_hip", 1.0) + visibilities.get("right_knee", 1.0) + visibilities.get("right_ankle", 1.0)) / 3.0
+
+    visible_side = "both"
+    if camera_view in ("sagittal", "side"):
+        if right_leg_vis >= 0.55 and left_leg_vis < 0.5:
+            visible_side = "right"
+        elif left_leg_vis >= 0.55 and right_leg_vis < 0.5:
+            visible_side = "left"
+        elif right_leg_vis > left_leg_vis + 0.2:
+            visible_side = "right"
+        elif left_leg_vis > right_leg_vis + 0.2:
+            visible_side = "left"
 
     nose_pt = keypoint_coords.get("nose")
     la_pt = keypoint_coords.get("left_ankle") or keypoint_coords.get("right_ankle")
@@ -99,8 +120,13 @@ def normalize_landmarks_to_svg(
     if invert_y:
         keypoint_coords = {k: (x, -y) for k, (x, y) in keypoint_coords.items()}
 
-    all_x = [pt[0] for pt in keypoint_coords.values()]
-    all_y = [pt[1] for pt in keypoint_coords.values()]
+    # Anchor bounding box using reliable (non-occluded) keypoints so occluded limbs don't skew canvas
+    reliable_pts = [pt for name, pt in keypoint_coords.items() if visibilities.get(name, 1.0) >= 0.4]
+    if not reliable_pts or len(reliable_pts) < 4:
+        reliable_pts = list(keypoint_coords.values())
+
+    all_x = [pt[0] for pt in reliable_pts]
+    all_y = [pt[1] for pt in reliable_pts]
 
     min_x, max_x = min(all_x), max(all_x)
     min_y, max_y = min(all_y), max(all_y)
@@ -160,6 +186,17 @@ def normalize_landmarks_to_svg(
         )
         angles["knee_flexion_right"] = k_angle_r
 
+    # Primary knee flexion depth based on visible side
+    if visible_side == "right" and "knee_flexion_right" in angles:
+        angles["knee_flexion"] = angles["knee_flexion_right"]
+    elif visible_side == "left" and "knee_flexion_left" in angles:
+        angles["knee_flexion"] = angles["knee_flexion_left"]
+    else:
+        if visibilities.get("right_knee", 0) >= visibilities.get("left_knee", 0):
+            angles["knee_flexion"] = angles.get("knee_flexion_right") or angles.get("knee_flexion_left", 90.0)
+        else:
+            angles["knee_flexion"] = angles.get("knee_flexion_left") or angles.get("knee_flexion_right", 90.0)
+
     if normalized.get("mid_hip") and normalized.get("mid_shoulder"):
         trunk_lean = _calculate_trunk_lean(
             (normalized["mid_hip"][0], normalized["mid_hip"][1]),
@@ -169,32 +206,41 @@ def normalize_landmarks_to_svg(
         if trunk_lean > 35.0:
             faults.append("excessive_trunk_lean")
 
-    if normalized.get("left_knee") and lh and normalized.get("left_ankle"):
-        lk_x = normalized["left_knee"][0]
-        lh_x = lh[0]
-        la_x = normalized["left_ankle"][0]
-        if lk_x > min(lh_x, la_x) + abs(lh_x - la_x) * 0.4 and abs(lh_x - la_x) > 5:
-            angles["knee_valgus_left"] = "mild"
-            faults.append("knee_valgus")
-        else:
-            angles["knee_valgus_left"] = "none"
-
-    if normalized.get("right_knee") and rh and normalized.get("right_ankle"):
-        rk_x = normalized["right_knee"][0]
-        rh_x = rh[0]
-        ra_x = normalized["right_ankle"][0]
-        if rk_x < max(rh_x, ra_x) - abs(rh_x - ra_x) * 0.4 and abs(rh_x - ra_x) > 5:
-            angles["knee_valgus_right"] = "mild"
-            if "knee_valgus" not in faults:
+    # Frontal Knee Valgus — ONLY assessable from frontal or oblique camera angles!
+    # Per docs/SCIENCE_CONSTRAINTS.md: never measure or flag knee valgus from 2D coordinates in a sagittal view.
+    if camera_view in ("frontal", "oblique"):
+        if normalized.get("left_knee") and lh and normalized.get("left_ankle"):
+            lk_x = normalized["left_knee"][0]
+            lh_x = lh[0]
+            la_x = normalized["left_ankle"][0]
+            if lk_x > min(lh_x, la_x) + abs(lh_x - la_x) * 0.4 and abs(lh_x - la_x) > 5:
+                angles["knee_valgus_left"] = "mild"
                 faults.append("knee_valgus")
-        else:
-            angles["knee_valgus_right"] = "none"
+            else:
+                angles["knee_valgus_left"] = "none"
+
+        if normalized.get("right_knee") and rh and normalized.get("right_ankle"):
+            rk_x = normalized["right_knee"][0]
+            rh_x = rh[0]
+            ra_x = normalized["right_ankle"][0]
+            if rk_x < max(rh_x, ra_x) - abs(rh_x - ra_x) * 0.4 and abs(rh_x - ra_x) > 5:
+                angles["knee_valgus_right"] = "mild"
+                if "knee_valgus" not in faults:
+                    faults.append("knee_valgus")
+            else:
+                angles["knee_valgus_right"] = "none"
+    else:
+        angles["knee_valgus_left"] = "not_assessable"
+        angles["knee_valgus_right"] = "not_assessable"
 
     return {
         "landmarks": normalized,
         "angles": angles,
         "faults": list(set(faults)),
         "ground_y": ground_y,
+        "visibilities": visibilities,
+        "visible_side": visible_side,
+        "camera_view": camera_view,
     }
 
 
@@ -306,6 +352,7 @@ async def extract_inflection_vector_for_video(db: AsyncSession, video_id: str) -
         return None
 
     movement_type = video.movement_type if video else "squatting"
+    camera_view = video.camera_view if video else "sagittal"
 
     frames = list((await db.scalars(
         select(PoseFrame)
@@ -320,13 +367,14 @@ async def extract_inflection_vector_for_video(db: AsyncSession, video_id: str) -
     if not best_frame or not best_frame.keypoints:
         return None
 
-    vector_data = normalize_landmarks_to_svg(best_frame.keypoints)
+    vector_data = normalize_landmarks_to_svg(best_frame.keypoints, camera_view=camera_view)
     if not vector_data or not vector_data.get("landmarks"):
         return None
 
     vector_data["frame_number"] = best_frame.frame_number
     vector_data["timestamp_ms"] = best_frame.timestamp_ms
     vector_data["movement_type"] = movement_type
+    vector_data["camera_view"] = camera_view
     return vector_data
 
 
@@ -346,4 +394,7 @@ def build_posture_snapshot(vector_dict: dict[str, Any] | None, valgus_flag: str 
         landmarks=vector_dict.get("landmarks", {}),
         angles=angles_clean,
         valgus_flag=valgus_flag,
+        camera_view=vector_dict.get("camera_view"),
+        visible_side=vector_dict.get("visible_side"),
+        visibilities=vector_dict.get("visibilities", {}),
     )

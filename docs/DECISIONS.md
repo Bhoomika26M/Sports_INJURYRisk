@@ -422,4 +422,9 @@ Mentor asked for a Gemini video route (downscale, fewer frames, chunking, joints
 ### Video Retry Endpoint with Safety Gates (Upgrade U4)
 - **Decision:** Added `POST /api/v1/videos/{video_id}/retry` allowing coaches and athletes to re-queue failed processing jobs. Rejects retry attempts for fatal non-retryable errors (`resolution_too_low`, `duration_too_short`, `duration_too_long`) with HTTP 422.
 
+### View-Discipline Posture Vector & Robust Dual-Video Polling
+- **Decision:** 
+  1. Updated `vector_service.py` and `posture-vector-card.tsx` to be camera-view aware. In sagittal (side) views, occluded contralateral limbs with landmark visibility $<0.5$ are omitted or dimmed so they no longer project chaotic crossing lines on the 2D SVG canvas. The primary flexion angle is derived from the visible side rather than defaulting to the left leg. Frontal knee valgus is marked `not_assessable` on sagittal clips in accordance with `docs/SCIENCE_CONSTRAINTS.md`, preventing false "Frontal Alignment" findings.
+  2. Fixed `video-comparator.tsx` dual-video upload polling: extended timeout from 120s (60 attempts) to 600s (300 attempts) to allow sequential multi-clip pose extraction to complete without premature timeout errors. Guarded `runCompare` so it only fires when both clips are confirmed completed, clearing any stale comparison error states on submission.
+
 

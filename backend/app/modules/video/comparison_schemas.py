@@ -36,6 +36,9 @@ class PostureSnapshot(BaseModel):
     landmarks: dict[str, list[float]] = Field(default_factory=dict)
     angles: dict[str, float] = Field(default_factory=dict)
     valgus_flag: Optional[str] = None
+    camera_view: Optional[str] = None
+    visible_side: Optional[str] = None
+    visibilities: dict[str, float] = Field(default_factory=dict)
 
 
 class VectorPostureData(BaseModel):
@@ -46,6 +49,9 @@ class VectorPostureData(BaseModel):
     frame_number: Optional[int] = None
     timestamp_ms: Optional[int] = None
     movement_type: Optional[str] = None
+    camera_view: Optional[str] = None
+    visible_side: Optional[str] = None
+    visibilities: dict[str, float] = Field(default_factory=dict)
 
 
 class CompareVideosResponse(BaseModel):

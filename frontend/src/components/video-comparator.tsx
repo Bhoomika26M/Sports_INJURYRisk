@@ -91,11 +91,13 @@ export function VideoComparator({
       const abortCtrl = new AbortController();
       abortControllerRef.current = abortCtrl;
 
+      compareMutation.reset();
+
       setPollingStatus({
         isPolling: true,
-        message: "Processing video pose landmarks...",
-        progressA: 10,
-        progressB: 10,
+        message: `Queuing ${labelA} and ${labelB} for MediaPipe analysis...`,
+        progressA: 0,
+        progressB: 0,
         error: null,
       });
 
@@ -103,7 +105,8 @@ export function VideoComparator({
       let doneB = false;
 
       try {
-        for (let attempt = 0; attempt < 60; attempt++) {
+        // Allow up to 300 attempts * 2s = 600s (10 min) for full 2-video pipeline
+        for (let attempt = 0; attempt < 300; attempt++) {
           if (abortCtrl.signal.aborted) return;
           await new Promise((res) => setTimeout(res, 2000));
           if (abortCtrl.signal.aborted) return;
@@ -122,17 +125,38 @@ export function VideoComparator({
             throw new Error(errA || errB || "Video processing failed");
           }
 
-          const pctA = vA.progress_pct ?? (doneA ? 100 : Math.min(95, 10 + attempt * 2));
-          const pctB = vB.progress_pct ?? (doneB ? 100 : Math.min(95, 10 + attempt * 2));
+          const pctA = vA.processing_status === "completed" ? 100 : (vA.progress_pct || 0);
+          const pctB = vB.processing_status === "completed" ? 100 : (vB.progress_pct || 0);
+
+          let statusText = `Processing: ${labelA} (${pctA}%) • ${labelB} (${pctB}%)`;
+          if (!doneA) {
+            if (pctA === 0) {
+              statusText = `Reference clip (${labelA}) queued for analysis • ${labelB} queued next`;
+            } else {
+              statusText = `Analyzing Reference clip: ${labelA} (${pctA}%) • ${labelB} queued next`;
+            }
+          } else if (doneA && !doneB) {
+            if (pctB === 0) {
+              statusText = `${labelA} analysis complete (100%) • Comparison clip (${labelB}) queued for analysis`;
+            } else {
+              statusText = `${labelA} analysis complete (100%) • Analyzing Comparison clip: ${labelB} (${pctB}%)`;
+            }
+          } else if (doneA && doneB) {
+            statusText = `Finalizing kinematic comparison: ${labelA} (100%) • ${labelB} (100%)`;
+          }
 
           setPollingStatus((prev) => ({
             ...prev,
             progressA: pctA,
             progressB: pctB,
-            message: `Analyzing pose landmarks: ${labelA} (${pctA}%) • ${labelB} (${pctB}%)`,
+            message: statusText,
           }));
 
           if (doneA && doneB) break;
+        }
+
+        if (!doneA || !doneB) {
+          throw new Error("Video processing is taking longer than expected. Please wait a moment and check the library.");
         }
 
         await queryClient.invalidateQueries({ queryKey: ["videos"] });
@@ -141,8 +165,8 @@ export function VideoComparator({
         setPollingStatus({
           isPolling: false,
           message: "",
-          progressA: 0,
-          progressB: 0,
+          progressA: 100,
+          progressB: 100,
           error: null,
         });
 
@@ -159,7 +183,7 @@ export function VideoComparator({
         }
       }
     },
-    [queryClient, runCompare]
+    [compareMutation, queryClient, runCompare]
   );
 
   const handleSwap = () => {

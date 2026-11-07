@@ -350,9 +350,11 @@ export interface VectorPostureData {
   angles: {
     knee_flexion_left?: number;
     knee_flexion_right?: number;
+    knee_flexion?: number;
     trunk_lean?: number;
-    knee_valgus_left?: "none" | "mild" | "marked";
-    knee_valgus_right?: "none" | "mild" | "marked";
+    knee_valgus_left?: "none" | "mild" | "marked" | "not_assessable";
+    knee_valgus_right?: "none" | "mild" | "marked" | "not_assessable";
+    visible_side?: "left" | "right" | "both";
     [key: string]: unknown;
   };
   faults: string[];
@@ -360,6 +362,9 @@ export interface VectorPostureData {
   frame_number?: number | null;
   timestamp_ms?: number | null;
   movement_type?: string | null;
+  camera_view?: string | null;
+  visible_side?: "left" | "right" | "both" | null;
+  visibilities?: Record<string, number>;
 }
 
 export interface MetricDelta {
@@ -389,6 +394,9 @@ export interface PostureSnapshot {
   landmarks: Record<string, [number, number] | number[]>;
   angles: Record<string, number>;
   valgus_flag?: string | null;
+  camera_view?: string | null;
+  visible_side?: "left" | "right" | "both" | null;
+  visibilities?: Record<string, number>;
 }
 
 export interface CompareVideosResponse {

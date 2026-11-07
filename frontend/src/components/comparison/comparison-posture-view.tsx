@@ -21,6 +21,13 @@ function SkeletonSvg({
   opacity?: number;
 }) {
   const lm = snapshot.landmarks || {};
+  const vis = snapshot.visibilities || {};
+  const isSagittal = snapshot.camera_view === "sagittal" || snapshot.camera_view === "side";
+  const visibleSide = snapshot.visible_side || (isSagittal ? "right" : "both");
+
+  const isVis = (name: string, fallback = 1.0): boolean => {
+    return vis[name] !== undefined ? vis[name] >= 0.5 : fallback >= 0.5;
+  };
 
   const getPt = (name: string): [number, number] | null => {
     const pt = lm[name];
@@ -30,31 +37,36 @@ function SkeletonSvg({
 
   const ls = getPt("left_shoulder");
   const rs = getPt("right_shoulder");
-  const le = getPt("left_elbow");
-  const re = getPt("right_elbow");
-  const lw = getPt("left_wrist");
-  const rw = getPt("right_wrist");
+  const le = isVis("left_elbow") ? getPt("left_elbow") : null;
+  const re = isVis("right_elbow") ? getPt("right_elbow") : null;
+  const lw = isVis("left_wrist") ? getPt("left_wrist") : null;
+  const rw = isVis("right_wrist") ? getPt("right_wrist") : null;
   const lh = getPt("left_hip");
   const rh = getPt("right_hip");
-  const lk = getPt("left_knee");
-  const rk = getPt("right_knee");
-  const la = getPt("left_ankle");
-  const ra = getPt("right_ankle");
+
+  // In sagittal view, omit far side if not visible (<0.5)
+  const showLeftLeg = isSagittal ? visibleSide === "left" || (isVis("left_knee") && isVis("left_ankle")) : isVis("left_knee");
+  const showRightLeg = isSagittal ? visibleSide === "right" || (isVis("right_knee") && isVis("right_ankle")) : isVis("right_knee");
+
+  const lk = showLeftLeg ? getPt("left_knee") : null;
+  const rk = showRightLeg ? getPt("right_knee") : null;
+  const la = showLeftLeg ? getPt("left_ankle") : null;
+  const ra = showRightLeg ? getPt("right_ankle") : null;
   const nose = getPt("nose");
 
   const midShoulder: [number, number] | null =
-    ls && rs ? [(ls[0] + rs[0]) / 2, (ls[1] + rs[1]) / 2] : null;
+    ls && rs ? [(ls[0] + rs[0]) / 2, (ls[1] + rs[1]) / 2] : ls || rs;
   const midHip: [number, number] | null =
-    lh && rh ? [(lh[0] + rh[0]) / 2, (lh[1] + rh[1]) / 2] : null;
+    lh && rh ? [(lh[0] + rh[0]) / 2, (lh[1] + rh[1]) / 2] : lh || rh;
 
   const bones: [ [number, number] | null, [number, number] | null ][] = [
-    [ls, rs],
+    [!isSagittal ? ls : null, !isSagittal ? rs : null],
     [ls, le],
     [le, lw],
     [rs, re],
     [re, rw],
     [midShoulder, midHip],
-    [lh, rh],
+    [!isSagittal ? lh : null, !isSagittal ? rh : null],
     [lh, lk],
     [lk, la],
     [rh, rk],
@@ -252,3 +264,4 @@ export function ComparisonPostureView({
     </div>
   );
 }
+
