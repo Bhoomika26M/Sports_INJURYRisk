@@ -236,6 +236,37 @@ async def confirm_upload(
     return {"status": "processing"}
 
 
+@router.post("/{video_id}/retry")
+async def retry_video_endpoint(
+    video_id: UuidPath,
+    current_user: Annotated[User, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    """Retry processing a failed video (retryable errors only)."""
+    video, athlete = await load_accessible_video(db, video_id, current_user)
+    if video.processing_status != VideoProcessingStatus.failed:
+        raise api_error(400, "NOT_FAILED", "Only failed videos can be retried")
+
+    non_retryable = {"resolution_too_low", "duration_too_short", "duration_too_long"}
+    if video.error_code in non_retryable:
+        raise api_error(
+            422,
+            "NON_RETRYABLE_ERROR",
+            f"Error '{video.error_code}' cannot be resolved by retrying. Please upload a compliant clip.",
+        )
+
+    video.processing_status = VideoProcessingStatus.processing
+    video.error_code = None
+    video.error_message = None
+    video.progress_pct = 0
+    await db.commit()
+
+    from app.modules.pose.jobs import enqueue
+    enqueue(video.id)
+
+    return {"message": "Video queued for retry", "video_id": video.id}
+
+
 @router.post("/compare", response_model=CompareVideosResponse)
 async def compare_videos_endpoint(
     req: CompareVideosRequest,

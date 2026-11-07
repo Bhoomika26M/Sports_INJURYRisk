@@ -1,0 +1,67 @@
+# Production Docker Compose specification for Sports Injury Risk Platform
+# Run: docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-injury_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in production}
+      POSTGRES_DB: ${POSTGRES_DB:-injury_detection}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-injury_user} -d ${POSTGRES_DB:-injury_detection}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal_net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-injury_detection}
+      DATABASE_URL_SYNC: postgresql+psycopg2://${POSTGRES_USER:-injury_user}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-injury_detection}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?JWT_SECRET_KEY must be a cryptographically random secret in production}
+      FRONTEND_URL: ${FRONTEND_URL:-https://app.injury-detection.local}
+      UPLOAD_DIR: /uploads
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-noreply@injury-detection.local}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads_prod:/uploads
+    ports:
+      - "8000:8000"
+    networks:
+      - internal_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000/api/v1}
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    networks:
+      - internal_net
+
+volumes:
+  pgdata_prod:
+  uploads_prod:
+
+networks:
+  internal_net:
+    driver: bridge
