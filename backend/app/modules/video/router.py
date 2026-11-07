@@ -33,7 +33,6 @@ from app.modules.video.comparison_schemas import (
 )
 from app.modules.video.comparison_service import compare_two_videos
 from app.modules.video.vector_service import extract_inflection_vector_for_video, get_textbook_ideal_landmarks
-from app.modules.video.export_service import generate_clinical_pdf_report, generate_telemetry_excel_export
 from app.modules.risk_scoring.models import RiskScore
 
 # One list for the filename gate AND the storage-key gate (main.py): they drifted once (storage PUT still said mp4|mov).
@@ -262,7 +261,7 @@ async def confirm_upload(
 
     if duration < settings.min_video_seconds or duration > settings.max_video_seconds:
         await _reject_upload(db, video, "duration_out_of_range",
-                             f"Video duration is {duration:.1f}s (must be between {settings.min_video_seconds:g}s and {settings.max_video_seconds:g}s)", local_path)
+                             f"Video duration is {duration:.1f}s (must be between {settings.min_video_seconds:g} and {settings.max_video_seconds:g}s)", local_path)
 
     if height < settings.min_video_height:
         await _reject_upload(db, video, "resolution_too_low",
@@ -640,54 +639,3 @@ async def export_csv(
         headers={"Content-Disposition": f'attachment; filename="video_{video_id}_metrics.csv"'},
     )
 
-@router.get("/{video_id}/report.pdf")
-async def export_pdf_report(
-    video_id: UuidPath,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    """Streams a publication-grade 1-page clinical movement assessment PDF."""
-    video = await db.scalar(select(Video).where(Video.id == video_id))
-    if not video:
-        raise api_error(404, "NOT_FOUND", "Video not found")
-
-    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
-    if not athlete:
-        raise api_error(404, "NOT_FOUND", "Athlete not found")
-    if not _can_access_athlete(current_user, athlete):
-        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-
-    risk = await db.scalar(select(RiskScore).where(RiskScore.video_id == video_id))
-    coach = await db.scalar(select(User).where(User.id == athlete.coach_id)) if athlete.coach_id else None
-
-    pdf_bytes = generate_clinical_pdf_report(video, risk, athlete, coach)
-    return StreamingResponse(
-        io.BytesIO(pdf_bytes),
-        media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="assessment_report_{video_id[:8]}.pdf"'},
-    )
-
-
-@router.get("/{video_id}/report.xlsx")
-async def export_excel_telemetry(
-    video_id: UuidPath,
-    current_user: Annotated[User, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(get_db)],
-):
-    """Streams research-grade frame-by-frame joint telemetry in Excel format."""
-    video = await db.scalar(select(Video).where(Video.id == video_id))
-    if not video:
-        raise api_error(404, "NOT_FOUND", "Video not found")
-
-    athlete = await db.scalar(select(Athlete).where(Athlete.id == video.athlete_id))
-    if not athlete:
-        raise api_error(404, "NOT_FOUND", "Athlete not found")
-    if not _can_access_athlete(current_user, athlete):
-        raise api_error(403, "INSUFFICIENT_PERMISSIONS", "Access denied")
-
-    xlsx_bytes = generate_telemetry_excel_export(video, athlete)
-    return StreamingResponse(
-        io.BytesIO(xlsx_bytes),
-        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": f'attachment; filename="kinematic_telemetry_{video_id[:8]}.xlsx"'},
-    )
