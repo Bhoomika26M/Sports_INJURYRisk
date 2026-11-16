@@ -88,7 +88,6 @@ const Layout = () => {
               <div className="flex items-center space-x-2 pl-2 border-l border-[#E5E7EB]">
                 <div className="flex flex-col text-right hidden sm:block">
                   <span className="text-xs font-semibold text-[#141B2B] leading-tight">{user?.full_name}</span>
-                  <span className="text-[10px] text-[#594139] capitalize">{user?.role?.replace(/_/g, ' ')}</span>
                 </div>
                 <span className={getRoleBadgeClass(user?.role)}>{user?.role}</span>
               </div>
