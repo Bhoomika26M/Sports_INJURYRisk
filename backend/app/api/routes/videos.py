@@ -1,8 +1,9 @@
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from typing import List
 from pathlib import Path
+from app.api.media import range_file_response
 from app.db.database import get_db, SessionLocal
 from app.core.security import get_current_active_user
 from app.core.dependencies import require_admin
@@ -363,12 +364,19 @@ def generate_annotated_video(
 @router.get("/{video_id}/annotated-video")
 def get_annotated_video(
     video_id: int,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """
-    Get annotated video file.
-    
+    Get the annotated video (skeleton overlay).
+
+    Served with HTTP range support, which matters in two ways:
+
+    * during analysis, the file is a fragmented MP4 that grows as frames are
+      written, so the player can start immediately and keep fetching;
+    * after analysis, range support is what lets the browser seek/scrub.
+
     Security:
     - Requires authentication
     - User must have access to the video
@@ -385,16 +393,18 @@ def get_annotated_video(
             detail="Annotated video not found. It is generated automatically during analysis; re-run POST /{video_id}/annotated-video for videos processed earlier."
         )
     
-    return FileResponse(
-        path=str(annotated_path),
+    return range_file_response(
+        annotated_path,
         media_type="video/mp4",
-        filename=f"annotated_{video.original_filename}"
+        filename=f"annotated_{video.original_filename}",
+        request=request,
     )
 
 
 @router.get("/{video_id}/video")
 def get_original_video(
     video_id: int,
+    request: Request,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
@@ -415,10 +425,11 @@ def get_original_video(
             detail="Original video file not found"
         )
 
-    return FileResponse(
-        path=str(video_path),
+    return range_file_response(
+        video_path,
         media_type="video/mp4",
-        filename=video.original_filename
+        filename=video.original_filename,
+        request=request,
     )
 
 

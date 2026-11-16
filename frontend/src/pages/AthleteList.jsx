@@ -89,7 +89,7 @@ const AthleteList = () => {
         {canAddAthlete && (
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            className="btn-primary"
           >
             {showAddForm ? 'Cancel' : 'Add Athlete'}
           </button>
@@ -201,7 +201,7 @@ const AthleteList = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="btn-primary"
               >
                 Add Athlete
               </button>
@@ -224,7 +224,7 @@ const AthleteList = () => {
                     <div className="flex-1 min-w-0">
                       <Link
                         to={`/athletes/${athlete.id}`}
-                        className="text-sm font-medium text-blue-600 truncate hover:text-blue-800"
+                        className="text-sm font-medium text-primary truncate hover:text-primary-hover"
                       >
                         {athlete.athlete_id}
                       </Link>
@@ -238,7 +238,7 @@ const AthleteList = () => {
                       <span className="text-sm text-gray-500">{athlete.age} yrs</span>
                       <Link
                         to={`/athletes/${athlete.id}`}
-                        className="text-blue-600 hover:text-blue-800 text-sm"
+                        className="text-primary hover:text-primary-hover font-medium text-sm"
                       >
                         View
                       </Link>

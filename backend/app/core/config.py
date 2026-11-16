@@ -32,8 +32,7 @@ class Settings(BaseSettings):
     # Cap annotated-video width: 4K encodes dominate runtime and file size
     ANNOTATED_MAX_WIDTH: int = 1280
 
-    # --- Annotated output framing ("smart crop") ---
-    # When enabled, the annotated video (and the live preview) is cropped to a
+    # --- Annotated output framing ("smart crop") ---    # When enabled, the annotated video (and the live preview) is cropped to a
     # moving window that follows the tracked athlete, so the full body fills the
     # frame instead of being a small figure in a wide shot. Purely a render-time
     # operation - it does not change analysis cost.
@@ -46,6 +45,33 @@ class Settings(BaseSettings):
     # Smallest crop, as a fraction of the frame's smaller side. Stops a spurious
     # tiny detection from producing a mushily upscaled close-up.
     ANNOTATED_CROP_MIN_SCALE: float = 0.35
+
+    # --- Live annotated playback (streaming output) ---
+    # The annotated video is muxed as a fragmented MP4 so it is playable in the
+    # browser WHILE analysis is still running, instead of only when it finishes.
+    # Requires the ffmpeg binary bundled by 'imageio-ffmpeg'; if it is missing,
+    # analysis still succeeds and the UI falls back to preview stills.
+    ANNOTATED_STREAM: bool = True
+    # Frames per fragment (also the keyframe interval). Smaller makes playback
+    # start sooner at a slightly higher bitrate.
+    ANNOTATED_STREAM_FRAGMENT_FRAMES: int = 8
+    # x264 quality/speed. Lower CRF = better and larger; veryfast keeps encoding
+    # from becoming the pipeline bottleneck.
+    ANNOTATED_STREAM_CRF: int = 23
+    ANNOTATED_STREAM_PRESET: str = "veryfast"
+
+    # --- Annotated output frame rate ---
+    # Analysis samples pose at POSE_FPS (cheap). The *output* video does not have
+    # to run at that rate: writing it at POSE_FPS makes fast movement step,
+    # because a 30fps clip sampled at 15fps discards half its motion.
+    # When enabled, the annotated video is rendered in a second pass at the
+    # source frame rate, with pose interpolated between measured samples (linear,
+    # between the temporally smoothed measurements). Analysis cost is unchanged;
+    # the cost is one extra decode+encode pass.
+    ANNOTATED_FULL_FPS: bool = True
+    # Upper bound on the output frame rate, to keep file size sane on very
+    # high-rate sources (e.g. 120fps phone footage). 0 means "use source fps".
+    ANNOTATED_MAX_FPS: int = 60
 
     # --- Pipeline profiling ---
     # When on, per-stage timings (detect / pose / render / encode / db / ...) are
@@ -65,6 +91,17 @@ class Settings(BaseSettings):
     # Inference size passed to YOLO. Left at the Ultralytics default (640) this
     # is explicit rather than implicit, and safely tunable per deployment.
     DETECT_IMGSZ: int = 640
+
+    # --- Environment / email delivery ---
+    # "development" prints OTPs and links to the console instead of emailing
+    # them; ANY other value (e.g. "production") attempts a real SMTP send.
+    ENVIRONMENT: str = "development"
+    SMTP_HOST: str = "localhost"
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_USE_TLS: bool = True
+    SMTP_FROM_EMAIL: str = "noreply@sportsinjuryrisk.com"
 
     # --- Email OTP (password recovery / authenticated password change) ---
     OTP_LENGTH: int = 6                     # digits; leading zeros are preserved

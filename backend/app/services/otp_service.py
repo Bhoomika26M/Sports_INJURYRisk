@@ -255,7 +255,10 @@ def request_password_recovery_otp(db: Session, email: str, ip_address: Optional[
                     user_id=user.id,
                     user_email=user.email,
                     ip_address=ip_address,
-                    details={"purpose": PURPOSE_PASSWORD_RECOVERY},
+                    details={
+                        "purpose": PURPOSE_PASSWORD_RECOVERY,
+                        "reason": email_service.last_error or "unknown",
+                    },
                     success=False,
                 )
 
@@ -326,7 +329,10 @@ def request_password_change_otp(db: Session, user: User, ip_address: Optional[st
             user_id=user.id,
             user_email=user.email,
             ip_address=ip_address,
-            details={"purpose": PURPOSE_PASSWORD_CHANGE},
+            details={
+                "purpose": PURPOSE_PASSWORD_CHANGE,
+                "reason": email_service.last_error or "unknown",
+            },
             success=False,
         )
         raise HTTPException(

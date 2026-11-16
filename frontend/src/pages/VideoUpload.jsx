@@ -191,7 +191,7 @@ function VideoUpload() {
         <button
           type="submit"
           disabled={uploading}
-          className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 disabled:bg-gray-400"
+          className="btn-primary w-full disabled:bg-text-muted disabled:cursor-not-allowed"
         >
           {uploading ? 'Uploading...' : 'Upload Video'}
         </button>

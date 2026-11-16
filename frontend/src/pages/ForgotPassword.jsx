@@ -112,13 +112,13 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-surface py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+          <h2 className="mt-6 text-center text-3xl font-display font-bold text-text-primary">
             Reset your password
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-sm text-text-secondary">
             {step === 'email'
               ? 'Enter your email and we will send you a verification code.'
               : 'Enter the code from your email and choose a new password.'}
@@ -126,12 +126,12 @@ const ForgotPassword = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded" role="alert">
+          <div className="bg-error-light border border-error text-error px-4 py-3 rounded" role="alert">
             {error}
           </div>
         )}
         {message && step === 'reset' && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded">
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 px-4 py-3 rounded">
             {message}
           </div>
         )}
@@ -139,7 +139,7 @@ const ForgotPassword = () => {
         {step === 'email' ? (
           <form className="mt-8 space-y-6" onSubmit={requestCode}>
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-text-primary">
                 Email address
               </label>
               <input
@@ -148,7 +148,7 @@ const ForgotPassword = () => {
                 type="email"
                 required
                 autoComplete="email"
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="input-field w-full mt-1"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -158,7 +158,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Sending...' : 'Send verification code'}
               </button>
@@ -167,19 +167,18 @@ const ForgotPassword = () => {
         ) : (
           <form className="mt-8 space-y-6" onSubmit={handleReset}>
             <div>
-              <label htmlFor="otp" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="otp" className="block text-sm font-medium text-text-primary">
                 Verification code
               </label>
               <input
                 id="otp"
                 name="otp"
-                // text (not number) so leading zeros are preserved
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
                 maxLength={6}
                 required
-                className="mt-1 tracking-[0.5em] appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="input-field w-full mt-1 tracking-[0.5em] text-center font-mono font-bold"
                 placeholder="000000"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
@@ -187,7 +186,7 @@ const ForgotPassword = () => {
             </div>
 
             <div>
-              <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="newPassword" className="block text-sm font-medium text-text-primary">
                 New password
               </label>
               <input
@@ -197,7 +196,7 @@ const ForgotPassword = () => {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="input-field w-full mt-1"
                 placeholder="At least 8 characters"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -205,7 +204,7 @@ const ForgotPassword = () => {
             </div>
 
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-primary">
                 Confirm new password
               </label>
               <input
@@ -215,7 +214,7 @@ const ForgotPassword = () => {
                 autoComplete="new-password"
                 required
                 minLength={8}
-                className="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-400 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="input-field w-full mt-1"
                 placeholder="Re-enter new password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -226,7 +225,7 @@ const ForgotPassword = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Resetting...' : 'Reset password'}
               </button>
@@ -237,7 +236,7 @@ const ForgotPassword = () => {
                 type="button"
                 onClick={handleResend}
                 disabled={cooldown > 0 || loading}
-                className="text-blue-600 hover:text-blue-800 disabled:text-gray-400 disabled:cursor-not-allowed"
+                className="text-primary hover:text-primary-hover font-medium disabled:text-text-muted disabled:cursor-not-allowed"
               >
                 {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
               </button>
@@ -246,7 +245,7 @@ const ForgotPassword = () => {
         )}
 
         <div className="text-center">
-          <Link to="/login" className="text-blue-600 hover:text-blue-800 text-sm">
+          <Link to="/login" className="text-primary hover:text-primary-hover text-sm font-medium">
             Back to sign in
           </Link>
         </div>

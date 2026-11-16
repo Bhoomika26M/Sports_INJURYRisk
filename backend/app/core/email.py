@@ -7,16 +7,25 @@ from app.core.config import settings
 
 
 class EmailService:
-    """Email service for sending password reset and other security-related emails."""
-    
+    """Email service for sending password reset and other security-related emails.
+
+    Configuration is read from ``Settings`` (which loads ``backend/.env``)
+    rather than ``os.getenv`` directly. pydantic-settings parses the .env file
+    into the Settings object without exporting those values into the process
+    environment, so reading os.getenv here would silently see nothing.
+    """
+
     def __init__(self):
-        self.smtp_host = os.getenv("SMTP_HOST", "localhost")
-        self.smtp_port = int(os.getenv("SMTP_PORT", "587"))
-        self.smtp_user = os.getenv("SMTP_USER", "")
-        self.smtp_password = os.getenv("SMTP_PASSWORD", "")
-        self.smtp_use_tls = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
-        self.from_email = os.getenv("SMTP_FROM_EMAIL", "noreply@sportsinjuryrisk.com")
-        self.development_mode = os.getenv("ENVIRONMENT", "development") == "development"
+        self.smtp_host = settings.SMTP_HOST
+        self.smtp_port = settings.SMTP_PORT
+        self.smtp_user = settings.SMTP_USER
+        self.smtp_password = settings.SMTP_PASSWORD
+        self.smtp_use_tls = settings.SMTP_USE_TLS
+        self.from_email = settings.SMTP_FROM_EMAIL
+        self.development_mode = settings.ENVIRONMENT == "development"
+        # Reason the most recent delivery attempt failed, if it did. Callers
+        # surface this in the audit log (never the code or the credentials).
+        self.last_error: Optional[str] = None
     
     def send_password_reset(self, to_email: str, reset_link: str, user_name: str) -> bool:
         """Send password reset email."""
@@ -108,7 +117,12 @@ Sports Injury Risk Detection Team
         return self._send_email(to_email, subject, body)
     
     def _send_email(self, to_email: str, subject: str, body: str) -> bool:
-        """Internal method to send email via SMTP."""
+        """Internal method to send email via SMTP.
+
+        On failure the reason is recorded in ``self.last_error`` so callers can
+        put it in the audit log. The recipient address is safe to log; the
+        credentials and message body are not, and are never included.
+        """
         try:
             msg = MIMEMultipart()
             msg['From'] = self.from_email
@@ -117,16 +131,20 @@ Sports Injury Risk Detection Team
             
             msg.attach(MIMEText(body, 'plain'))
             
-            with smtplib.SMTP(self.smtp_host, self.smtp_port) as server:
+            with smtplib.SMTP(self.smtp_host, self.smtp_port, timeout=15) as server:
                 if self.smtp_use_tls:
                     server.starttls()
                 if self.smtp_user and self.smtp_password:
                     server.login(self.smtp_user, self.smtp_password)
                 server.send_message(msg)
             
+            self.last_error = None
             return True
         except Exception as e:
-            print(f"Failed to send email: {e}")
+            # Class name only: an SMTP error string can echo credentials or
+            # server banners, so it is kept out of the audit record.
+            self.last_error = type(e).__name__
+            print(f"Failed to send email: {type(e).__name__}: {e}")
             return False
 
 

@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { videosAPI } from '../services/api';
 import ComparisonPanel from '../components/ComparisonPanel';
+import FindingCard from '../components/FindingCard';
+import AngleGaugeBar from '../components/AngleGaugeBar';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const IN_PROGRESS_STATUSES = ['preprocessing', 'pose_estimation', 'analyzing'];
@@ -43,12 +45,21 @@ function VideoAnalysis() {
   const [progress, setProgress] = useState(null);
   const [previewOk, setPreviewOk] = useState(false);
   const [annotatedVideoUrl, setAnnotatedVideoUrl] = useState(null);
+  // True once the live player has produced its first frame. Until then (and if
+  // the stream never becomes readable) the still-image preview is shown.
+  const [livePlayable, setLivePlayable] = useState(false);
   const [showAnnotated, setShowAnnotated] = useState(true);
+  // True while the live player has caught up with the writer and is waiting
+  // for more frames. Surfaced in the UI so a pause reads as "buffering" rather
+  // than as playback being broken.
+  const [waitingForFrames, setWaitingForFrames] = useState(false);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [generatingAnnotated, setGeneratingAnnotated] = useState(false);
   const [error, setError] = useState('');
   const pollRef = useRef(null);
+  // The live <video> element, so playback can resume as fragments arrive.
+  const liveVideoRef = useRef(null);
 
   useEffect(() => {
     fetchVideo();
@@ -65,6 +76,105 @@ function VideoAnalysis() {
   };
 
   /**
+   * Live playback pacing.
+   *
+   * The annotated file is written far slower than real time (a 30s clip takes
+   * minutes to analyse, because detection/pose run per frame), so the player
+   * inevitably reaches the end of the bytes that exist. The old approach
+   * reloaded the whole source on every end event, which produced a
+   * play/stutter/reload loop: a few seconds of motion, a hard reset, and
+   * visible jumping - the "screenshots changing" feel.
+   *
+   * Instead we:
+   *   1. record where playback stopped,
+   *   2. wait until the file has actually grown (polling its size over the
+   *      existing range-capable endpoint, so no reload happens until there is
+   *      genuinely more to play), and
+   *   3. resume from that exact position.
+   *
+   * The source is reloaded only after the writer has produced more data, so
+   * the player no longer thrashes between the end of the file and the start.
+   */
+  const resumeLivePlayback = () => {
+    if (!processing) return; // finished: leaving it stopped is correct
+    const el = liveVideoRef.current;
+    if (!el) return;
+
+    const resumeAt = el.currentTime > 0.5 ? el.currentTime - 0.3 : 0;
+    const knownLength = el.duration && isFinite(el.duration) ? el.duration : 0;
+    setWaitingForFrames(true);
+
+    // Poll the endpoint until the media has grown beyond what we have already
+    // played. Each poll is a deliberate delay, so this cannot spin.
+    const startedAt = Date.now();
+    const POLL_MS = 1200;
+    const MAX_WAIT_MS = 30000;
+
+    const check = () => {
+      if (!processing) {
+        setWaitingForFrames(false);
+        return;
+      }
+      if (Date.now() - startedAt > MAX_WAIT_MS) {
+        // Do not sit idle forever if growth stalls (e.g. encoder finished
+        // early, or a frame with no detection). Fall through and retry once.
+        setWaitingForFrames(false);
+        return;
+      }
+
+      const probe = document.createElement('video');
+      probe.preload = 'metadata';
+      probe.muted = true;
+      const probeUrl = `${videosAPI.getAnnotatedVideo(videoId)}&t=${Date.now()}`;
+      const cleanup = () => {
+        probe.removeAttribute('src');
+        probe.load();
+      };
+      probe.onloadedmetadata = () => {
+        const grown = isFinite(probe.duration) && probe.duration > knownLength + 0.15;
+        cleanup();
+        if (grown) {
+          resumeAtPosition(resumeAt);
+        } else {
+          setTimeout(check, POLL_MS);
+        }
+      };
+      probe.onerror = () => {
+        cleanup();
+        setTimeout(check, POLL_MS);
+      };
+      probe.src = probeUrl;
+    };
+
+    const resumeAtPosition = (position) => {
+      const target = liveVideoRef.current;
+      if (!target || !processing) {
+        setWaitingForFrames(false);
+        return;
+      }
+      const fresh = `${videosAPI.getAnnotatedVideo(videoId)}&t=${Date.now()}`;
+      const onReady = () => {
+        target.removeEventListener('loadedmetadata', onReady);
+        try {
+          target.currentTime = position;
+        } catch (err) {
+          // Seeking may fail before enough data exists; next resume catches up.
+        }
+        setWaitingForFrames(false);
+        target.play().catch(() => {
+          // Autoplay can be blocked; controls remain available.
+        });
+      };
+      target.addEventListener('loadedmetadata', onReady);
+      target.src = fresh;
+      target.load();
+    };
+
+    // First check after a short delay so the writer has time to append.
+    setTimeout(check, 600);
+  };
+
+  /**
    * Poll the live progress endpoint: it streams the current stage, percent,
    * frames processed, live joint angles, a streaming risk summary, and the
    * newest annotated (skeleton overlay) frame.
@@ -77,8 +187,19 @@ function VideoAnalysis() {
         const p = response.data;
         setProgress(p);
 
+        // As soon as frames have been written, the annotated output is a
+        // fragmented MP4 that can be played while it is still being written.
+        // Point the player at it now instead of waiting for completion, and
+        // keep the URL stable so the browser is not forced to restart.
+        if (p.frames_processed > 0) {
+          setAnnotatedVideoUrl((current) =>
+            current || videosAPI.getAnnotatedVideo(videoId)
+          );
+        }
+
         if (p.frames_processed) {
-          // Cache-bust so the <img> always shows the newest frame
+          // Cache-bust so the <img> always shows the newest frame. Used as a
+          // fallback until the live video has its first decodable frame.
           await new Promise((resolve) => {
             const img = new Image();
             img.onload = () => {
@@ -96,6 +217,7 @@ function VideoAnalysis() {
         if (p.status === 'completed') {
           stopPolling();
           setProcessing(false);
+          setWaitingForFrames(false);
           await fetchVideo();
           await fetchAnalysis();
           await fetchRisk();
@@ -103,6 +225,7 @@ function VideoAnalysis() {
         } else if (p.status === 'failed') {
           stopPolling();
           setProcessing(false);
+          setWaitingForFrames(false);
           setError('Processing failed: ' + (p.error || 'unknown error'));
         }
       } catch (err) {
@@ -244,7 +367,7 @@ function VideoAnalysis() {
         </div>
         <button
           onClick={() => navigate('/')}
-          className="mt-4 text-blue-500 hover:underline"
+          className="mt-4 text-primary hover:text-primary-hover font-medium hover:underline"
         >
           Go back
         </button>
@@ -257,7 +380,7 @@ function VideoAnalysis() {
   const liveRisk = progress?.risk;
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-6 card">
+    <div className="w-full mt-4 p-4 sm:p-6 lg:p-8 card border border-border bg-white shadow-sm">
       <h1 className="text-3xl font-display font-bold mb-6 text-text-primary">Video Analysis</h1>
 
       {error && (
@@ -385,8 +508,41 @@ function VideoAnalysis() {
             </div>
           )}
 
-          {/* Live skeleton overlay */}
-          {previewOk && progress?.frames_processed > 0 && (
+          {/* Live annotated playback. The annotated output is a fragmented
+              MP4, so it is playable while analysis is still running. The
+              still-frame preview below is only a fallback for the brief
+              window before the first fragment is decodable, or if the
+              streaming encoder is unavailable. */}
+          {annotatedVideoUrl && progress?.frames_processed > 0 && (
+            <div className="mb-2">
+              <video
+                ref={liveVideoRef}
+                key={annotatedVideoUrl}
+                src={annotatedVideoUrl}
+                className="w-full rounded border border-border bg-black"
+                controls
+                autoPlay
+                muted
+                playsInline
+                onLoadedData={() => setLivePlayable(true)}
+                onError={() => setLivePlayable(false)}
+                onEnded={resumeLivePlayback}
+              />
+              <p className="text-xs text-text-secondary mt-1">
+                Live annotated playback — skeleton mapping and tracking, updating
+                as the analysis runs
+              </p>
+              {waitingForFrames && (
+                <p className="text-xs text-primary mt-1 flex items-center gap-2">
+                  <span className="inline-block w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  Caught up with the analysis — waiting for the next frames…
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Fallback still frame, shown only until live video is playing */}
+          {!livePlayable && previewOk && progress?.frames_processed > 0 && (
             <div className="mb-2">
               <img
                 src={`${videosAPI.getPreviewFrame(videoId)}&t=${progress?.updated_at || ''}`}
@@ -395,7 +551,7 @@ function VideoAnalysis() {
                 onError={() => setPreviewOk(false)}
               />
               <p className="text-xs text-text-secondary mt-1">
-                Live skeleton overlay — updated as each chunk is processed
+                Live skeleton overlay — playable video starts momentarily
               </p>
             </div>
           )}
@@ -440,135 +596,121 @@ function VideoAnalysis() {
             </div>
           )}
 
-          {/* Per-finding explanation with anatomy and recommendations */}
+          {/* Per-finding explanation with anatomy, predicted injury, stick figures, and recommendations */}
           {risk.findings.length > 0 && (
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2">Findings explained</h3>
-              <div className="space-y-3">
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 mb-4 border-b border-gray-200">
+                <div>
+                  <h3 className="text-xl font-display font-bold text-gray-900">Findings & Injury Risk Explanations</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Biomechanical pathology diagnosis, technical calculations, stick figure movement corrections, and mitigation protocol
+                  </p>
+                </div>
+                <div className="mt-2 sm:mt-0 flex items-center gap-2">
+                  <span className="text-xs bg-gray-100 text-gray-700 font-mono px-2.5 py-1 rounded-md font-semibold">
+                    {risk.findings.length} Flagged Pattern{risk.findings.length === 1 ? '' : 's'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-6">
                 {risk.findings.map((f, idx) => (
-                  <div key={idx} className="p-3 border rounded">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="font-medium">{f.issue}</div>
-                      <span className={`text-xs px-2 py-1 rounded border capitalize ${SEVERITY_STYLES[f.severity] || ''}`}>
-                        {f.severity}
-                      </span>
-                    </div>
-
-                    {f.body_parts?.length > 0 && (
-                      <div className="text-xs text-gray-600 mt-1">
-                        Body parts: {f.body_parts.join(', ')}
-                      </div>
-                    )}
-
-                    <p className="text-sm mt-2">{f.rationale}</p>
-
-                    {f.scientific_term && (
-                      <p className="text-sm mt-2">
-                        <span className="font-medium">Clinical term:</span> {f.scientific_term}
-                      </p>
-                    )}
-
-                    {f.structures_at_risk?.length > 0 && (
-                      <p className="text-sm mt-1">
-                        <span className="font-medium">Structures at risk:</span>{' '}
-                        {f.structures_at_risk.join('; ')}
-                      </p>
-                    )}
-
-                    {f.muscles?.primary?.length > 0 && (
-                      <p className="text-sm mt-1">
-                        <span className="font-medium">Muscles involved:</span>{' '}
-                        {f.muscles.primary.join('; ')}
-                      </p>
-                    )}
-                    {f.muscles?.stabilizers?.length > 0 && (
-                      <p className="text-sm mt-1">
-                        <span className="font-medium">Stabilisers:</span>{' '}
-                        {f.muscles.stabilizers.join('; ')}
-                      </p>
-                    )}
-                    {f.muscles_overactive?.length > 0 && (
-                      <p className="text-sm mt-1 text-orange-800">
-                        <span className="font-medium">Overactive:</span> {f.muscles_overactive.join('; ')}
-                      </p>
-                    )}
-                    {f.muscles_underactive?.length > 0 && (
-                      <p className="text-sm mt-1 text-blue-800">
-                        <span className="font-medium">Underactive:</span> {f.muscles_underactive.join('; ')}
-                      </p>
-                    )}
-
-                    {f.mechanism && (
-                      <p className="text-sm mt-2 text-gray-700">
-                        <span className="font-medium">Why this matters:</span> {f.mechanism}
-                      </p>
-                    )}
-
-                    {f.evidence?.length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-xs font-medium text-gray-600 mb-1">Measurements</div>
-                        <table className="text-xs w-full">
-                          <tbody>
-                            {f.evidence.map((e, i) => (
-                              <tr key={i} className="border-b">
-                                <td className="py-1 text-gray-600">{e.metric.replace(/_/g, ' ')}</td>
-                                <td className="py-1 text-right font-mono">
-                                  {typeof e.value === 'number' ? e.value : '—'} {e.unit}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-
-                    {f.recommended_actions?.length > 0 && (
-                      <div className="mt-2">
-                        <div className="text-xs font-medium text-gray-600">Recommended actions</div>
-                        <ul className="list-disc list-inside text-sm">
-                          {f.recommended_actions.map((a, i) => (
-                            <li key={i}>{a}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
+                  <FindingCard
+                    key={idx}
+                    finding={f}
+                    index={idx}
+                    activityType={video?.activity_type || 'squat'}
+                    keypointsData={analysis?.pose_analysis?.keypoints_data}
+                  />
                 ))}
               </div>
             </div>
           )}
 
-          {/* Joint angles measured and the muscles that act on them */}
+          {/* Part-by-part joint angles measured, visual gauge vs recommended/normal, and muscles */}
           {risk.joints_and_muscles?.length > 0 && (
-            <div className="mb-4">
-              <h3 className="font-semibold mb-2">Joints, angles and muscles</h3>
+            <div className="mb-6 p-5 bg-white rounded-xl border border-gray-200 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-gray-100 gap-2">
+                <div>
+                  <h3 className="text-lg font-display font-bold text-gray-900">
+                    Part-by-Part Joint Angles & Normative Comparison
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Calculated joint kinematics evaluated against physiological sports medicine thresholds
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="inline-flex items-center gap-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Optimal Range
+                  </span>
+                  <span className="inline-flex items-center gap-1 font-semibold text-rose-700 bg-rose-50 px-2 py-0.5 rounded">
+                    <span className="w-2 h-2 rounded-full bg-rose-500" /> High Stress Zone
+                  </span>
+                </div>
+              </div>
+
+              {/* Visual Angle Gauges Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+                {risk.joints_and_muscles.map((j, idx) => (
+                  <AngleGaugeBar
+                    key={idx}
+                    joint={j.joint}
+                    currentVal={j.mean_deg}
+                    romVal={j.rom_deg}
+                    activity={video?.activity_type || 'squat'}
+                  />
+                ))}
+              </div>
+
+              {/* Detailed Breakdown Table */}
               <div className="overflow-x-auto">
-                <table className="min-w-full text-xs">
+                <table className="min-w-full text-xs text-left">
                   <thead>
-                    <tr className="border-b text-left">
-                      <th className="py-1 pr-3">Joint</th>
-                      <th className="py-1 pr-3">Side</th>
-                      <th className="py-1 pr-3">Mean</th>
-                      <th className="py-1 pr-3">Min</th>
-                      <th className="py-1 pr-3">Max</th>
-                      <th className="py-1 pr-3">ROM</th>
-                      <th className="py-1">Muscles</th>
+                    <tr className="border-b border-gray-200 bg-gray-50/80 text-gray-600 uppercase font-semibold tracking-wider">
+                      <th className="py-2.5 px-3">Joint</th>
+                      <th className="py-2.5 px-3">Side</th>
+                      <th className="py-2.5 px-3">Mean Angle</th>
+                      <th className="py-2.5 px-3">Min Angle</th>
+                      <th className="py-2.5 px-3">Max Angle</th>
+                      <th className="py-2.5 px-3">Range of Motion (ROM)</th>
+                      <th className="py-2.5 px-3">Status vs Normal</th>
+                      <th className="py-2.5 px-3">Engaged Musculature</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {risk.joints_and_muscles.map((j, idx) => (
-                      <tr key={idx} className="border-b align-top">
-                        <td className="py-1 pr-3 capitalize">{j.joint}</td>
-                        <td className="py-1 pr-3">{j.side}</td>
-                        <td className="py-1 pr-3">{fmt(j.mean_deg)}°</td>
-                        <td className="py-1 pr-3">{fmt(j.min_deg)}°</td>
-                        <td className="py-1 pr-3">{fmt(j.max_deg)}°</td>
-                        <td className="py-1 pr-3">{fmt(j.rom_deg)}°</td>
-                        <td className="py-1 text-gray-700">
-                          {(j.muscles_primary || []).join('; ')}
-                        </td>
-                      </tr>
-                    ))}
+                  <tbody className="divide-y divide-gray-100 font-mono">
+                    {risk.joints_and_muscles.map((j, idx) => {
+                      const isHigh = j.joint === 'trunk' ? (j.mean_deg > 32 || j.max_deg > 40) : false;
+                      const isLowRom = j.joint === 'knee' ? (j.rom_deg < 75) : false;
+
+                      return (
+                        <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="py-2.5 px-3 capitalize font-sans font-semibold text-gray-900">{j.joint}</td>
+                          <td className="py-2.5 px-3 capitalize text-gray-600">{j.side}</td>
+                          <td className="py-2.5 px-3 font-bold text-gray-900">{fmt(j.mean_deg)}°</td>
+                          <td className="py-2.5 px-3 text-gray-600">{fmt(j.min_deg)}°</td>
+                          <td className="py-2.5 px-3 text-gray-600">{fmt(j.max_deg)}°</td>
+                          <td className="py-2.5 px-3 font-semibold text-indigo-700">{fmt(j.rom_deg)}°</td>
+                          <td className="py-2.5 px-3 font-sans">
+                            {isHigh ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-100 text-rose-800">
+                                Beyond Normal
+                              </span>
+                            ) : isLowRom ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800">
+                                Sub-Optimal ROM
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-800">
+                                Normal Range
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-sans text-gray-600 text-[11px] leading-snug">
+                            {(j.muscles_primary || []).join('; ')}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -577,11 +719,21 @@ function VideoAnalysis() {
 
           {/* Overall suggestions */}
           {risk.suggestions?.length > 0 && (
-            <div className="p-3 bg-green-50 rounded">
-              <h3 className="font-semibold mb-1">Suggested solutions / alternative movements</h3>
-              <ul className="list-disc list-inside text-sm">
+            <div className="p-4 bg-emerald-50/80 border border-emerald-200 rounded-xl mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="p-1 bg-emerald-200 text-emerald-900 rounded">
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </span>
+                <h3 className="font-bold text-emerald-950 text-sm">Suggested Solutions & Alternative Movements</h3>
+              </div>
+              <ul className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
                 {risk.suggestions.map((s, idx) => (
-                  <li key={idx}>{s}</li>
+                  <li key={idx} className="flex items-start gap-2 bg-white/80 p-2.5 rounded-lg border border-emerald-100 text-xs text-emerald-950 font-medium">
+                    <span className="text-emerald-600 font-bold">•</span>
+                    <span>{s}</span>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -889,9 +1041,9 @@ function VideoAnalysis() {
 
       <button
         onClick={() => navigate('/')}
-        className="text-blue-500 hover:underline"
+        className="text-primary hover:text-primary-hover font-medium hover:underline"
       >
-        Back to Dashboard
+        ← Back to Dashboard
       </button>
     </div>
   );

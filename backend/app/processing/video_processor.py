@@ -118,6 +118,46 @@ class VideoProcessor:
                 yield (frame_index, frame)
             
             frame_index += 1
+
+    def frame_interval_for(self, target_fps: Optional[float] = None) -> int:
+        """Number of source frames per sampled frame at ``target_fps``.
+
+        Exposed so a caller that needs to render EVERY source frame (for smooth
+        annotated output) can know which frames the analysis actually measured,
+        without duplicating the sampling arithmetic.
+        """
+        if target_fps is None:
+            target_fps = settings.POSE_FPS
+        video_fps = self.metadata.fps if self.metadata else 30.0
+        if video_fps <= 0:
+            video_fps = 30.0
+        return max(1, int(video_fps / target_fps))
+
+    def all_frames_with_sampling(
+        self, target_fps: Optional[float] = None
+    ) -> Generator[Tuple[int, np.ndarray, bool], None, None]:
+        """Yield EVERY source frame, flagged with whether it is a sample point.
+
+        This is the single-decode path used when the annotated video must run at
+        the full source rate: one pass over the file provides both the frames
+        the analysis measures on (``is_sampled`` True) and the in-between frames
+        that only need rendering. It replaces a second decode of the same file.
+
+        Yields:
+            ``(frame_index, frame, is_sampled)``
+        """
+        if self.cap is None:
+            raise RuntimeError("Video not opened. Call open() first.")
+
+        interval = self.frame_interval_for(target_fps)
+        frame_index = 0
+        while True:
+            ret, frame = self.cap.read()
+            if not ret:
+                break
+            yield (frame_index, frame, frame_index % interval == 0)
+            frame_index += 1
+
     
     def get_frame_at_index(self, frame_index: int) -> Optional[np.ndarray]:
         """

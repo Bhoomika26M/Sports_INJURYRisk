@@ -231,7 +231,7 @@ const ChangePasswordCard = () => {
         <button
           type="submit"
           disabled={submitting}
-          className="w-full sm:w-auto inline-flex justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
+          className="btn-primary w-full sm:w-auto disabled:opacity-50"
         >
           {submitting ? 'Changing...' : 'Change password'}
         </button>

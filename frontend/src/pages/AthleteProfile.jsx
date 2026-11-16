@@ -81,7 +81,7 @@ const AthleteProfile = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <Link to="/athletes" className="text-blue-600 hover:text-blue-800 text-sm">
+          <Link to="/athletes" className="text-primary hover:text-primary-hover text-sm font-medium">
             ← Back to Athletes
           </Link>
           <h1 className="text-2xl font-bold text-gray-900 mt-2">{athlete.athlete_id}</h1>
@@ -90,7 +90,7 @@ const AthleteProfile = () => {
         {canEdit && (
           <button
             onClick={() => setEditing(!editing)}
-            className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            className="btn-primary"
           >
             {editing ? 'Cancel' : 'Edit Profile'}
           </button>
@@ -199,7 +199,7 @@ const AthleteProfile = () => {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                className="btn-primary"
               >
                 Save Changes
               </button>

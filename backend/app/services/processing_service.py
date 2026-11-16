@@ -20,6 +20,8 @@ from app.tracking.yolo_tracker import YOLOTracker
 from app.tracking.base import TrackedObject
 from app.visualization.skeleton_renderer import SkeletonRenderer
 from app.visualization.smart_framing import SmoothFramer, apply_crop
+from app.visualization.streaming_writer import StreamingVideoWriter
+from app.visualization.frame_sequencer import AnnotatedFrameSequencer
 from app.core.config import settings
 from app.core import profiling
 from app.services.video_service import VideoService
@@ -127,6 +129,13 @@ class VideoProcessingService:
                 # rendered inside the analysis loop below, so the annotated
                 # video is produced without re-reading/re-encoding the file
                 # in a second pass.
+                #
+                # The output is a fragmented MP4 written by ffmpeg, which makes
+                # it playable while analysis is still running (a plain
+                # cv2.VideoWriter file is unreadable until closed because its
+                # moov index is written last). If the streaming encoder is
+                # unavailable, fall back to OpenCV so analysis still produces
+                # an annotated video.
                 frame_interval = max(1, int(processor.metadata.fps / settings.POSE_FPS))
                 sampled_fps = processor.metadata.fps / frame_interval
                 annotated_path = (
@@ -140,16 +149,66 @@ class VideoProcessingService:
                 if out_w > settings.ANNOTATED_MAX_WIDTH:
                     out_w = settings.ANNOTATED_MAX_WIDTH
                     out_h = max(1, round(processor.metadata.height * out_w / processor.metadata.width))
-                writer = cv2.VideoWriter(
-                    str(annotated_path),
-                    cv2.VideoWriter_fourcc(*"mp4v"),
-                    sampled_fps,
-                    (out_w, out_h)
-                )
-                if not writer.isOpened():
-                    print(f"Warning: could not open annotated video writer: {annotated_path}")
-                    writer = None
+                # x264 with yuv420p needs even dimensions.
+                out_w = max(2, out_w - (out_w % 2))
+                out_h = max(2, out_h - (out_h % 2))
                 out_size = (out_w, out_h)
+
+                # Output frame rate. Analysis samples pose at POSE_FPS, but the
+                # annotated video may run at the source rate (see below) so
+                # movement plays back smoothly instead of stepping.
+                full_rate = (
+                    settings.ANNOTATED_FULL_FPS
+                    and processor.metadata.frame_count > 0
+                )
+                if full_rate:
+                    out_fps = processor.metadata.fps or sampled_fps
+                    if settings.ANNOTATED_MAX_FPS and out_fps > settings.ANNOTATED_MAX_FPS:
+                        out_fps = float(settings.ANNOTATED_MAX_FPS)
+                    if out_fps <= 0:
+                        out_fps = sampled_fps
+                else:
+                    out_fps = sampled_fps
+
+                # Two ways to produce the annotated video:
+                #  * full_rate: rendered in THIS loop, every source frame, using
+                #    an interpolated pose for the frames analysis did not
+                #    measure. One decode, one encode.
+                #  * otherwise: only the sampled frames are written, as before.
+                writer = None
+                if settings.ANNOTATED_STREAM:
+                    stream_writer = StreamingVideoWriter(
+                        annotated_path,
+                        out_fps,
+                        out_size,
+                        fragment_interval=settings.ANNOTATED_STREAM_FRAGMENT_FRAMES,
+                        crf=settings.ANNOTATED_STREAM_CRF,
+                        preset=settings.ANNOTATED_STREAM_PRESET,
+                    )
+                    if stream_writer.is_usable():
+                        writer = stream_writer
+                        logger.info(
+                            "Live annotated playback enabled for video %s",
+                            video_id,
+                        )
+                    else:
+                        logger.warning(
+                            "Streaming encoder unavailable for video %s (%s); "
+                            "falling back to OpenCV writer",
+                            video_id,
+                            stream_writer.error,
+                        )
+
+                if writer is None:
+                    writer = cv2.VideoWriter(
+                        str(annotated_path),
+                        cv2.VideoWriter_fourcc(*"mp4v"),
+                        out_fps,
+                        out_size
+                    )
+                    if not writer.isOpened():
+                        print(f"Warning: could not open annotated video writer: {annotated_path}")
+                        writer = None
 
                 # Follows the athlete so the annotated output frames the whole
                 # body instead of showing a small figure in a wide shot. Reset
@@ -193,7 +252,21 @@ class VideoProcessingService:
                 # chunk in parallel across MediaPipe instances, then push a
                 # live progress update so clients see step-by-step results
                 # within seconds of starting.
-                frames_iter = processor.sample_frames(target_fps=settings.POSE_FPS)
+                #
+                # When FULL-RATE output is on, the iterator yields EVERY source
+                # frame tagged with whether it was sampled. Measurement
+                # (detect/track/pose) still happens only on sampled frames -
+                # identical to before - while the in-between frames are just
+                # held and later rendered with an interpolated pose. That is
+                # what allows smooth output without decoding the file twice.
+                if full_rate:
+                    frames_iter = processor.all_frames_with_sampling(target_fps=settings.POSE_FPS)
+                else:
+                    frames_iter = (
+                        (idx, frame, True)
+                        for idx, frame in processor.sample_frames(target_fps=settings.POSE_FPS)
+                    )
+                sequencer = AnnotatedFrameSequencer(enabled=full_rate)
                 chunk_size = max(1, settings.PROGRESS_CHUNK_FRAMES)
                 chunks_done = 0
                 last_annotated = None
@@ -201,25 +274,59 @@ class VideoProcessingService:
                 conf_sum = 0.0
                 conf_count = 0
                 loop_start = time.perf_counter()
+                out_frames_written = 0
                 
                 while True:
-                    # -- Collect the next chunk of sampled frames
+                    # -- Collect the next chunk of frames. In full-rate mode
+                    #    this includes unmeasured frames, which are separated
+                    #    out here and never reach the measurement phases.
                     chunk = []
+                    unmeasured = []
                     decode_start = time.perf_counter()
                     for _ in range(chunk_size):
                         try:
-                            chunk.append(next(frames_iter))
+                            item = next(frames_iter)
                         except StopIteration:
                             break
+                        frame_idx, frame, is_sampled = item
+                        if is_sampled:
+                            chunk.append((frame_idx, frame))
+                        else:
+                            timestamp = frame_idx / processor.metadata.fps
+                            unmeasured.append((frame_idx, timestamp, frame))
                     profiling.record("frame_decode", time.perf_counter() - decode_start)
+                    if not chunk and not unmeasured:
+                        break
                     if not chunk:
+                        # Only unmeasured frames remain (a short tail after the
+                        # last sampled frame). They have no "next" pose, so they
+                        # hold the last measurement - then we are done.
+                        for frame_idx, timestamp, frame in unmeasured:
+                            sequencer.hold(frame_idx, timestamp, frame)
+                        self._drain_and_write(
+                            sequencer, None, None, None,
+                            writer, out_size, self.renderer, framer,
+                        )
                         break
                     
                     # -- Phase 1: sequential tracking + ROI crop
                     #    (ByteTrack is stateful, so frames stay ordered here)
+                    #
+                    # Unmeasured frames are attached to the NEXT sampled frame,
+                    # because drawing them needs that frame's pose as the far
+                    # side of the interpolation. They are rendered just before
+                    # it, so output stays in source order.
+                    unmeasured_iter = iter(unmeasured)
+                    next_unmeasured = next(unmeasured_iter, None)
                     entries = []
                     for frame_idx, frame in chunk:
                         timestamp = frame_idx / processor.metadata.fps
+
+                        # Frames that fall before this sampled frame.
+                        pending = []
+                        while next_unmeasured is not None and next_unmeasured[0] < frame_idx:
+                            pending.append(next_unmeasured)
+                            next_unmeasured = next(unmeasured_iter, None)
                         
                         # YOLO11n detection + ByteTrack tracking in a single
                         # inference (a separate detect() pass was redundant)
@@ -254,6 +361,7 @@ class VideoProcessingService:
                             "track_id": primary_track_id,
                             "roi": None,
                             "expanded_bbox": None,
+                            "pending": pending,
                         }
                         if primary_bbox is not None:
                             expanded_bbox = self.roi_cropper.expand_bbox(
@@ -284,6 +392,18 @@ class VideoProcessingService:
                         timestamps.append(e["timestamp"])
                         
                         if e["roi"] is None:
+                            # No athlete detected in this frame. Full-rate: the
+                            # held in-between frames drain toward THIS measurement
+                            # (no pose), so they stay in source order.
+                            pending = e.get("pending")
+                            if pending and sequencer.enabled:
+                                for pidx, pts, pframe in pending:
+                                    sequencer.hold(pidx, pts, pframe)
+                                self._drain_and_write(
+                                    sequencer, [], None, e["timestamp"],
+                                    writer, out_size, self.renderer, framer,
+                                )
+                            sequencer.begin_measurement(e["timestamp"], [], None)
                             # No athlete detected in this frame
                             frames_data.append({
                                 "frame": e["frame_idx"],
@@ -308,6 +428,7 @@ class VideoProcessingService:
                             last_annotated = self._fit_for_output(no_detect_frame, out_size)
                             if writer is not None:
                                 writer.write(last_annotated)
+                                out_frames_written += 1
                             continue
                         
                         roi_keypoints = next(kps_iter)
@@ -344,6 +465,31 @@ class VideoProcessingService:
                             conf_count += 1
                         
                         last_bio = self._frame_biomechanics(mapped_keypoints)
+
+                        # Full-rate: drain the in-between frames that precede this
+                        # measurement, interpolating toward this frame's pose and
+                        # bbox. They are written first so output stays in order.
+                        pending = e.get("pending")
+                        if pending and sequencer.enabled:
+                            for pidx, pts, pframe in pending:
+                                sequencer.hold(pidx, pts, pframe)
+                            with profiling.profile("render_between"):
+                                out_frames_written += self._drain_and_write(
+                                    sequencer,
+                                    mapped_keypoints,
+                                    e["bbox"],
+                                    e["timestamp"],
+                                    writer,
+                                    out_size,
+                                    self.renderer,
+                                    framer,
+                                )
+                        # This measurement becomes the "previous" side for the
+                        # frames between it and the next measurement.
+                        sequencer.begin_measurement(
+                            e["timestamp"], mapped_keypoints, e["bbox"]
+                        )
+
                         # Render skeleton/bbox only; the HUD text is drawn after
                         # cropping so it is never clipped by the follow-crop.
                         with profiling.profile("render_overlay"):
@@ -380,6 +526,7 @@ class VideoProcessingService:
                         if writer is not None:
                             with profiling.profile("video_encode"):
                                 writer.write(last_annotated)
+                                out_frames_written += 1
                     
                     # -- Phase 4: live progress + preview + partial risk
                     chunks_done += 1
@@ -786,6 +933,74 @@ class VideoProcessingService:
             new_size = (max(1, int(w * scale)), max(1, int(h * scale)))
             roi = cv2.resize(roi, new_size, interpolation=cv2.INTER_AREA)
         return roi
+
+
+    def _drain_and_write(
+        self,
+        sequencer,
+        next_pose,
+        next_bbox,
+        next_timestamp,
+        writer,
+        out_size,
+        renderer,
+        framer,
+    ) -> int:
+        """Render and write every held (unmeasured) frame, in order.
+
+        Returns the number of frames written. A no-op when nothing is held, so
+        the non-full-rate path (where nothing is ever held) is unaffected.
+        """
+        written = 0
+        for frame_idx, timestamp, frame, pose, bbox in sequencer.drain(
+            next_pose, next_bbox, next_timestamp
+        ):
+            rendered = self._render_one(
+                renderer, framer, frame, pose, bbox, frame_idx, timestamp, out_size
+            )
+            if writer is not None and rendered is not None:
+                writer.write(rendered)
+                written += 1
+        return written
+
+    def _render_one(
+        self,
+        renderer,
+        framer,
+        frame,
+        keypoints,
+        bbox,
+        frame_index: int,
+        timestamp: float,
+        out_size,
+    ):
+        """Render one frame with the skeleton/bbox, then crop + HUD.
+
+        Shared by the measured and interpolated paths so both produce visually
+        identical output (same renderer, same follow-crop, same HUD ordering).
+        """
+        bio = self._frame_biomechanics(keypoints) if keypoints else None
+        rendered = renderer.render(
+            frame,
+            keypoints or [],
+            bbox=bbox,
+            track_id=None,
+            frame_number=frame_index,
+            timestamp=timestamp,
+            biomechanical_data=bio,
+            draw_hud=framer is None,
+        )
+        if framer is not None:
+            window = framer.window(
+                bbox,
+                (frame.shape[1], frame.shape[0]),
+                out_size,
+            )
+            rendered = apply_crop(rendered, window)
+        rendered = self._fit_for_output(rendered, out_size)
+        if framer is not None:
+            renderer.draw_hud(rendered, frame_index, timestamp, bio)
+        return rendered
 
     @staticmethod
     def _fit_for_output(frame: np.ndarray, out_size: tuple) -> np.ndarray:
