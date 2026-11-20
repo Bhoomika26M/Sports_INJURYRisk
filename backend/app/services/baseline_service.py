@@ -460,6 +460,96 @@ def compare_to_baseline(
     }
 
 
+def compare_two_videos(
+    trial_metrics: Dict[str, float],
+    baseline_metrics_dict: Dict[str, float],
+    baseline_label: str = "Baseline Video",
+) -> Dict[str, Any]:
+    """Compare a trial video's metrics against a specific baseline video's metrics."""
+    deltas: List[Dict[str, Any]] = []
+    flags: List[Dict[str, Any]] = []
+
+    for metric, trial_val in trial_metrics.items():
+        trial_num = _num(trial_val)
+        if trial_num is None:
+            continue
+        base_val = baseline_metrics_dict.get(metric)
+        base_num = _num(base_val)
+        if base_num is None:
+            continue
+
+        delta = trial_num - base_num
+        # Estimate clinical spread floor
+        spread = max(abs(base_num) * 0.1, 1.0)
+        z = delta / spread
+        direction = METRIC_DIRECTIONS.get(metric, 0)
+
+        if z >= 1.0:
+            verdict = "deterioration" if direction > 0 else ("improvement" if direction < 0 else "neutral")
+        elif z <= -1.0:
+            verdict = "improvement" if direction > 0 else ("deterioration" if direction < 0 else "neutral")
+        else:
+            verdict = "neutral"
+
+        notable = abs(z) >= 0.8
+        meta = METRIC_META.get(metric, {})
+        entry = {
+            "metric": metric,
+            "label": meta.get("label", metric.replace("_", " ").title()),
+            "unit": meta.get("unit", ""),
+            "current": round(trial_num, 2),
+            "baseline": round(base_num, 2),
+            "delta": round(delta, 2),
+            "percent_change": (
+                round((delta / base_num) * 100.0, 1) if abs(base_num) > 1e-9 else None
+            ),
+            "z_score": round(z, 2),
+            "verdict": verdict,
+            "notable": notable,
+            "baseline_range": [round(base_num, 2), round(base_num, 2)],
+        }
+        deltas.append(entry)
+        if notable and direction != 0:
+            flags.append(entry)
+
+    deltas.sort(key=lambda d: abs(d["z_score"]), reverse=True)
+    flags.sort(key=lambda d: abs(d["z_score"]), reverse=True)
+
+    improvements = [f for f in flags if f["verdict"] == "improvement"]
+    deteriorations = [f for f in flags if f["verdict"] == "deterioration"]
+
+    if deteriorations:
+        summary = f"Deterioration detected in {len(deteriorations)} metric(s) compared to {baseline_label}."
+    elif improvements:
+        summary = f"Improvement noted across {len(improvements)} metric(s) compared to {baseline_label}."
+    else:
+        summary = f"Performance is stable and aligned with {baseline_label}."
+
+    return {
+        "status": "changed" if flags else "stable",
+        "baseline_size": 1,
+        "baseline_window": 1,
+        "summary": summary,
+        "deltas": deltas,
+        "flags": flags,
+        "deteriorations": [f["metric"] for f in deteriorations],
+        "improvements": [f["metric"] for f in improvements],
+        "baseline_metrics": [
+            {
+                "metric": m,
+                "label": METRIC_META.get(m, {}).get("label", m.replace("_", " ").title()),
+                "unit": METRIC_META.get(m, {}).get("unit", ""),
+                "mean": round(_num(v) or 0.0, 2),
+                "min": round(_num(v) or 0.0, 2),
+                "max": round(_num(v) or 0.0, 2),
+                "samples": 1,
+            }
+            for m, v in baseline_metrics_dict.items()
+            if _num(v) is not None
+        ],
+    }
+
+
 def format_baseline(
     baseline: Optional[Dict[str, Dict[str, float]]]
 ) -> List[Dict[str, Any]]:

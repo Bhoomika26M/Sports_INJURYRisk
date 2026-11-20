@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary-fixed-variant":"#005236","on-surface":"#141b2b","on-secondary-fixed":"#002113","secondary":"#006c49","tertiary-container":"#965e00","on-error-container":"#93000a","surface-tint":"#aa3700","inverse-surface":"#293040","on-error":"#ffffff","inverse-on-surface":"#edf0ff","on-primary-fixed":"#380c00","tertiary-fixed":"#ffddb8","error-container":"#ffdad6","surface-container-high":"#e1e8fd","tertiary-fixed-dim":"#ffb95f","on-tertiary-container":"#ffe8d1","on-surface-variant":"#594139","on-background":"#141b2b","secondary-fixed-dim":"#4edea3","surface":"#f9f9ff","primary-fixed":"#ffdbcf","on-tertiary":"#ffffff","primary-fixed-dim":"#ffb59c","surface-bright":"#f9f9ff","background":"#f9f9ff","primary-container":"#bd4006","error":"#ba1a1a","inverse-primary":"#ffb59c","outline":"#8d7168","on-tertiary-fixed-variant":"#653e00","surface-container":"#e9edff","on-secondary-container":"#00714d","surface-variant":"#dce2f7","tertiary":"#754900","on-primary-container":"#ffe7df","on-secondary":"#ffffff","on-tertiary-fixed":"#2a1700","secondary-container":"#6cf8bb","on-primary-fixed-variant":"#822800","surface-container-low":"#f1f3ff","surface-dim":"#d3daef","primary":"#952f00","secondary-fixed":"#6ffbbe","on-primary":"#ffffff","surface-container-highest":"#dce2f7","surface-container-lowest":"#ffffff","outline-variant":"#e1bfb5"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"space-xl":"2rem","space-sm":"0.5rem","space-xs":"0.25rem","margin":"1rem","space-lg":"1.25rem","margin-desktop":"2.5rem","gutter-desktop":"1.5rem","space-md":"0.75rem","margin-tablet":"1.5rem","gutter":"1rem"},fontFamily:{"body-lg":["Inter"],"label-sm":["JetBrains Mono"],"headline-lg":["Space Grotesk"],"body-md":["Inter"],"headline-md":["Space Grotesk"],"body-sm":["Inter"],"display-lg-mobile":["Space Grotesk"],"label-lg":["JetBrains Mono"],"headline-sm":["Space Grotesk"],"display-lg":["Space Grotesk"],"label-md":["JetBrains Mono"],"headline-lg-mobile":["Space Grotesk"]},fontSize:{"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"label-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.05em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"display-lg-mobile":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"500"}],"headline-sm":["18px",{"lineHeight":"26px","letterSpacing":"0em","fontWeight":"600"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"700"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 w-full z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 w-full px-margin-desktop flex items-center justify-between gap-gutter-desktop"><div class="flex items-center gap-space-lg flex-shrink-0"><div class="flex items-center gap-space-md"><img alt="KinetiK Risk Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzq8gVRkphoo39SDTi9zaWObGLoO5BLb92wuymJaOOM4UlW_WHbyX1TLlXgl_q_-HtveX0ACZtvYRHa5hnEDiQT2Pemo98W03FN-QlStJVZtuFJiAPkdEfAXRGL3ndUrIi0XN_nLNuhK3DCaKiofDmnzVKJZDENsXKMKsDxI6_cXnjBU77dIXJx29dBP2YCv9fX3NP-TIYdbhyKnYMDn1tj6UqKsNYRr3pXKIGfRJPLBSXJEJy-T6WCA"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface">KinetiK Risk</span><span class="font-label-sm text-label-sm uppercase text-on-surface-variant">AI Movement Biomechanics</span></div></div><div class="h-8 w-[1px] bg-outline-variant/40 hidden xl:block"></div><nav class="hidden lg:flex items-center gap-space-xs" data-active-classes="bg-primary-container text-on-primary font-body-md font-semibold rounded-lg shadow-sm"><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="dashboard" href="#">Dashboard</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="athletes" href="#">Athletes</a><a aria-current="page" class="px-space-md py-space-sm transition-colors bg-primary-container text-on-primary font-body-md font-semibold rounded-lg shadow-sm" data-path="video-analysis" href="#">Video Analysis</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="upload-video" href="#">Upload Video</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="reports" href="#">Reports</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="settings" href="#">Settings</a></nav></div><div class="flex items-center gap-space-md flex-shrink-0"><div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-high border border-outline-variant/30 text-on-surface"><span class="w-2 h-2 rounded-full bg-secondary-fixed-dim animate-pulse"></span><span class="font-label-sm text-label-sm uppercase text-on-surface font-semibold">3 in queue</span></div><button class="flex items-center gap-space-xs px-space-md py-space-sm bg-primary-container hover:bg-primary text-on-primary rounded-lg font-body-md font-semibold shadow-sm transition-colors"><span class="material-symbols-outlined text-[18px]">cloud_upload</span><span class="hidden md:inline">Upload Video</span></button><button aria-label="Notifications" class="relative p-space-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-label-sm">3</span></button><div class="h-8 w-[1px] bg-outline-variant/40 hidden md:block"></div><div class="flex items-center gap-space-md pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEVp4QaME8mzLol4b4kdKge5Iw02kwlZwtVkiq9a3VSUD4A7dpgOz9t3m3PBTY-nxerQoRtu64Al7_DgXlX7ir7A7B6Kz7fL7Zy827OegHFKZH_nab9zRlchJ79DqQ-CpmfxJZxS0SwJ7crcvsVRViPvM_UIyQkgPjCCm4QBtZpEYiYAOedbjGjcRjWnscxHuJ1X4MUG-p7Wl__C1En64ix9N4k_TsF2T4giLTELhevoWc9rc5UDl1Pw"/><div class="hidden xl:flex flex-col"><span class="font-body-sm text-body-sm font-semibold text-on-surface leading-tight">Dr. Sarah Lin</span><span class="inline-flex items-center px-space-xs py-[1px] rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-[9px] uppercase tracking-wider font-semibold w-fit">Physiotherapist</span></div></div></div></div><div class="h-10 w-full px-margin-desktop bg-surface-container-low border-t border-outline-variant/20 flex items-center justify-between text-body-sm"><div class="flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">terminal</span><span class="font-semibold text-on-surface">Telemetry Hub</span><span class="text-outline-variant">/</span><span class="text-on-surface-variant">Kinematic Stream Active</span></div><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span><span>SYNC ENGINE 120Hz</span></div><div class="hidden md:flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm"><span>MODEL: VIBE-POSE-3.2</span></div></div></div></header><main class="w-full pt-[7.5rem] bg-background min-h-screen"><div class="flex flex-col w-full">
+<div class="w-full px-margin-desktop py-space-md flex flex-col gap-space-lg">
+<!-- Section: Breadcrumbs & Primary Session Header -->
+<div class="flex flex-col gap-space-sm bg-surface-container-lowest p-space-lg rounded-xl shadow-sm">
+<div class="flex flex-wrap items-center justify-between gap-space-md">
+<!-- Breadcrumb Path -->
+<nav aria-label="Breadcrumb" class="flex items-center gap-space-xs font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
+<a class="hover:text-primary transition-colors" href="#">Dashboard</a>
+<span class="text-outline-variant font-bold">/</span>
+<a class="hover:text-primary transition-colors" href="#">Videos</a>
+<span class="text-outline-variant font-bold">/</span>
+<span class="text-on-surface font-semibold">ATH-092 (Marcus Vance)</span>
+<span class="text-outline-variant font-bold">/</span>
+<span class="text-primary-container font-semibold">Trial #03 [Peak Impact]</span>
+</nav>
+<!-- Right System Telemetry Status -->
+<div class="flex items-center gap-space-sm">
+<span class="flex items-center gap-1.5 px-space-sm py-1 rounded-full bg-secondary-fixed text-on-secondary-fixed font-label-sm text-label-sm font-semibold">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+            ANALYSIS COMPLETED
+          </span>
+<span class="hidden sm:inline-flex px-space-sm py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">
+            REC: 120 FPS HIGH-SPEED
+          </span>
+<span class="hidden sm:inline-flex px-space-sm py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">
+            RES: 4K UHD 3840×2160
+          </span>
+</div>
+</div>
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-space-md pt-space-xs">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-on-surface tracking-tight">
+            Drop Vertical Jump <span class="text-on-surface-variant font-normal">(Bilateral Landing Phase)</span>
+</h1>
+<div class="flex flex-wrap items-center gap-space-md mt-1 font-body-sm text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1 text-on-surface font-semibold">
+<span class="material-symbols-outlined text-[18px] text-primary">person</span>
+              Marcus Vance
+            </span>
+<span>•</span>
+<span>ID: <code class="font-label-sm text-label-sm font-semibold text-on-surface">ATH-092</code></span>
+<span>•</span>
+<span>Squad: Premier League Soccer (Forward)</span>
+<span>•</span>
+<span>Session: Eccentric Deceleration Protocol</span>
+</div>
+</div>
+<!-- Action Control Group -->
+<div class="flex flex-wrap items-center gap-space-sm">
+<button class="flex items-center gap-1.5 px-space-md py-space-sm rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md font-semibold text-body-md shadow-sm" id="splitViewBtn">
+<span class="material-symbols-outlined text-[18px]">splitscreen</span>
+<span>Split-View</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-space-sm rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md font-semibold text-body-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]">picture_as_pdf</span>
+<span>Export PDF</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-space-sm rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors font-body-md font-semibold text-body-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]">share</span>
+<span>Share</span>
+</button>
+<button class="flex items-center gap-1.5 px-space-md py-space-sm rounded-lg bg-primary-container hover:bg-primary text-on-primary transition-colors font-body-md font-semibold text-body-md shadow-sm">
+<span class="material-symbols-outlined text-[18px]">replay</span>
+<span>Re-Run Model</span>
+</button>
+</div>
+</div>
+</div>
+<!-- MAIN WORKSTATION GRID: 7 COLS VIDEO VIEWPORT / 5 COLS DIAGNOSTICS -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- LEFT: Video Telemetry Viewport (7 Cols) -->
+<div class="lg:col-span-7 flex flex-col gap-space-md">
+<!-- Primary Canvas Container -->
+<div class="relative bg-inverse-surface rounded-xl overflow-hidden shadow-xl aspect-[16/10] w-full flex items-center justify-center select-none group">
+<!-- Background Synthetic Motion Backdrop -->
+<div class="absolute inset-0 bg-gradient-to-tr from-inverse-surface via-surface-container-highest/20 to-inverse-surface/80">
+<img class="w-full h-full object-cover opacity-35 mix-blend-luminosity" data-alt="Athletic high-performance biomechanics laboratory testing field. An elite male soccer striker in compression training gear captured mid-air landing frozen at ground impact on force plates. High-contrast sports medical cinematography, warm kinetic orange accent lights and dark slate background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmEhZM7Zt5gslDJRfCA-RSTu8U2-1I_TWNFKAPi_95l4KaUMb5M-l9Tr439I9XCyH5Rg7w5Prn-_oGk9-dGJdusNz0PUASWeGUoxkjag3K8ZxJjYFE5atNiBhfQigqVk_XiANwepR1lrbrST348gNNA4oBmW6hd4pczzFMvzE2zX3Scx8P8K_iVMuSBgYQ-r_E8i2Kw2hye1IZRqyjP99zYHP-Rns-YKKjRnchr8ny92ss_epnTWJSxg"/>
+</div>
+<!-- Synthetic Floor Grid -->
+<div class="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-inverse-surface via-inverse-surface/80 to-transparent pointer-events-none"></div>
+<!-- AI Skeletal & Force HUD Canvas Layer (SVG) -->
+<svg class="absolute inset-0 w-full h-full pointer-events-none" fill="none" viewbox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<!-- Glowing Vector Filter -->
+<filter height="140%" id="glow" width="140%" x="-20%" y="-20%">
+<fegaussianblur result="blur" stddeviation="3"></fegaussianblur>
+<fecomposite in="SourceGraphic" in2="blur" operator="over"></fecomposite>
+</filter>
+<!-- Linear Force Gradient -->
+<lineargradient id="forceGrad" x1="0" x2="0" y1="1" y2="0">
+<stop offset="0%" stop-color="#bd4006" stop-opacity="0.9"></stop>
+<stop offset="1%" stop-color="#ffb59c" stop-opacity="0.1"></stop>
+</lineargradient>
+</defs>
+<!-- Coordinate Grid Matrix Lines -->
+<path d="M 100 0 L 100 500 M 200 0 L 200 500 M 300 0 L 300 500 M 400 0 L 400 500 M 500 0 L 500 500 M 600 0 L 600 500 M 700 0 L 700 500" stroke="#dce2f7" stroke-dasharray="4 6" stroke-opacity="0.07"></path>
+<path d="M 0 100 L 800 100 M 0 200 L 800 200 M 0 300 L 800 300 M 0 400 L 800 400" stroke="#dce2f7" stroke-dasharray="4 6" stroke-opacity="0.07"></path>
+<!-- Ground Force Reference Plate Zones -->
+<rect fill="#006c49" fill-opacity="0.3" height="8" rx="2" stroke="#4edea3" stroke-width="1.5" width="80" x="290" y="445"></rect>
+<rect fill="#bd4006" fill-opacity="0.3" height="8" rx="2" stroke="#bd4006" stroke-width="1.5" width="80" x="420" y="445"></rect>
+<!-- Ground Reaction Force Vectors (GRF) -->
+<!-- Left Leg (Normal) -->
+<path d="M 330 445 L 330 330" stroke="#4edea3" stroke-dasharray="3 3" stroke-width="2.5"></path>
+<polygon fill="#4edea3" points="326,332 330,320 334,332"></polygon>
+<text fill="#4edea3" font-family="JetBrains Mono" font-size="10" font-weight="600" x="312" y="315">1.8 BW (Norm)</text>
+<!-- Right Leg (Excessive Dynamic Spike) -->
+<path d="M 460 445 L 435 250" filter="url(#glow)" stroke="#ba1a1a" stroke-width="3.5"></path>
+<polygon fill="#ba1a1a" points="430,253 433,240 440,251"></polygon>
+<text fill="#ba1a1a" font-family="JetBrains Mono" font-size="11" font-weight="700" x="444" y="245">3.4 BW [SPIKE]</text>
+<!-- Center of Mass (CoM) Projection Trajectory -->
+<circle cx="395" cy="230" fill="#bd4006" fill-opacity="0.15" r="16"></circle>
+<circle cx="395" cy="230" fill="#ffb59c" r="5" stroke="#bd4006" stroke-width="2"></circle>
+<path d="M 395 230 L 395 448" stroke="#ffb59c" stroke-dasharray="4 4" stroke-width="1.5"></path>
+<text fill="#ffb59c" font-family="JetBrains Mono" font-size="9" x="404" y="226">CoM (Δ: +3.8cm L-Lat)</text>
+<!-- SKELETAL POSE ESTIMATION RIG -->
+<!-- Torso / Spine -->
+<line stroke="#f9f9ff" stroke-linecap="round" stroke-width="3" x1="395" x2="395" y1="135" y2="230"></line>
+<!-- Head / Neck -->
+<circle cx="395" cy="100" fill="none" r="18" stroke="#f9f9ff" stroke-width="2"></circle>
+<line stroke="#f9f9ff" stroke-width="3" x1="395" x2="395" y1="118" y2="135"></line>
+<!-- Trunk Lean Angle Vector Arc -->
+<path d="M 395 135 L 380 90" stroke="#ffb95f" stroke-dasharray="2 2" stroke-width="1.5"></path>
+<text fill="#ffb95f" font-family="JetBrains Mono" font-size="10" x="360" y="85">Trunk Lean: 8.2°</text>
+<!-- Shoulders -->
+<line stroke="#f9f9ff" stroke-linecap="round" stroke-width="3" x1="350" x2="440" y1="140" y2="140"></line>
+<!-- Left Arm -->
+<line stroke="#dce2f7" stroke-width="2.5" x1="350" x2="315" y1="140" y2="195"></line>
+<line stroke="#dce2f7" stroke-width="2" x1="315" x2="280" y1="195" y2="235"></line>
+<circle cx="350" cy="140" fill="#6cf8bb" r="4"></circle>
+<circle cx="315" cy="195" fill="#6cf8bb" r="4"></circle>
+<circle cx="280" cy="235" fill="#6cf8bb" r="3"></circle>
+<!-- Right Arm -->
+<line stroke="#dce2f7" stroke-width="2.5" x1="440" x2="480" y1="140" y2="190"></line>
+<line stroke="#dce2f7" stroke-width="2" x1="480" x2="510" y1="190" y2="230"></line>
+<circle cx="440" cy="140" fill="#6cf8bb" r="4"></circle>
+<circle cx="480" cy="190" fill="#6cf8bb" r="4"></circle>
+<circle cx="510" cy="230" fill="#6cf8bb" r="3"></circle>
+<!-- Pelvis Crossbar -->
+<line stroke="#f9f9ff" stroke-width="3.5" x1="365" x2="425" y1="230" y2="230"></line>
+<!-- LEFT LEG (Stable Anatomy) -->
+<!-- Left Hip to Knee -->
+<line stroke="#6cf8bb" stroke-linecap="round" stroke-width="4" x1="365" x2="340" y1="230" y2="340"></line>
+<!-- Left Knee to Ankle -->
+<line stroke="#6cf8bb" stroke-linecap="round" stroke-width="4" x1="340" x2="330" y1="340" y2="445"></line>
+<circle cx="365" cy="230" fill="#6cf8bb" r="5"></circle>
+<circle cx="340" cy="340" fill="#006c49" r="6" stroke="#6cf8bb" stroke-width="2"></circle>
+<circle cx="330" cy="445" fill="#6cf8bb" r="5"></circle>
+<!-- Left Knee Angle Indicator Arc (168°) -->
+<path d="M 333 325 A 25 25 0 0 1 348 355" fill="none" stroke="#6cf8bb" stroke-width="2"></path>
+<rect fill="#002113" fill-opacity="0.8" height="20" rx="4" width="82" x="250" y="325"></rect>
+<text fill="#4edea3" font-family="JetBrains Mono" font-size="10" font-weight="600" x="256" y="339">L Valgus 168°</text>
+<!-- RIGHT LEG (High ACL Risk Dynamic Valgus Collapse) -->
+<!-- Right Hip to Medial Knee Inward Deflection -->
+<line filter="url(#glow)" stroke="#ba1a1a" stroke-linecap="round" stroke-width="4.5" x1="425" x2="420" y1="230" y2="345"></line>
+<!-- Right Knee to Ankle -->
+<line filter="url(#glow)" stroke="#ba1a1a" stroke-linecap="round" stroke-width="4.5" x1="420" x2="460" y1="345" y2="445"></line>
+<circle cx="425" cy="230" fill="#ba1a1a" r="5"></circle>
+<!-- Acute Knee Joint Warning Beacon -->
+<circle class="animate-ping" cx="420" cy="345" fill="#ba1a1a" fill-opacity="0.3" r="9"></circle>
+<circle cx="420" cy="345" fill="#ba1a1a" r="7" stroke="#ffdad6" stroke-width="2.5"></circle>
+<circle cx="460" cy="445" fill="#ba1a1a" r="5"></circle>
+<!-- Right Knee Valgus Inward Vector Arrow -->
+<path d="M 445 345 L 426 345" marker-end="url(#arrow)" stroke="#ba1a1a" stroke-width="2"></path>
+<polygon fill="#ba1a1a" points="426,342 420,345 426,348"></polygon>
+<!-- Angle Arc Right Knee: 152° Critical Warning Badge -->
+<path d="M 428 330 A 24 24 0 0 1 433 365" fill="none" stroke="#ba1a1a" stroke-width="2.5"></path>
+<g transform="translate(438, 332)">
+<rect fill="#380c00" fill-opacity="0.9" height="26" rx="4" width="138"></rect>
+<rect fill="#ba1a1a" height="26" width="3" x="0" y="0"></rect>
+<text fill="#ffdad6" font-family="JetBrains Mono" font-size="9" font-weight="600" x="8" y="13">R VALGUS 152°</text>
+<text fill="#ffb59c" font-family="Space Grotesk" font-size="8" font-weight="700" x="8" y="22">ACL TEAR THREAT</text>
+</g>
+<!-- Athlete Bounding Box Matrix HUD -->
+<rect fill="none" height="390" stroke="#e1e8fd" stroke-dasharray="8 6" stroke-opacity="0.3" stroke-width="1" width="320" x="240" y="70"></rect>
+<path d="M 240 85 L 240 70 L 255 70" fill="none" stroke="#bd4006" stroke-width="2"></path>
+<path d="M 545 70 L 560 70 L 560 85" fill="none" stroke="#bd4006" stroke-width="2"></path>
+<path d="M 240 445 L 240 460 L 255 460" fill="none" stroke="#bd4006" stroke-width="2"></path>
+<path d="M 545 460 L 560 460 L 560 445" fill="none" stroke="#bd4006" stroke-width="2"></path>
+</svg>
+<!-- TOP HUD: Timecode, Frame Number, Confidence -->
+<div class="absolute top-space-md left-space-md right-space-md flex items-center justify-between pointer-events-none">
+<div class="flex items-center gap-2 bg-inverse-surface/85 backdrop-blur-md px-space-md py-1.5 rounded-lg text-inverse-on-surface">
+<span class="w-2 h-2 rounded-full bg-error animate-ping"></span>
+<span class="font-label-sm text-label-sm font-semibold tracking-wider">FRAME 172 / 240</span>
+<span class="text-outline-variant font-mono">|</span>
+<span class="font-label-sm text-label-sm font-bold text-tertiary-fixed-dim">TC 00:01.433</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<div class="bg-inverse-surface/85 backdrop-blur-md px-space-md py-1.5 rounded-lg text-inverse-on-surface font-label-sm text-label-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[14px] text-secondary-fixed">verified</span>
+<span>CONFIDENCE: <b class="text-secondary-fixed">98.4%</b></span>
+</div>
+<div class="bg-inverse-surface/85 backdrop-blur-md px-space-sm py-1.5 rounded-lg text-inverse-on-surface font-label-sm text-label-sm flex items-center gap-1">
+<span>VIBE-POSE v3.2</span>
+</div>
+</div>
+</div>
+<!-- BOTTOM-LEFT HUD: Kinetic Coordinates Stream -->
+<div class="absolute bottom-space-md left-space-md pointer-events-none hidden sm:flex flex-col gap-0.5 bg-inverse-surface/80 backdrop-blur-md p-space-sm rounded-lg text-inverse-on-surface font-label-sm text-[10px]">
+<span class="text-surface-variant font-semibold">JOINT COORDINATES (NORM XYZ):</span>
+<span class="text-secondary-fixed">KNEE_L: [0.425, 0.680, -0.042]</span>
+<span class="text-error">KNEE_R: [0.525, 0.690, +0.118] Δ-INWARD</span>
+<span class="text-on-surface-variant">ANKLE_R: [0.575, 0.890, +0.021]</span>
+</div>
+<!-- Hover Control Overlay (Center Play Trigger) -->
+<button class="absolute inset-0 m-auto w-14 h-14 rounded-full bg-surface-container-lowest/20 backdrop-blur-md flex items-center justify-center text-inverse-on-surface hover:bg-primary-container hover:text-on-primary transition-all scale-95 hover:scale-105 opacity-0 group-hover:opacity-100 shadow-xl">
+<span class="material-symbols-outlined text-[32px]">play_arrow</span>
+</button>
+</div>
+<!-- PLAYBACK SCRUBBING TIMELINE & PHASE SEGMENTATION -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex flex-col gap-space-sm">
+<!-- Movement Phase Color Track -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center font-label-sm text-label-sm text-on-surface-variant">
+<span>MOVEMENT PHASES (DROP VERTICAL JUMP)</span>
+<span class="text-primary font-semibold">Peak Deceleration (Impact @ Frame 172)</span>
+</div>
+<!-- Segmented Timeline Bar -->
+<div class="relative w-full h-7 rounded-lg overflow-hidden flex cursor-pointer select-none">
+<!-- Preparation: 0-40 frames (16%) -->
+<div class="h-full bg-surface-container-highest text-on-surface flex items-center justify-center font-label-sm text-[9px] uppercase font-semibold" style="width: 17%;">
+                Prep
+              </div>
+<!-- Takeoff: 41-75 frames (15%) -->
+<div class="h-full bg-surface-container-high text-on-surface flex items-center justify-center font-label-sm text-[9px] uppercase font-semibold" style="width: 15%;">
+                Takeoff
+              </div>
+<!-- Flight: 76-140 frames (27%) -->
+<div class="h-full bg-surface-container text-on-surface flex items-center justify-center font-label-sm text-[9px] uppercase font-semibold" style="width: 27%;">
+                Flight Phase
+              </div>
+<!-- Initial Contact: 141-165 frames (10%) -->
+<div class="h-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-label-sm text-[9px] uppercase font-bold" style="width: 10%;">
+                Touchdown
+              </div>
+<!-- Peak GRF Deceleration (CRITICAL): 166-190 frames (13%) -->
+<div class="h-full bg-primary-fixed-dim text-on-primary-fixed font-label-sm text-[9px] uppercase font-bold flex items-center justify-center relative overflow-hidden" style="width: 13%;">
+<span class="relative z-10">Peak GRF</span>
+<span class="absolute inset-0 bg-primary/20 animate-pulse"></span>
+</div>
+<!-- Stabilization: 191-240 frames (18%) -->
+<div class="h-full bg-surface-container-high text-on-surface flex items-center justify-center font-label-sm text-[9px] uppercase font-semibold" style="width: 18%;">
+                Stabilize
+              </div>
+<!-- Draggable Scrub Head at 71.6% (Frame 172) -->
+<div class="absolute top-0 bottom-0 left-[71.6%] w-1 bg-error z-20 flex flex-col items-center">
+<div class="w-3 h-3 bg-error rounded-full shadow -mt-0.5"></div>
+</div>
+</div>
+</div>
+<!-- Transport Controls Row -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs">
+<!-- Left: Play/Pause/Frame Jumps -->
+<div class="flex items-center gap-1.5">
+<button class="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors" title="Step Back 10 Frames">
+<span class="material-symbols-outlined text-[18px]">fast_rewind</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors" title="Previous Frame">
+<span class="material-symbols-outlined text-[18px]">skip_previous</span>
+</button>
+<button class="p-2 px-3 rounded-lg bg-primary text-on-primary hover:bg-primary-container transition-colors shadow-sm" title="Play">
+<span class="material-symbols-outlined text-[20px]">pause</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors" title="Next Frame">
+<span class="material-symbols-outlined text-[18px]">skip_next</span>
+</button>
+<button class="p-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors" title="Step Forward 10 Frames">
+<span class="material-symbols-outlined text-[18px]">fast_forward</span>
+</button>
+<div class="h-6 w-px bg-outline-variant/40 mx-1"></div>
+<!-- Playback Speed Radios -->
+<div class="flex items-center bg-surface-container rounded-lg p-0.5">
+<button class="px-2 py-1 rounded text-body-sm font-semibold bg-surface-container-lowest text-on-surface shadow-xs">0.25x</button>
+<button class="px-2 py-1 rounded text-body-sm font-semibold text-on-surface-variant hover:text-on-surface">0.5x</button>
+<button class="px-2 py-1 rounded text-body-sm font-semibold text-on-surface-variant hover:text-on-surface">1.0x</button>
+</div>
+</div>
+<!-- Right: Rep Loop & Display Toggles -->
+<div class="flex items-center gap-space-sm font-label-sm text-label-sm">
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-[16px]">repeat</span>
+<span>Loop Trial</span>
+</button>
+<button class="flex items-center gap-1 px-space-sm py-1 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high">
+<span class="material-symbols-outlined text-[16px]">crop_free</span>
+<span>Fullscreen</span>
+</button>
+</div>
+</div>
+<!-- Video AI Overlay Toggles Grid -->
+<div class="pt-space-xs border-t border-outline-variant/20 flex flex-wrap items-center justify-between gap-space-sm">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold">Telemetry Layers:</span>
+<div class="flex flex-wrap items-center gap-space-sm text-body-sm">
+<label class="flex items-center gap-1.5 cursor-pointer bg-surface-container-low px-space-sm py-1 rounded-md">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span class="font-medium text-on-surface">Skeleton Wireframe</span>
+</label>
+<label class="flex items-center gap-1.5 cursor-pointer bg-surface-container-low px-space-sm py-1 rounded-md">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span class="font-medium text-on-surface">Joint Angle Arcs</span>
+</label>
+<label class="flex items-center gap-1.5 cursor-pointer bg-surface-container-low px-space-sm py-1 rounded-md">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span class="font-medium text-on-surface">Center of Mass (CoM)</span>
+</label>
+<label class="flex items-center gap-1.5 cursor-pointer bg-surface-container-low px-space-sm py-1 rounded-md">
+<input class="accent-primary rounded" type="checkbox"/>
+<span class="font-medium text-on-surface">Ground Reaction Vectors</span>
+</label>
+<label class="flex items-center gap-1.5 cursor-pointer bg-surface-container-low px-space-sm py-1 rounded-md">
+<input checked="" class="accent-primary rounded" type="checkbox"/>
+<span class="font-medium text-on-surface">Athlete Bounding Box</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT: Diagnostic Telemetry & Biomechanics Panel (5 Cols) -->
+<div class="lg:col-span-5 flex flex-col gap-space-md">
+<!-- Movement Quality Score Gauge Card -->
+<div class="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div>
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider font-semibold">Kinematic Index</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">Movement Quality Score</h2>
+</div>
+<!-- Severity Badge -->
+<span class="inline-flex items-center gap-1 px-space-sm py-1 rounded-full bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm font-bold">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+              MODERATE RISK
+            </span>
+</div>
+<!-- Circular Metric Representation -->
+<div class="flex items-center gap-space-lg bg-surface-container-low p-space-md rounded-xl">
+<!-- Inline SVG Gauge (Score 68/100) -->
+<div class="relative w-28 h-28 flex items-center justify-center flex-shrink-0">
+<svg class="w-full h-full transform -rotate-90" viewbox="0 0 100 100">
+<!-- Background Ring -->
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#dce2f7" stroke-width="9"></circle>
+<!-- Score Arc (68% = 251.2 circumference * 0.68 = 170.8) -->
+<circle cx="50" cy="50" fill="transparent" r="40" stroke="#965e00" stroke-dasharray="251.2" stroke-dashoffset="80.3" stroke-linecap="round" stroke-width="9"></circle>
+</svg>
+<div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+<span class="font-headline-lg text-headline-lg font-bold text-on-surface leading-none">68</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-medium">/ 100</span>
+</div>
+</div>
+<!-- Contextual Diagnostic Summary -->
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase text-primary font-bold tracking-wider">Primary Deficit Found:</span>
+<p class="font-body-md text-body-md text-on-surface leading-snug">
+                Excessive right knee dynamic valgus excursion during eccentric deceleration. Peak landing force disproportionately shifted to medial tibiofemoral compartment.
+              </p>
+<div class="mt-1 flex items-center gap-space-xs font-label-sm text-label-sm text-error font-semibold">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+<span>Relative ACL Injury Risk: +3.4x baseline</span>
+</div>
+</div>
+</div>
+<!-- Sub-component Quality Breakdown Bars -->
+<div class="flex flex-col gap-space-sm pt-space-xs">
+<span class="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant">Kinematic Sub-System Breakdown</span>
+<!-- Metric 1: Frontal Plane Knee Alignment (High Risk) -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-body-sm">
+<span class="font-semibold text-on-surface">Frontal Plane Knee Alignment</span>
+<span class="font-label-sm text-label-sm font-bold text-error">54 / 100 (Critical Deviation)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-error rounded-full" style="width: 54%;"></div>
+</div>
+</div>
+<!-- Metric 2: Bilateral Weight Distribution Symmetry -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-body-sm">
+<span class="font-semibold text-on-surface">Bilateral Force Symmetry</span>
+<span class="font-label-sm text-label-sm font-bold text-tertiary">72 / 100 (62% Right Loaded)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-tertiary-fixed-dim rounded-full" style="width: 72%;"></div>
+</div>
+</div>
+<!-- Metric 3: Trunk Lean Compensation -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-body-sm">
+<span class="font-semibold text-on-surface">Trunk Lean Compensation</span>
+<span class="font-label-sm text-label-sm font-bold text-secondary">88 / 100 (Optimal Control)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 88%;"></div>
+</div>
+</div>
+<!-- Metric 4: Hip Flexion Range of Motion -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-body-sm">
+<span class="font-semibold text-on-surface">Hip Flexion Range of Motion</span>
+<span class="font-label-sm text-label-sm font-bold text-secondary">81 / 100 (Good Cushioning)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 81%;"></div>
+</div>
+</div>
+<!-- Metric 5: Rate of Deceleration Smoothness -->
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-center text-body-sm">
+<span class="font-semibold text-on-surface">Deceleration Jerk Index</span>
+<span class="font-label-sm text-label-sm font-bold text-tertiary">65 / 100 (Abrupt Braking)</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-tertiary-container rounded-full" style="width: 65%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Critical Injury Risk Alert Widget -->
+<div class="bg-error-container text-on-error-container p-space-md rounded-xl flex flex-col gap-space-sm shadow-sm">
+<div class="flex items-start gap-space-sm">
+<span class="material-symbols-outlined text-error text-[24px] flex-shrink-0 mt-0.5">report_problem</span>
+<div class="flex flex-col gap-1">
+<span class="font-label-sm text-label-sm uppercase font-bold text-error tracking-wider">Biomechanist Priority Flag</span>
+<h3 class="font-headline-sm text-headline-sm font-bold leading-tight">Right Knee Dynamic Valgus: 18.4° Excursion</h3>
+<p class="font-body-md text-body-md leading-snug">
+                Threshold exceeded by <b>+8.4°</b> (Safe limit: &lt;10.0°). Joint collapse occurs simultaneously with tibial external rotation, creating high anterior cruciate ligament shear stress.
+              </p>
+</div>
+</div>
+<!-- Bilateral Valgus Comparison Cards -->
+<div class="grid grid-cols-2 gap-space-sm mt-1">
+<div class="bg-surface-container-lowest/90 p-space-sm rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase font-semibold">Left Knee Valgus</span>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="font-headline-md text-headline-md font-bold text-secondary">6.2°</span>
+<span class="font-label-sm text-label-sm text-secondary font-semibold">SAFE</span>
+</div>
+<span class="font-body-sm text-body-sm text-on-surface-variant mt-0.5">Within normal limits (&lt;10°)</span>
+</div>
+<div class="bg-surface-container-lowest/90 p-space-sm rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-error uppercase font-semibold">Right Knee Valgus</span>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="font-headline-md text-headline-md font-bold text-error">18.4°</span>
+<span class="font-label-sm text-label-sm text-error font-semibold">CRITICAL</span>
+</div>
+<span class="font-body-sm text-body-sm text-error font-semibold mt-0.5">Asymmetry: Δ +12.2°</span>
+</div>
+</div>
+</div>
+<!-- Quick Athlete History Micro-Card -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm flex items-center justify-between">
+<div class="flex items-center gap-space-md">
+<div class="w-10 h-10 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed font-bold font-headline-sm">
+              MV
+            </div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-bold text-on-surface">Prior Right Knee Reconstruction</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Post-Op ACL Repair (Month 14 Return-to-Play Protocol)</span>
+</div>
+</div>
+<a class="font-label-sm text-label-sm font-bold text-primary hover:underline" href="#">Full History →</a>
+</div>
+</div>
+</div>
+<!-- BOTTOM DEEP-DIVE TABS WORKSTATION SECTION -->
+<div class="w-full bg-surface-container-lowest rounded-xl shadow-sm overflow-hidden flex flex-col">
+<!-- Tab Navigation Header -->
+<div class="bg-surface-container-low px-space-lg pt-space-sm border-b border-outline-variant/30 flex items-center gap-space-sm overflow-x-auto">
+<button class="px-space-md py-space-sm font-headline-sm text-body-md font-semibold text-primary border-b-2 border-primary -mb-px flex items-center gap-1.5 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px]">show_chart</span>
+<span>Time-Series Kinematic Charts</span>
+</button>
+<button class="px-space-md py-space-sm font-headline-sm text-body-md font-medium text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px]">view_timeline</span>
+<span>Trial &amp; Repetition Comparison</span>
+</button>
+<button class="px-space-md py-space-sm font-headline-sm text-body-md font-medium text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px]">trending_down</span>
+<span>Fatigue &amp; Late-Set Degradation</span>
+</button>
+<button class="px-space-md py-space-sm font-headline-sm text-body-md font-medium text-on-surface-variant hover:text-on-surface transition-colors flex items-center gap-1.5 whitespace-nowrap">
+<span class="material-symbols-outlined text-[18px]">data_array</span>
+<span>Raw 3D Joint Vectors</span>
+</button>
+</div>
+<!-- Tab Content Area -->
+<div class="p-space-lg flex flex-col gap-space-xl">
+<!-- GRID: Kinematic Telemetry Waveform + Clinical Action Plan -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- LEFT: SVG Kinematic Chart (8 Cols) -->
+<div class="lg:col-span-8 flex flex-col gap-space-sm">
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Frontal Plane Knee Abduction / Valgus Waveform</h3>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Continuous angle (Degrees) over 240 frames (120 Hz optical capture)</span>
+</div>
+<div class="flex items-center gap-space-md text-label-sm font-label-sm">
+<span class="flex items-center gap-1.5 text-secondary">
+<span class="w-3 h-1 bg-secondary rounded-full"></span> Left Knee
+                </span>
+<span class="flex items-center gap-1.5 text-error">
+<span class="w-3 h-1.5 bg-error rounded-full"></span> Right Knee (Deficit)
+                </span>
+<span class="flex items-center gap-1.5 text-outline">
+<span class="w-3 h-0.5 border-t border-dashed border-outline"></span> Safe Threshold (&lt;10°)
+                </span>
+</div>
+</div>
+<!-- Waveform SVG Container -->
+<div class="w-full bg-surface-container-low p-space-md rounded-xl relative overflow-hidden">
+<svg class="w-full h-56" fill="none" viewbox="0 0 900 220" xmlns="http://www.w3.org/2000/svg">
+<!-- Safe Zone Background Fill (0° to 10°) -->
+<!-- Assuming 0° is y=190, 10° is y=140, 20° is y=50 -->
+<rect fill="#ecfdf5" fill-opacity="0.6" height="60" width="820" x="60" y="140"></rect>
+<text fill="#065f46" font-family="JetBrains Mono" font-size="9" font-weight="600" x="70" y="155">SAFE KINEMATIC CORRIDOR (&lt;10°)</text>
+<!-- High Risk Strain Zone (Above 10°) -->
+<rect fill="#fef2f2" fill-opacity="0.4" height="120" width="820" x="60" y="20"></rect>
+<text fill="#ba1a1a" font-family="JetBrains Mono" font-size="9" font-weight="700" x="70" y="36">CRITICAL ACL SHEAR RISK ZONE (&gt;10°)</text>
+<!-- Horizontal Axis Grid Lines -->
+<line stroke="#dce2f7" stroke-width="1" x1="60" x2="880" y1="190" y2="190"></line>
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="45" y="193">0°</text>
+<line stroke="#ba1a1a" stroke-dasharray="4 4" stroke-opacity="0.5" stroke-width="1" x1="60" x2="880" y1="140" y2="140"></line>
+<text fill="#ba1a1a" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="45" y="143">10°</text>
+<line stroke="#dce2f7" stroke-width="1" x1="60" x2="880" y1="90" y2="90"></line>
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="45" y="93">15°</text>
+<line stroke="#dce2f7" stroke-width="1" x1="60" x2="880" y1="40" y2="40"></line>
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" text-anchor="end" x="45" y="43">20°</text>
+<!-- Vertical Event Grid Line (Impact: Frame 172 ~ X=650) -->
+<line stroke="#ba1a1a" stroke-dasharray="2 2" stroke-width="1.5" x1="650" x2="650" y1="20" y2="190"></line>
+<text fill="#ba1a1a" font-family="JetBrains Mono" font-size="10" font-weight="700" x="655" y="55">Initial Contact (F172)</text>
+<!-- Left Knee Valgus Curve (Stays Healthy under 8°) -->
+<!-- Path from frame 0 to 240 mapped across 60 to 880 -->
+<path d="M 60 185 Q 200 183 350 184 T 550 178 Q 630 165 650 160 T 680 155 T 720 162 T 880 182" fill="none" stroke="#006c49" stroke-linecap="round" stroke-width="3"></path>
+<!-- Right Knee Valgus Curve (Severe spike above 18°) -->
+<path d="M 60 184 Q 200 182 350 185 T 550 175 Q 630 140 650 82 T 675 58 T 710 95 T 760 150 T 880 180" fill="none" stroke="#ba1a1a" stroke-linecap="round" stroke-width="3.5"></path>
+<!-- Peak Breach Circle Callout at Peak GRF -->
+<circle cx="675" cy="58" fill="#ba1a1a" r="6" stroke="#ffffff" stroke-width="2"></circle>
+<rect fill="#380c00" height="24" rx="4" width="110" x="685" y="45"></rect>
+<text fill="#ffb59c" font-family="JetBrains Mono" font-size="10" font-weight="700" x="692" y="61">Peak: 18.4° @ F178</text>
+<!-- X Axis Frame Legend -->
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" x="60" y="210">0ms (F0)</text>
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" x="350" y="210">600ms (F72 Flight)</text>
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" x="650" y="210">1433ms (F172 Contact)</text>
+<text fill="#594139" font-family="JetBrains Mono" font-size="10" x="860" y="210">2000ms</text>
+</svg>
+</div>
+<!-- Set Fatigue Progression Indicator -->
+<div class="mt-space-sm bg-surface-container-low p-space-md rounded-xl flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase font-bold text-on-surface-variant">Trial Degradation Trajectory (Current Session)</span>
+<span class="font-label-sm text-label-sm text-error font-semibold">-22% Mechanical Integrity Drop</span>
+</div>
+<div class="grid grid-cols-4 gap-space-sm">
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Trial #1</span>
+<span class="font-headline-sm text-headline-sm font-bold text-secondary mt-1">76 pts</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant">Valgus: 11.2°</span>
+</div>
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Trial #2</span>
+<span class="font-headline-sm text-headline-sm font-bold text-secondary">72 pts</span>
+<span class="font-label-sm text-[10px] text-on-surface-variant">Valgus: 13.8°</span>
+</div>
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col ring-2 ring-primary">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm text-primary font-bold">Trial #3 (Current)</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</div>
+<span class="font-headline-sm text-headline-sm font-bold text-tertiary mt-1">68 pts</span>
+<span class="font-label-sm text-[10px] text-error font-semibold">Valgus: 18.4°</span>
+</div>
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col">
+<span class="font-label-sm text-label-sm text-on-surface-variant">Trial #4 (Fatigued)</span>
+<span class="font-headline-sm text-headline-sm font-bold text-error mt-1">59 pts</span>
+<span class="font-label-sm text-[10px] text-error font-semibold">Valgus: 22.1°</span>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT: Clinical Recommended Interventions (4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-md">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Targeted Clinical Interventions</h3>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Automated sports medicine protocol recommendations</span>
+</div>
+<!-- Protocol Card 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-1.5 border-l-4 border-primary">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase font-bold text-primary">Priority 1 • Neuromuscular</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">3x / wk</span>
+</div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Gluteus Medius Activation &amp; Force Absorption</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Implement single-leg deceleration landings with auditory biofeedback. Strengthen hip abductor torque to counteract dynamic inward knee collapse.
+              </p>
+</div>
+<!-- Protocol Card 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-1.5 border-l-4 border-tertiary">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase font-bold text-tertiary">Priority 2 • Strength</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">2x / wk</span>
+</div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Eccentric Quadriceps / Hamstring Ratio</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Nordic hamstring curls paired with flywheel eccentric squats. Goal is increasing knee flexion compliance from current 52° to &gt;68° on impact.
+              </p>
+</div>
+<!-- Protocol Card 3 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-1.5 border-l-4 border-secondary">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase font-bold text-secondary">Priority 3 • Load Mgmt</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">Immediate</span>
+</div>
+<h4 class="font-body-md text-body-md font-bold text-on-surface">Deload Max-Velocity Plyometrics</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                Cap weekly jump volume at 40 contacts until right knee valgus excursion drops below 12° during drop jump re-screen on Matchday -2.
+              </p>
+</div>
+<!-- Biomechanical Validation Note -->
+<div class="p-space-sm bg-surface-container rounded-lg text-on-surface-variant font-label-sm text-[11px] leading-tight flex items-start gap-2">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant mt-0.5">info</span>
+<span>All metrics calculated utilizing markerless multi-camera 3D triangulation validated to ISO 13485 kinematic standards.</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple client-side micro-interaction for Split-View toggle
+  document.getElementById('splitViewBtn')?.addEventListener('click', function() {
+    const isSplit = this.classList.toggle('bg-primary-container');
+    if (isSplit) {
+      this.classList.remove('bg-surface-container', 'text-on-surface');
+      this.classList.add('text-on-primary');
+      this.querySelector('span:last-child').textContent = 'Split-View Active';
+    } else {
+      this.classList.add('bg-surface-container', 'text-on-surface');
+      this.classList.remove('text-on-primary');
+      this.querySelector('span:last-child').textContent = 'Split-View';
+    }
+  });
+</script></main><footer class="w-full bg-surface-container-low border-t border-outline-variant/30 py-space-lg"><div class="w-full px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-label-sm text-label-sm"><div>© 2025 KinetiK Biomechanics Inc. High-Performance Movement Risk Analytics.</div><div class="flex items-center gap-space-lg"><span>API v2.4.1</span><span>CALIBRATION: PASSED</span><span>HIPAA / GDPR VALIDATED</span></div></div></footer></body></html>

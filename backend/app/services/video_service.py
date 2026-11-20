@@ -120,9 +120,10 @@ class VideoService:
         
         # Check authorization
         if user.role == "athlete":
-            # Athletes can only access their own videos
+            # Athletes can access their own videos OR system benchmark videos
             athlete = db.query(Athlete).filter(Athlete.id == video.athlete_id).first()
-            if athlete and athlete.user_id != user.id:
+            is_benchmark = athlete and (athlete.athlete_id == "BENCHMARK-GOLD" or athlete.user_id is None)
+            if not is_benchmark and athlete and athlete.user_id != user.id:
                 log_security_event("unauthorized_video_access", {
                     "user_id": user.id,
                     "video_id": video_id

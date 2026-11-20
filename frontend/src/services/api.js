@@ -78,6 +78,9 @@ export const videosAPI = {
   getAnalysis: (id) => api.get(`/api/v1/videos/${id}/analysis`),
   // Recorded comparison of this analysis vs the athlete's rolling baseline
   getComparison: (id) => api.get(`/api/v1/videos/${id}/comparison`),
+  // Pairwise side-by-side comparison of a trial video vs a specific baseline or benchmark video
+  compareWithVideo: (videoId, baselineVideoId) =>
+    api.get(`/api/v1/videos/${videoId}/compare/${baselineVideoId}`),
   // Explainable injury-risk assessment (scientific terms, muscles, rationale)
   getRisk: (id) => api.get(`/api/v1/risk/${id}`),
   // Live step-by-step progress while the background analysis runs
