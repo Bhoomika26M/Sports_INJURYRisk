@@ -2,9 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { athletesAPI, datasetsAPI, videosAPI } from '../services/api';
+import AthleteAccessCard from '../components/AthleteAccessCard';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [currentAthlete, setCurrentAthlete] = useState(null);
   const [stats, setStats] = useState({
     totalAthletes: 0,
     datasetsReady: 0,
@@ -21,6 +23,11 @@ const Dashboard = () => {
           datasetsAPI.getAll(),
           videosAPI.getAll().catch(() => ({ data: [] })),
         ]);
+
+        if (user?.role === 'athlete') {
+          // If athlete, fetch own athlete profile for AthleteAccessCard
+          athletesAPI.getMe().then(res => setCurrentAthlete(res.data)).catch(() => {});
+        }
         
         setStats({
           totalAthletes: athletesResponse.data.length,
@@ -36,7 +43,7 @@ const Dashboard = () => {
     };
 
     loadStats();
-  }, []);
+  }, [user]);
 
   const features = [
     {
@@ -51,13 +58,6 @@ const Dashboard = () => {
       description: 'Upload sports movement videos for analysis',
       icon: '📹',
       link: '/videos/upload',
-      available: true,
-    },
-    {
-      title: 'Dataset Integration',
-      description: 'Integrated pose estimation datasets for model training',
-      icon: '📁',
-      link: '#',
       available: true,
     },
   ];
@@ -204,7 +204,7 @@ const Dashboard = () => {
           <span className="text-xs font-mono text-[#594139] uppercase">Platform Capabilities</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {features.map((feature, index) => {
             const Content = (
               <div
@@ -248,6 +248,11 @@ const Dashboard = () => {
           })}
         </div>
       </div>
+
+      {/* Care Team & Access Permissions Card (Athlete Role Only) */}
+      {user?.role === 'athlete' && currentAthlete && (
+        <AthleteAccessCard athleteId={currentAthlete.id} isOwner={true} />
+      )}
     </div>
   );
 };

@@ -57,6 +57,28 @@ def get_all_athletes(db: Session, skip: int = 0, limit: int = 100, current_user:
         own = db.query(Athlete).filter(Athlete.user_id == current_user.id).all()
         return own
 
+    # Administrators see all athletes
+    if current_user and current_user.role == "administrator":
+        return db.query(Athlete).offset(skip).limit(limit).all()
+
+    # For other roles (coach, physiotherapist, sports_scientist):
+    # Only return athlete profiles for which an invite has been accepted (plus benchmark models)
+    if current_user and current_user.role in ["coach", "physiotherapist", "sports_scientist"]:
+        from app.models.access_invitation import AccessInvitation
+        accepted_athlete_ids = [
+            inv.athlete_id for inv in db.query(AccessInvitation).filter(
+                AccessInvitation.professional_user_id == current_user.id,
+                AccessInvitation.status == "accepted"
+            ).all()
+        ]
+        
+        # Include accepted athletes and system benchmark athletes
+        return db.query(Athlete).filter(
+            (Athlete.id.in_(accepted_athlete_ids)) |
+            (Athlete.athlete_id == "BENCHMARK-GOLD") |
+            (Athlete.user_id == None)
+        ).offset(skip).limit(limit).all()
+
     athletes = db.query(Athlete).offset(skip).limit(limit).all()
     return athletes
 
