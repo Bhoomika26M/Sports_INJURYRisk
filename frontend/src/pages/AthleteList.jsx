@@ -83,8 +83,14 @@ const AthleteList = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Athletes</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage athlete profiles</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            {user?.role === 'athlete' ? 'My Athlete Profile' : 'Athletes'}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500">
+            {user?.role === 'athlete'
+              ? 'View and manage your personal athletic profile & care permissions'
+              : 'Manage athlete profiles and clinical telemetry access'}
+          </p>
         </div>
         {canAddAthlete && (
           <button
