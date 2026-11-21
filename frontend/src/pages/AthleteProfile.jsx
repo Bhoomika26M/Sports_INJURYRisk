@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { athletesAPI } from '../services/api';
 import HistoryTimeline from '../components/HistoryTimeline';
+import AthleteAccessCard from '../components/AthleteAccessCard';
 
 const AthleteProfile = () => {
   const { id } = useParams();
@@ -286,6 +287,14 @@ const AthleteProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Care Team & Access Authorizations (Athlete invites coach / therapist or revokes access) */}
+      {athlete && (
+        <AthleteAccessCard
+          athleteId={athlete.id}
+          isOwner={user?.role === 'athlete' ? athlete.user_id === user?.id : ['administrator'].includes(user?.role)}
+        />
+      )}
 
       {/* Every completed analysis for this athlete, newest first, with the
           comparison that was recorded against their rolling baseline. */}

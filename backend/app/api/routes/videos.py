@@ -308,6 +308,65 @@ def get_video_comparison(
     return BaselineComparison.model_validate(comparison)
 
 
+@router.get("/{video_id}/compare/{baseline_video_id}", response_model=BaselineComparison)
+def compare_two_videos_endpoint(
+    video_id: int,
+    baseline_video_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Compare a trial video directly against a chosen baseline video.
+    
+    Security:
+    - Requires authentication.
+    - User must have access to the trial video.
+    - Athletes can access their own videos or system benchmark videos (athlete_id=3).
+    - Coaches, physiotherapists, sports scientists, and administrators can compare across athletes.
+    """
+    from app.models.analysis_snapshot import AnalysisSnapshot
+    from app.models.athlete import Athlete
+    from app.services.baseline_service import compare_two_videos
+
+    # Access check on trial video
+    trial_video = VideoService.get_video(video_id, current_user, db)
+
+    # Access check on baseline video (athletes allowed if own video OR system benchmark)
+    baseline_video = db.query(Video).filter(Video.id == baseline_video_id).first()
+    if not baseline_video:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Baseline video not found"
+        )
+
+    # Check if baseline is a benchmark video
+    benchmark_athlete = db.query(Athlete).filter(Athlete.athlete_id == 'BENCHMARK-GOLD').first()
+    is_benchmark = benchmark_athlete and baseline_video.athlete_id == benchmark_athlete.id
+
+    if not is_benchmark:
+        # Standard video authorization check
+        baseline_video = VideoService.get_video(baseline_video_id, current_user, db)
+
+    # Check both videos have snapshots
+    trial_snap = db.query(AnalysisSnapshot).filter(AnalysisSnapshot.video_id == video_id).first()
+    if not trial_snap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Trial video has not been processed to completion yet."
+        )
+
+    base_snap = db.query(AnalysisSnapshot).filter(AnalysisSnapshot.video_id == baseline_video_id).first()
+    if not base_snap:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Baseline video has not been processed to completion yet."
+        )
+
+    label = "Gold Benchmark Form" if is_benchmark else f"Baseline ({baseline_video.original_filename})"
+    res = compare_two_videos(trial_snap.metrics or {}, base_snap.metrics or {}, baseline_label=label)
+    return BaselineComparison.model_validate(res)
+
+
 @router.post("/{video_id}/annotated-video")
 def generate_annotated_video(
     video_id: int,

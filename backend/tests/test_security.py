@@ -13,35 +13,41 @@ from app.core.otp import hash_otp, PURPOSE_PASSWORD_RECOVERY
 from datetime import datetime, timedelta
 
 
-client = TestClient(app)
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+# Use a separate test database to avoid dropping dev database
+SQLALCHEMY_DATABASE_URL = "sqlite:///./test_security.db"
+test_engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
 
 
-# Override database for testing
 def get_test_db():
-    from app.db.database import SessionLocal
-    db = SessionLocal()
+    session = TestingSessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
 
 
 app.dependency_overrides[get_db] = get_test_db
+client = TestClient(app)
 
 
 @pytest.fixture
 def db():
-    from app.db.database import SessionLocal, engine, Base
+    from app.db.database import Base
     # Create a fresh database for each test
-    Base.metadata.create_all(bind=engine)
-    db = SessionLocal()
+    Base.metadata.create_all(bind=test_engine)
+    session = TestingSessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
-        # Clean up database
-        Base.metadata.drop_all(bind=engine)
-        Base.metadata.create_all(bind=engine)
+        session.close()
+        # Clean up test database
+        Base.metadata.drop_all(bind=test_engine)
 
 
 @pytest.fixture

@@ -54,43 +54,11 @@ const Dashboard = () => {
       available: true,
     },
     {
-      title: 'Movement Analysis',
-      description: 'Analyze athlete movement patterns using pose estimation',
-      icon: '🏃',
-      link: '#',
-      available: false,
-      milestone: 'Milestone 2',
-    },
-    {
-      title: 'Biomechanical Assessment',
-      description: 'Calculate joint angles and movement metrics',
-      icon: '📊',
-      link: '#',
-      available: false,
-      milestone: 'Milestone 2',
-    },
-    {
-      title: 'Injury Risk Prediction',
-      description: 'AI-powered injury risk scoring and prediction',
-      icon: '⚠️',
-      link: '#',
-      available: false,
-      milestone: 'Milestone 3',
-    },
-    {
       title: 'Dataset Integration',
       description: 'Integrated pose estimation datasets for model training',
       icon: '📁',
       link: '#',
       available: true,
-    },
-    {
-      title: 'Recommendation Engine',
-      description: 'Personalized corrective exercise recommendations',
-      icon: '💡',
-      link: '#',
-      available: false,
-      milestone: 'Milestone 3',
     },
   ];
 

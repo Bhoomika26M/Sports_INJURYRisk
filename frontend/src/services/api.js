@@ -78,6 +78,9 @@ export const videosAPI = {
   getAnalysis: (id) => api.get(`/api/v1/videos/${id}/analysis`),
   // Recorded comparison of this analysis vs the athlete's rolling baseline
   getComparison: (id) => api.get(`/api/v1/videos/${id}/comparison`),
+  // Pairwise side-by-side comparison of a trial video vs a specific baseline or benchmark video
+  compareWithVideo: (videoId, baselineVideoId) =>
+    api.get(`/api/v1/videos/${videoId}/compare/${baselineVideoId}`),
   // Explainable injury-risk assessment (scientific terms, muscles, rationale)
   getRisk: (id) => api.get(`/api/v1/risk/${id}`),
   // Live step-by-step progress while the background analysis runs
@@ -98,6 +101,17 @@ export const videosAPI = {
     return `${API_BASE_URL}/api/v1/videos/${id}/video?token=${token}`;
   },
   delete: (id) => api.delete(`/api/v1/videos/${id}`),
+};
+
+export const invitationsAPI = {
+  getProfessionals: () => api.get('/api/v1/invitations/professionals'),
+  getAthleteInvitations: (athleteId) => api.get(`/api/v1/invitations/athlete/${athleteId}`),
+  invite: (athleteId, data) => api.post(`/api/v1/invitations/athlete/${athleteId}/invite`, data),
+  revoke: (athleteId, invitationId) =>
+    api.post(`/api/v1/invitations/athlete/${athleteId}/revoke/${invitationId}`),
+  getNotifications: () => api.get('/api/v1/invitations/notifications'),
+  respond: (invitationId, action) =>
+    api.post(`/api/v1/invitations/notifications/${invitationId}/respond`, { action }),
 };
 
 export default api;

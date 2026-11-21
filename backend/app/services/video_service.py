@@ -63,12 +63,43 @@ class VideoService:
                 })
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only upload videos for your own athlete profile"
+                    detail="You can only access your own athlete profile"
                 )
-        
-        # Other roles (coach, physiotherapist, sports_scientist, admin) can access
-        # This will be refined based on business rules
-        
+            return athlete
+
+        # Administrators always have access
+        if user.role == "administrator":
+            return athlete
+
+        # System benchmark records (no owner) are accessible to all professionals
+        if athlete.athlete_id == 'BENCHMARK-GOLD' or athlete.user_id is None:
+            return athlete
+
+        # For coaches, physiotherapists, and sports scientists:
+        # Check if athlete has granted them active access via accepted AccessInvitation.
+        # If there are NO invitations in the system for this athlete yet, maintain legacy backwards compatibility.
+        from app.models.access_invitation import AccessInvitation
+        has_any_invitations = db.query(AccessInvitation).filter(
+            AccessInvitation.athlete_id == athlete_id
+        ).count() > 0
+
+        if has_any_invitations:
+            has_access = db.query(AccessInvitation).filter(
+                AccessInvitation.athlete_id == athlete_id,
+                AccessInvitation.professional_user_id == user.id,
+                AccessInvitation.status == "accepted"
+            ).first()
+
+            if not has_access:
+                log_security_event("unauthorized_professional_access", {
+                    "user_id": user.id,
+                    "athlete_id": athlete_id
+                })
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Access not granted. The athlete has not accepted an invitation for your account or access has been withdrawn."
+                )
+
         return athlete
     
     @staticmethod
@@ -118,19 +149,8 @@ class VideoService:
                 detail="Video not found"
             )
         
-        # Check authorization
-        if user.role == "athlete":
-            # Athletes can only access their own videos
-            athlete = db.query(Athlete).filter(Athlete.id == video.athlete_id).first()
-            if athlete and athlete.user_id != user.id:
-                log_security_event("unauthorized_video_access", {
-                    "user_id": user.id,
-                    "video_id": video_id
-                })
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only access your own videos"
-                )
+        # Check authorization via check_athlete_access
+        VideoService.check_athlete_access(user, video.athlete_id, db)
         
         return video
     

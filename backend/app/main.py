@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from app.api.routes import auth, users, athletes, datasets, videos, risk
+from app.api.routes import auth, users, athletes, datasets, videos, risk, invitations
 import logging
 
 # Configure logging
@@ -16,6 +16,17 @@ app = FastAPI(
     docs_url="/docs",
     redoc_url="/redoc"
 )
+
+
+@app.on_event("startup")
+def on_startup():
+    from app.db.database import SessionLocal
+    from app.services.seed_service import ensure_demo_personas
+    db = SessionLocal()
+    try:
+        ensure_demo_personas(db)
+    finally:
+        db.close()
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -48,14 +59,37 @@ class ErrorHandlingMiddleware(BaseHTTPMiddleware):
             )
 
 
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+class StripGzipForMediaMiddleware:
+    """Pure ASGI middleware that strips Accept-Encoding for video endpoints
+    BEFORE GZipMiddleware processes the request, ensuring video range streams are NEVER gzipped.
+    """
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            if path.endswith(("/video", "/annotated-video")) or any(k.lower() == b"range" for k, v in scope.get("headers", [])):
+                scope["headers"] = [
+                    (k, v) for k, v in scope.get("headers", [])
+                    if k.lower() != b"accept-encoding"
+                ]
+        await self.app(scope, receive, send)
+
+
 # Add error handling middleware
 app.add_middleware(ErrorHandlingMiddleware)
 
 # Add security headers middleware
 app.add_middleware(SecurityHeadersMiddleware)
 
-# Add GZip compression
+# Add GZip compression for API JSON/text
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Strip GZip on video endpoints (runs BEFORE GZipMiddleware in the outer onion layer)
+app.add_middleware(StripGzipForMediaMiddleware)
 
 # Configure CORS
 app.add_middleware(
@@ -73,6 +107,7 @@ app.include_router(athletes.router, prefix="/api/v1")
 app.include_router(datasets.router, prefix="/api/v1")
 app.include_router(videos.router, prefix="/api/v1/videos")
 app.include_router(risk.router, prefix="/api/v1")
+app.include_router(invitations.router, prefix="/api/v1")
 
 
 @app.get("/")

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -84,6 +85,9 @@ const Layout = () => {
                 <span className="w-2 h-2 rounded-full bg-[#006C49] animate-pulse" />
                 <span>120Hz Calibrated</span>
               </div>
+
+              {/* Notifications for coaches/physios/athletes */}
+              <NotificationBell />
 
               <div className="flex items-center space-x-2 pl-2 border-l border-[#E5E7EB]">
                 <div className="flex flex-col text-right hidden sm:block">

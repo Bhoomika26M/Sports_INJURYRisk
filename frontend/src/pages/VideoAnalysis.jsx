@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { videosAPI } from '../services/api';
 import ComparisonPanel from '../components/ComparisonPanel';
+import DualVideoPlayer from '../components/DualVideoPlayer';
 import FindingCard from '../components/FindingCard';
 import AngleGaugeBar from '../components/AngleGaugeBar';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -198,20 +199,11 @@ function VideoAnalysis() {
         }
 
         if (p.frames_processed) {
-          // Cache-bust so the <img> always shows the newest frame. Used as a
-          // fallback until the live video has its first decodable frame.
-          await new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-              setPreviewOk(true);
-              resolve();
-            };
-            img.onerror = () => {
-              setPreviewOk(false);
-              resolve();
-            };
-            img.src = `${videosAPI.getPreviewFrame(videoId)}&t=${Date.now()}`;
-          });
+          // Cache-bust image preview asynchronously without blocking progress ticks
+          const img = new Image();
+          img.onload = () => setPreviewOk(true);
+          img.onerror = () => setPreviewOk(false);
+          img.src = `${videosAPI.getPreviewFrame(videoId)}&t=${Date.now()}`;
         }
 
         if (p.status === 'completed') {
@@ -427,80 +419,118 @@ function VideoAnalysis() {
         </div>
       )}
 
+      {/* Dual Video Synchronized Side-by-Side Comparison (Top of the Analysis) */}
+      {video && video.processing_status === 'completed' && (
+        <DualVideoPlayer
+          trialVideo={video}
+          athleteId={video.athlete_id}
+          activityType={video.activity_type}
+        />
+      )}
+
       {/* Live step-by-step progress while the analysis runs */}
       {showLivePanel && (
-        <div className="mb-6 p-4 bg-surface-container rounded border border-border">
-          <h2 className="text-xl font-display font-semibold mb-2 text-text-primary">Live Analysis</h2>
-
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="font-medium text-text-primary">
-              {progress?.stage_label || 'Starting analysis...'}
-            </span>
-            <span className="text-text-secondary font-mono">{fmt(progress?.percent, 0)}%</span>
-          </div>
-          <div className="w-full bg-border-muted rounded-lg h-4 mb-3 overflow-hidden relative">
-            <div
-              className="bg-primary h-full transition-all duration-500 ease-out"
-              style={{ width: `${Math.max(0, Math.min(100, progress?.percent || 0))}%` }}
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-mono font-semibold text-white mix-blend-difference">
-                {fmt(progress?.percent, 0)}%
+        <div className="mb-6 p-5 bg-gradient-to-br from-indigo-50/60 via-white to-slate-50 rounded-2xl border-2 border-indigo-200/80 shadow-md">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="w-3 h-3 rounded-full bg-indigo-600 animate-ping" />
+              <h2 className="text-xl font-display font-bold text-gray-900 tracking-tight">
+                Live Kinematic Telemetry
+              </h2>
+              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-indigo-100 text-indigo-700 uppercase tracking-wider">
+                Real-Time Streaming
               </span>
             </div>
+            <span className="text-lg font-mono font-bold text-indigo-600">
+              {progress?.percent != null ? `${Math.round(progress.percent)}%` : '0%'}
+            </span>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-3">
-            <div>
-              <div className="text-text-secondary text-xs">Frames</div>
-              <div className="font-medium text-text-primary">
+          <div className="mb-2 flex items-center justify-between text-xs text-gray-600">
+            <span className="font-semibold text-gray-800 flex items-center gap-2">
+              <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              {progress?.stage_label || 'Initializing pose estimation model...'}
+            </span>
+            <span className="font-mono text-gray-500">
+              {progress?.frames_processed ? `${progress.frames_processed} frames computed` : 'Preparing video stream'}
+            </span>
+          </div>
+
+          {/* Dynamic Animated Progress Bar */}
+          <div className="w-full bg-gray-200 rounded-full h-3.5 mb-4 overflow-hidden relative shadow-inner">
+            <div
+              className="h-full bg-gradient-to-r from-indigo-500 via-indigo-600 to-amber-500 transition-all duration-300 ease-out"
+              style={{ width: `${Math.max(5, Math.min(100, progress?.percent || 5))}%` }}
+            />
+          </div>
+
+          {/* Metric Telemetry Gauges */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
+            <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider">Frames Processed</div>
+              <div className="font-display font-bold text-gray-900 text-lg mt-0.5">
                 {progress?.frames_processed ?? 0}
-                {progress?.total_frames ? ` / ${progress.total_frames}` : ''}
+                <span className="text-xs font-normal text-gray-400">
+                  {progress?.total_frames ? ` / ${progress.total_frames}` : ''}
+                </span>
               </div>
             </div>
-            <div>
-              <div className="text-text-secondary text-xs">Pose detected</div>
-              <div className="font-medium text-text-primary">{progress?.valid_pose_frames ?? 0}</div>
+            <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider">Pose Detected</div>
+              <div className="font-display font-bold text-emerald-600 text-lg mt-0.5">
+                {progress?.valid_pose_frames ?? 0}
+              </div>
             </div>
-            <div>
-              <div className="text-text-secondary text-xs">Mean confidence</div>
-              <div className="font-medium text-text-primary">{fmt(progress?.mean_confidence, 3)}</div>
+            <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider">Mean Confidence</div>
+              <div className="font-display font-bold text-indigo-600 text-lg mt-0.5">
+                {progress?.mean_confidence != null ? `${(progress.mean_confidence * 100).toFixed(1)}%` : '—'}
+              </div>
             </div>
-            <div>
-              <div className="text-text-secondary text-xs">Stage</div>
-              <div className="font-medium text-text-primary">{progress?.stage || '—'}</div>
+            <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium uppercase tracking-wider">Pipeline Stage</div>
+              <div className="font-display font-bold text-amber-700 text-base mt-0.5 capitalize">
+                {progress?.stage?.replace(/_/g, ' ') || 'Starting'}
+              </div>
             </div>
           </div>
 
-          {/* Live joint angles */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm mb-3">
-            <div className="bg-white rounded p-2 border border-border">
-              <div className="text-text-secondary text-xs">Left knee</div>
-              <div className="font-medium text-text-primary">{fmt(liveAngles.knee_angle)}°</div>
+          {/* Live Joint Angles */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm mb-4">
+            <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium">Knee Angle</div>
+              <div className="font-mono font-bold text-gray-900 text-lg mt-0.5">
+                {liveAngles.knee_angle != null ? `${fmt(liveAngles.knee_angle)}°` : '—'}
+              </div>
             </div>
-            <div className="bg-white rounded p-2 border border-border">
-              <div className="text-text-secondary text-xs">Hip angle</div>
-              <div className="font-medium text-text-primary">{fmt(liveAngles.hip_angle)}°</div>
+            <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium">Hip Angle</div>
+              <div className="font-mono font-bold text-gray-900 text-lg mt-0.5">
+                {liveAngles.hip_angle != null ? `${fmt(liveAngles.hip_angle)}°` : '—'}
+              </div>
             </div>
-            <div className="bg-white rounded p-2 border border-border">
-              <div className="text-text-secondary text-xs">Trunk lean</div>
-              <div className="font-medium text-text-primary">{fmt(liveAngles.trunk_lean)}°</div>
+            <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium">Trunk Lean</div>
+              <div className="font-mono font-bold text-gray-900 text-lg mt-0.5">
+                {liveAngles.trunk_lean != null ? `${fmt(liveAngles.trunk_lean)}°` : '—'}
+              </div>
             </div>
-            <div className="bg-white rounded p-2 border border-border">
-              <div className="text-text-secondary text-xs">Live risk</div>
-              <div className="font-medium text-text-primary">
-                {liveRisk ? `${fmt(liveRisk.overall_risk_score)} (${liveRisk.risk_level})` : '—'}
+            <div className="bg-white rounded-xl p-3 border border-gray-200 shadow-sm">
+              <div className="text-gray-500 text-[11px] font-medium">Live Risk Score</div>
+              <div className="font-mono font-bold text-rose-600 text-lg mt-0.5">
+                {liveRisk ? `${fmt(liveRisk.overall_risk_score)} (${liveRisk.risk_level})` : 'Calculating...'}
               </div>
             </div>
           </div>
 
           {/* Streaming risk findings while frames are processed */}
           {liveRisk && liveRisk.top_findings?.length > 0 && (
-            <div className="mb-3 text-sm bg-white rounded p-2 border border-border">
-              <div className="font-medium mb-1 text-text-primary">
-                Streaming risk findings ({liveRisk.findings_count})
+            <div className="mb-4 text-sm bg-amber-50/80 rounded-xl p-3.5 border border-amber-200">
+              <div className="font-bold mb-1.5 text-amber-950 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                Streaming Live Risk Findings ({liveRisk.findings_count})
               </div>
-              <ul className="list-disc list-inside text-text-secondary">
+              <ul className="list-disc list-inside text-amber-900 text-xs space-y-1">
                 {liveRisk.top_findings.map((issue, idx) => (
                   <li key={idx}>{issue}</li>
                 ))}
@@ -755,78 +785,9 @@ function VideoAnalysis() {
         <div className="mb-6">
           <h2 className="text-xl font-semibold mb-4">Analysis Results</h2>
 
-          {/* 1. Video Player with Annotated Video */}
-          <div className="mb-6 p-4 bg-surface rounded">
-            <h3 className="font-display font-semibold mb-2 text-text-primary">1. Video Player</h3>
-
-            {/* Toggle between original and annotated video */}
-            {annotatedVideoUrl && (
-              <div className="mb-3 flex gap-2">
-                <button
-                  onClick={() => setShowAnnotated(true)}
-                  className={`px-3 py-1 rounded text-sm ${showAnnotated ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  Annotated (Skeleton)
-                </button>
-                <button
-                  onClick={() => setShowAnnotated(false)}
-                  className={`px-3 py-1 rounded text-sm ${!showAnnotated ? 'btn-primary' : 'btn-secondary'}`}
-                >
-                  Original
-                </button>
-              </div>
-            )}
-
-            {showAnnotated && annotatedVideoUrl ? (
-              <div>
-                <video
-                  controls
-                  className="w-full rounded border border-border"
-                  src={annotatedVideoUrl}
-                  onError={() => {
-                    console.error('Annotated video failed to load, switching to original');
-                    setShowAnnotated(false);
-                  }}
-                >
-                  Your browser does not support the video tag.
-                </video>
-                <p className="text-sm text-success mt-2">✓ Annotated video with pose estimation visualization</p>
-              </div>
-            ) : video?.file_path ? (
-              <div>
-                <video
-                  controls
-                  className="w-full rounded border border-border"
-                  src={videosAPI.getVideoUrl(videoId)}
-                >
-                  Your browser does not support the video tag.
-                </video>
-                <p className="text-sm text-text-secondary mt-2">Original video</p>
-              </div>
-            ) : generatingAnnotated ? (
-              <div className="text-center py-4">
-                <p className="text-primary">Generating annotated video with pose visualization...</p>
-                <p className="text-sm text-text-secondary mt-2">This may take a moment for large videos</p>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <p className="text-text-secondary mb-2">Annotated video not available for this run</p>
-                <button
-                  onClick={handleGenerateAnnotatedVideo}
-                  className="btn-primary"
-                >
-                  Generate Annotated Video
-                </button>
-                <p className="text-sm text-text-secondary mt-2">
-                  Annotated video includes skeleton visualization, bounding boxes, and biomechanical measurements
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* 2. Skeleton View Info */}
+          {/* 1. Skeleton View Info */}
           <div className="mb-6 p-4 bg-surface-container rounded">
-            <h3 className="font-display font-semibold mb-2 text-text-primary">2. Skeleton View</h3>
+            <h3 className="font-display font-semibold mb-2 text-text-primary">1. Skeleton View</h3>
             <div className="text-sm text-text-secondary">
               <p><strong className="text-text-primary">Athlete Detection:</strong> YOLO11n + ByteTrack tracking</p>
               <p><strong className="text-text-primary">Pose Estimation:</strong> MediaPipe BlazePose (33 landmarks)</p>

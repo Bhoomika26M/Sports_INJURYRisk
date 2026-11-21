@@ -95,12 +95,8 @@ def get_athlete_endpoint(
     """
     athlete = get_athlete(db, athlete_id)
     
-    # IDOR protection: Athletes can only view their own profile
-    if current_user.role == "athlete" and athlete.user_id != current_user.id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You can only view your own profile"
-        )
+    # Access check (athletes can only view their own; coaches/physios need granted access)
+    VideoService.check_athlete_access(current_user, athlete_id, db)
     
     return athlete
 
