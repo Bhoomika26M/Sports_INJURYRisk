@@ -51,7 +51,12 @@ def get_athlete_by_public_id(db: Session, public_id: str) -> Athlete:
     return athlete
 
 
-def get_all_athletes(db: Session, skip: int = 0, limit: int = 100) -> List[Athlete]:
+def get_all_athletes(db: Session, skip: int = 0, limit: int = 100, current_user: Optional[User] = None) -> List[Athlete]:
+    # Privacy rule: Athletes can only see their own athlete profile
+    if current_user and current_user.role == "athlete":
+        own = db.query(Athlete).filter(Athlete.user_id == current_user.id).all()
+        return own
+
     athletes = db.query(Athlete).offset(skip).limit(limit).all()
     return athletes
 

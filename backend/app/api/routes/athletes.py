@@ -55,12 +55,13 @@ def get_athletes(
     """
     Get all athletes.
     
-    Available to all authenticated users.
+    Athletes only see their own profile.
+    Coaches, physiotherapists, scientists, and administrators see all athletes.
     
     - **skip**: Number of athletes to skip
     - **limit**: Maximum number of athletes to return
     """
-    return get_all_athletes(db, skip=skip, limit=limit)
+    return get_all_athletes(db, skip=skip, limit=limit, current_user=current_user)
 
 
 @router.get("/me", response_model=AthleteResponse)
