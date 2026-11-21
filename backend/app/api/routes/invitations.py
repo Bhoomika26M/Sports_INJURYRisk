@@ -36,7 +36,7 @@ def get_athlete_invitations(
 ):
     """
     Get all invitations and active connections for a given athlete.
-    Athletes can only view their own invitations.
+    Athletes can view their own; Administrators can view any athlete's care team.
     """
     athlete = db.query(Athlete).filter(Athlete.id == athlete_id).first()
     if not athlete:
@@ -75,7 +75,7 @@ def invite_professional(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Athlete sends an invitation to a coach, physiotherapist, or sports scientist.
+    Athlete or Admin sends an invitation / access grant to a coach, physiotherapist, or sports scientist.
     """
     athlete = db.query(Athlete).filter(Athlete.id == athlete_id).first()
     if not athlete:
@@ -102,12 +102,16 @@ def invite_professional(
         else:
             raise HTTPException(status_code=400, detail="An invitation is already pending with this professional.")
 
+    note_text = payload.notes
+    if current_user.role == "administrator":
+        note_text = f"[Admin Assigned]: {note_text or 'Access granted by Administrator'}"
+
     invitation = AccessInvitation(
         athlete_id=athlete_id,
         professional_user_id=pro_user.id,
-        status="pending",
+        status="accepted" if current_user.role == "administrator" else "pending",
         invited_role=pro_user.role,
-        notes=payload.notes
+        notes=note_text
     )
     db.add(invitation)
     db.commit()
@@ -135,7 +139,7 @@ def revoke_access(
     current_user: User = Depends(get_current_active_user)
 ):
     """
-    Athlete withdraws / revokes access from a previously accepted or pending professional at any time.
+    Athlete or Admin withdraws / revokes access from a professional at any time.
     """
     athlete = db.query(Athlete).filter(Athlete.id == athlete_id).first()
     if not athlete:

@@ -76,6 +76,11 @@ def upload_video(
     """
     # Check athlete access
     athlete = VideoService.check_athlete_access(current_user, athlete_id, db)
+    if athlete.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This athlete profile is scheduled for deletion. New video uploads are locked."
+        )
     
     # Validate file
     file_size = 0
@@ -201,6 +206,12 @@ def process_video(
     - User must have access to the video
     """
     video = VideoService.get_video(video_id, current_user, db)
+    athlete = db.query(Athlete).filter(Athlete.id == video.athlete_id).first()
+    if athlete and athlete.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This athlete profile is scheduled for deletion. New video analysis is locked."
+        )
     
     if video.processing_status in (
         ProcessingStatus.PREPROCESSING,

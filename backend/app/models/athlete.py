@@ -17,6 +17,7 @@ class Athlete(Base):
     weight = Column(Float, nullable=False)  # in kg
     injury_history = Column(Text, nullable=True)
     training_load = Column(String, nullable=True)
+    deleted_at = Column(DateTime, nullable=True)  # Set when admin initiates 30-day graceful deletion window
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

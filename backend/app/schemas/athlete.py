@@ -134,6 +134,7 @@ class AthleteResponse(BaseModel):
     weight: float
     injury_history: Optional[str]
     training_load: Optional[str]
+    deleted_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
     

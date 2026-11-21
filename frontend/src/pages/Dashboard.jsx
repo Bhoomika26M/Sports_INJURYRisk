@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { athletesAPI, datasetsAPI, videosAPI } from '../services/api';
 import AthleteAccessCard from '../components/AthleteAccessCard';
+import AdminCareTeamManagementCard from '../components/AdminCareTeamManagementCard';
+import AdminAthleteAccessCard from '../components/AdminAthleteAccessCard';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -252,6 +254,14 @@ const Dashboard = () => {
       {/* Care Team & Access Permissions Card (Athlete Role Only) */}
       {user?.role === 'athlete' && currentAthlete && (
         <AthleteAccessCard athleteId={currentAthlete.id} isOwner={true} />
+      )}
+
+      {/* Admin Care Team Users Management & Manual Access Grants (Administrator Role Only) */}
+      {user?.role === 'administrator' && (
+        <div className="space-y-6">
+          <AdminCareTeamManagementCard />
+          <AdminAthleteAccessCard />
+        </div>
       )}
     </div>
   );

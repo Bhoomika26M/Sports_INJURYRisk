@@ -85,7 +85,29 @@ const Login = () => {
               </span>
               <span className="text-[10px] text-[#006C49] font-semibold">1-Click Sign In</span>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+              <button
+                type="button"
+                onClick={async () => {
+                  setEmail('admin@athletics.org');
+                  setPassword('password123');
+                  setError('');
+                  setLoading(true);
+                  try {
+                    await login('admin@athletics.org', 'password123');
+                    navigate('/dashboard');
+                  } catch (err) {
+                    setError('Quick sign in failed');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                className="p-2 rounded-lg text-left bg-white hover:bg-gray-50 border border-red-200 shadow-sm transition-all text-xs flex flex-col justify-between"
+              >
+                <div className="font-mono font-bold text-[#BD4006]">Admin</div>
+                <div className="text-[10px] text-gray-500 truncate">System Admin</div>
+              </button>
+
               <button
                 type="button"
                 onClick={async () => {

@@ -149,6 +149,14 @@ class VideoService:
                 detail="Video not found"
             )
         
+        # Privacy policy: Administrators manage system configuration & user access,
+        # but do not have access to stream or view the athlete videos themselves.
+        if user.role == "administrator":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Administrator accounts do not have access to view raw athlete video footage directly."
+            )
+
         # Check authorization via check_athlete_access
         VideoService.check_athlete_access(user, video.athlete_id, db)
         

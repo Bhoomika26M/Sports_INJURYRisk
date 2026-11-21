@@ -62,7 +62,7 @@ const AthleteList = () => {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this athlete?')) return;
+    if (!confirm('Are you sure you want to delete this athlete? Per data privacy protocols, the profile will enter a 30-day grace period where no new videos can be uploaded or analysed, after which the full profile will be permanently deleted.')) return;
     
     try {
       await athletesAPI.delete(id);
@@ -248,10 +248,16 @@ const AthleteList = () => {
                       >
                         View
                       </Link>
-                      {canDeleteAthlete && (
+                      {athlete.deleted_at && (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                          Deletes in 30 Days
+                        </span>
+                      )}
+                      {canDeleteAthlete && !athlete.deleted_at && (
                         <button
                           onClick={() => handleDelete(athlete.id)}
-                          className="text-red-600 hover:text-red-800 text-sm"
+                          className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          title="Schedule for 30-day deletion"
                         >
                           Delete
                         </button>

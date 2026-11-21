@@ -103,6 +103,24 @@ const AthleteProfile = () => {
         </div>
       )}
 
+      {/* 30-day grace period banner */}
+      {athlete?.deleted_at && (
+        <div className="bg-amber-50 border-2 border-amber-300 text-amber-900 px-4 py-3.5 rounded-xl text-xs flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <div>
+              <span className="font-bold">Scheduled for Permanent Deletion (30-Day Retention Grace Period):</span>
+              <p className="mt-0.5 text-amber-800">
+                New video uploads and analyses are locked. All existing kinematic history and telemetry reports remain readable until the 30-day retention period elapses.
+              </p>
+            </div>
+          </div>
+          <span className="px-2.5 py-1 bg-amber-200 text-amber-950 rounded font-mono font-bold text-[10px] uppercase whitespace-nowrap ml-3">
+            Grace Period Active
+          </span>
+        </div>
+      )}
+
       {editing ? (
         <div className="bg-white shadow rounded-lg p-6">
           <h3 className="text-lg font-medium text-gray-900 mb-4">Edit Athlete Profile</h3>

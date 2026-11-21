@@ -11,6 +11,12 @@ logger = logging.getLogger(__name__)
 
 DEMO_PERSONAS = [
     {
+        "email": "admin@athletics.org",
+        "full_name": "System Administrator",
+        "role": "administrator",
+        "password": "password123"
+    },
+    {
         "email": "coach@athletics.org",
         "full_name": "Coach Miller",
         "role": "coach",

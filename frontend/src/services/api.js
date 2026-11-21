@@ -114,4 +114,9 @@ export const invitationsAPI = {
     api.post(`/api/v1/invitations/notifications/${invitationId}/respond`, { action }),
 };
 
+export const usersAPI = {
+  getAll: (params) => api.get('/api/v1/users', { params }),
+  create: (data) => api.post('/api/v1/users/', data),
+};
+
 export default api;

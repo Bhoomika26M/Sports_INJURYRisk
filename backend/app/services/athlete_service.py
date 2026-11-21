@@ -105,9 +105,23 @@ def delete_athlete(db: Session, athlete_id: int, current_user: User) -> Athlete:
             detail="Only administrators can delete athletes"
         )
     
-    db.delete(athlete)
-    db.commit()
-    return athlete
+    from datetime import datetime, timedelta
+    now = datetime.utcnow()
+
+    # If already in 30-day grace period and 30 days have elapsed, hard-delete.
+    # Otherwise, mark deleted_at = now (graceful 30-day window begins).
+    if athlete.deleted_at:
+        if now - athlete.deleted_at >= timedelta(days=30):
+            db.delete(athlete)
+            db.commit()
+            return athlete
+        else:
+            return athlete
+    else:
+        athlete.deleted_at = now
+        db.commit()
+        db.refresh(athlete)
+        return athlete
 
 
 def get_athlete_for_user(db: Session, user_id: int) -> Optional[Athlete]:
