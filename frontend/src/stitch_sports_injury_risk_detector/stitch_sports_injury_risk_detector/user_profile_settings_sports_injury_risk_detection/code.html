@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=JetBrains+Mono:wght@400;500;600&amp;family=Space+Grotesk:wght@600;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{colors:{"on-secondary-fixed-variant":"#005236","on-surface":"#141b2b","on-secondary-fixed":"#002113","secondary":"#006c49","tertiary-container":"#965e00","on-error-container":"#93000a","surface-tint":"#aa3700","inverse-surface":"#293040","on-error":"#ffffff","inverse-on-surface":"#edf0ff","on-primary-fixed":"#380c00","tertiary-fixed":"#ffddb8","error-container":"#ffdad6","surface-container-high":"#e1e8fd","tertiary-fixed-dim":"#ffb95f","on-tertiary-container":"#ffe8d1","on-surface-variant":"#594139","on-background":"#141b2b","secondary-fixed-dim":"#4edea3","surface":"#f9f9ff","primary-fixed":"#ffdbcf","on-tertiary":"#ffffff","primary-fixed-dim":"#ffb59c","surface-bright":"#f9f9ff","background":"#f9f9ff","primary-container":"#bd4006","error":"#ba1a1a","inverse-primary":"#ffb59c","outline":"#8d7168","on-tertiary-fixed-variant":"#653e00","surface-container":"#e9edff","on-secondary-container":"#00714d","surface-variant":"#dce2f7","tertiary":"#754900","on-primary-container":"#ffe7df","on-secondary":"#ffffff","on-tertiary-fixed":"#2a1700","secondary-container":"#6cf8bb","on-primary-fixed-variant":"#822800","surface-container-low":"#f1f3ff","surface-dim":"#d3daef","primary":"#952f00","secondary-fixed":"#6ffbbe","on-primary":"#ffffff","surface-container-highest":"#dce2f7","surface-container-lowest":"#ffffff","outline-variant":"#e1bfb5"},borderRadius:{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},spacing:{"space-xl":"2rem","space-sm":"0.5rem","space-xs":"0.25rem","margin":"1rem","space-lg":"1.25rem","margin-desktop":"2.5rem","gutter-desktop":"1.5rem","space-md":"0.75rem","margin-tablet":"1.5rem","gutter":"1rem"},fontFamily:{"body-lg":["Inter"],"label-sm":["JetBrains Mono"],"headline-lg":["Space Grotesk"],"body-md":["Inter"],"headline-md":["Space Grotesk"],"body-sm":["Inter"],"display-lg-mobile":["Space Grotesk"],"label-lg":["JetBrains Mono"],"headline-sm":["Space Grotesk"],"display-lg":["Space Grotesk"],"label-md":["JetBrains Mono"],"headline-lg-mobile":["Space Grotesk"]},fontSize:{"body-lg":["16px",{"lineHeight":"24px","fontWeight":"400"}],"label-sm":["10px",{"lineHeight":"14px","letterSpacing":"0.05em","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"600"}],"body-md":["14px",{"lineHeight":"20px","fontWeight":"400"}],"headline-md":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}],"body-sm":["12px",{"lineHeight":"16px","fontWeight":"400"}],"display-lg-mobile":["32px",{"lineHeight":"40px","letterSpacing":"-0.02em","fontWeight":"700"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"-0.01em","fontWeight":"500"}],"headline-sm":["18px",{"lineHeight":"26px","letterSpacing":"0em","fontWeight":"600"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.03em","fontWeight":"700"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.02em","fontWeight":"500"}],"headline-lg-mobile":["24px",{"lineHeight":"32px","letterSpacing":"-0.01em","fontWeight":"600"}]}}}}</script></head><body class="bg-background font-body-md text-on-surface antialiased"><header class="fixed top-0 w-full z-50 bg-surface-container-lowest border-b border-outline-variant/30 shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-20 w-full px-margin-desktop flex items-center justify-between gap-gutter-desktop"><div class="flex items-center gap-space-lg flex-shrink-0"><div class="flex items-center gap-space-md"><img alt="KinetiK Risk Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAzq8gVRkphoo39SDTi9zaWObGLoO5BLb92wuymJaOOM4UlW_WHbyX1TLlXgl_q_-HtveX0ACZtvYRHa5hnEDiQT2Pemo98W03FN-QlStJVZtuFJiAPkdEfAXRGL3ndUrIi0XN_nLNuhK3DCaKiofDmnzVKJZDENsXKMKsDxI6_cXnjBU77dIXJx29dBP2YCv9fX3NP-TIYdbhyKnYMDn1tj6UqKsNYRr3pXKIGfRJPLBSXJEJy-T6WCA"/><div class="flex flex-col"><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface">KinetiK Risk</span><span class="font-label-sm text-label-sm uppercase text-on-surface-variant">AI Movement Biomechanics</span></div></div><div class="h-8 w-[1px] bg-outline-variant/40 hidden xl:block"></div><nav class="hidden lg:flex items-center gap-space-xs" data-active-classes="bg-primary-container text-on-primary font-body-md font-semibold rounded-lg shadow-sm"><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="dashboard" href="#">Dashboard</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="athletes" href="#">Athletes</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="athlete-profile" href="#">Athlete Profile</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="video-upload" href="#">Video Upload</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="video-analysis" href="#">Video Analysis</a><a class="px-space-md py-space-sm rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors font-body-md" data-path="reports" href="#">Reports</a><a aria-current="page" class="px-space-md py-space-sm transition-colors bg-primary-container text-on-primary font-body-md font-semibold rounded-lg shadow-sm" data-path="settings-profile" href="#">Profile</a></nav></div><div class="flex items-center gap-space-md flex-shrink-0"><div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-high border border-outline-variant/30 text-on-surface"><span class="w-2 h-2 rounded-full bg-secondary-fixed-dim animate-pulse"></span><span class="font-label-sm text-label-sm uppercase text-on-surface font-semibold">3 in queue</span></div><button class="flex items-center gap-space-xs px-space-md py-space-sm bg-primary-container hover:bg-primary text-on-primary rounded-lg font-body-md font-semibold shadow-sm transition-colors" data-path="video-upload"><span class="material-symbols-outlined text-[18px]">cloud_upload</span><span class="hidden md:inline">Upload Video</span></button><button aria-label="Notifications" class="relative p-space-sm text-on-surface-variant hover:bg-surface-container hover:text-on-surface rounded-lg transition-colors"><span class="material-symbols-outlined text-[22px]">notifications</span><span class="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-on-error font-label-sm text-label-sm">3</span></button><div class="h-8 w-[1px] bg-outline-variant/40 hidden md:block"></div><a class="flex items-center gap-space-md pl-space-xs rounded-lg hover:bg-surface-container transition-colors py-1 px-1.5" data-path="settings-profile" href="#"><img alt="Dr. Sarah Lin Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/50" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAEVp4QaME8mzLol4b4kdKge5Iw02kwlZwtVkiq9a3VSUD4A7dpgOz9t3m3PBTY-nxerQoRtu64Al7_DgXlX7ir7A7B6Kz7fL7Zy827OegHFKZH_nab9zRlchJ79DqQ-CpmfxJZxS0SwJ7crcvsVRViPvM_UIyQkgPjCCm4QBtZpEYiYAOedbjGjcRjWnscxHuJ1X4MUG-p7Wl__C1En64ix9N4k_TsF2T4giLTELhevoWc9rc5UDl1Pw"/><div class="hidden xl:flex flex-col text-left"><span class="font-body-sm text-body-sm font-semibold text-on-surface leading-tight">Dr. Sarah Lin</span><span class="inline-flex items-center px-space-xs py-[1px] rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-[9px] uppercase tracking-wider font-semibold w-fit">Physiotherapist</span></div></a></div></div><div class="h-10 w-full px-margin-desktop bg-surface-container-low border-t border-outline-variant/20 flex items-center justify-between text-body-sm"><div class="flex items-center gap-space-sm text-on-surface-variant font-label-md text-label-md"><span class="material-symbols-outlined text-[16px] text-on-surface-variant">terminal</span><span class="font-semibold text-on-surface">Telemetry Hub</span><span class="text-outline-variant">/</span><span class="text-on-surface-variant">Kinematic Stream Active</span></div><div class="flex items-center gap-space-lg"><div class="flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span><span>SYNC ENGINE 120Hz</span></div><div class="hidden md:flex items-center gap-space-xs text-on-surface-variant font-label-sm text-label-sm"><span>MODEL: VIBE-POSE-3.2</span></div></div></div></header><main class="w-full pt-[7.5rem] bg-background min-h-screen"><div class="flex flex-col w-full">
+<!-- Subtle Ambient Top Gradient Strip -->
+<div class="w-full h-1 bg-gradient-to-r from-primary via-tertiary-container to-secondary-container opacity-80"></div>
+<!-- Main Container -->
+<div class="w-full px-margin-tablet lg:px-margin-desktop py-space-xl max-w-[1600px] mx-auto flex flex-col gap-space-xl">
+<!-- Breadcrumb & Status Monospace Tracker -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+<nav aria-label="Breadcrumbs" class="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant">
+<a class="hover:text-primary transition-colors flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-[16px]">sensors</span>
+<span>Telemetry Hub</span>
+</a>
+<span class="text-outline-variant font-label-sm">/</span>
+<span class="hover:text-on-surface transition-colors cursor-pointer">System Administration</span>
+<span class="text-outline-variant font-label-sm">/</span>
+<span class="text-on-surface font-semibold bg-surface-container px-space-xs py-[2px] rounded">User Profile &amp; Clinical Settings</span>
+</nav>
+<div class="flex items-center gap-space-md self-start md:self-auto font-label-sm text-label-sm">
+<div class="flex items-center gap-1.5 px-space-sm py-1 rounded bg-surface-container-high text-on-surface">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span>ISO 13485:2016 COMPLIANT</span>
+</div>
+<div class="text-on-surface-variant hidden sm:flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">verified_user</span>
+<span>HIPAA ENCLAVE SECURE</span>
+</div>
+</div>
+</div>
+<!-- Doctor Header Profile Identity Card -->
+<div class="relative overflow-hidden bg-surface-container-lowest rounded-xl shadow-sm p-space-lg lg:p-space-xl flex flex-col xl:flex-row items-start xl:items-center justify-between gap-space-xl">
+<!-- Background subtle technical mesh glow -->
+<div class="absolute right-0 top-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+<div class="flex flex-col sm:flex-row items-start sm:items-center gap-space-lg z-10">
+<!-- Profile Avatar with Verified Ring Indicator -->
+<div class="relative group">
+<img class="w-24 h-24 lg:w-28 lg:h-28 rounded-xl object-cover shadow-md" data-alt="Dr Sarah Lin high-resolution studio clinical portrait, professional sports physiotherapist, British Asian female in athletic performance lab scrubs, subtle warm analytical lighting, sharp focus, clean clinical backdrop" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAoRm6BBInR0NTlMIqVDZ2z27aCh6nS9kwXNNgHstdteXCib7WX-ZNe8hWRXdPKe9HWBbp6liRYqM9m_jVNBwa-F36upt0MFH43id-AjXIpFpBjUP1NLjB7PZ-bes5an8U5MxcbW9CSuVA971RxLvx0D3UR6EmseUjCM5mBjc2_fidKaGqidnUZHu6zARorhZKfjzqILwZGI4_bpuY8OMrv804Uqr0_QQ4z1JQ11YxpBiu4j7pKn2ek0w"/>
+<span class="absolute -bottom-2 -right-2 bg-secondary text-on-secondary w-7 h-7 rounded-lg flex items-center justify-center shadow-sm" title="Biomechanical Tier-2 Verified">
+<span class="material-symbols-outlined text-[16px]">medical_services</span>
+</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex flex-wrap items-center gap-space-sm">
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight">Dr. Sarah Lin, DPT, SCS</h1>
+<span class="px-space-sm py-0.5 rounded bg-surface-variant text-on-surface font-label-sm text-label-sm tracking-wider uppercase font-semibold">
+              Physiotherapist (Clinical Tier 2)
+            </span>
+<span class="px-space-sm py-0.5 rounded bg-secondary-container/60 text-on-secondary-fixed font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+              Active Status
+            </span>
+</div>
+<div class="flex flex-wrap items-center gap-y-1 gap-x-space-md font-body-sm text-body-sm text-on-surface-variant">
+<span class="flex items-center gap-1 text-on-surface font-medium">
+<span class="material-symbols-outlined text-[15px] text-primary">mail</span>
+              sarah.lin@biomech-institute.org
+            </span>
+<span class="text-outline-variant">•</span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[15px]">apartment</span>
+              UK Athletics High-Performance Biomechanics Lab
+            </span>
+<span class="text-outline-variant">•</span>
+<span class="flex items-center gap-1 font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]">calendar_today</span>
+              Member since March 2023
+            </span>
+</div>
+<div class="flex items-center gap-2 mt-1">
+<span class="font-label-sm text-label-sm text-on-surface-variant uppercase">Clinical Clearance Scope:</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface font-semibold">Track &amp; Field Cohort A</span>
+<span class="px-1.5 py-0.5 rounded bg-surface-container font-label-sm text-label-sm text-on-surface font-semibold">EPL Soccer Academy</span>
+</div>
+</div>
+</div>
+<!-- Quick Action / Readiness Mini Gauge -->
+<div class="flex flex-col sm:flex-row xl:flex-col items-stretch sm:items-center xl:items-end gap-space-sm w-full xl:w-auto z-10 bg-surface-container-low p-space-md rounded-xl">
+<div class="flex items-center justify-between xl:justify-end gap-space-lg w-full">
+<div class="flex flex-col text-left xl:text-right">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Credential Validation</span>
+<span class="font-headline-sm text-headline-sm text-secondary font-bold">Verified • 100%</span>
+</div>
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
+<span class="material-symbols-outlined text-[20px]">verified</span>
+</div>
+</div>
+<div class="w-full xl:w-48 bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
+<div class="bg-secondary h-1.5 rounded-full w-full"></div>
+</div>
+<span class="font-label-sm text-[10px] text-on-surface-variant text-left xl:text-right">License Re-certification due Dec 2026</span>
+</div>
+</div>
+<!-- Telemetry Tab Navigation -->
+<div class="w-full bg-surface-container-lowest p-space-xs rounded-xl shadow-sm flex items-center gap-space-xs overflow-x-auto">
+<button class="tab-btn px-space-md py-space-sm rounded-lg font-body-md text-body-md font-semibold transition-all bg-primary-container text-on-primary shadow-sm flex items-center gap-space-xs whitespace-nowrap" id="tab-account" onclick="switchTab('account')">
+<span class="material-symbols-outlined text-[18px]">badge</span>
+<span>Account Information</span>
+</button>
+<button class="tab-btn px-space-md py-space-sm rounded-lg font-body-md text-body-md font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center gap-space-xs whitespace-nowrap" id="tab-security" onclick="switchTab('security')">
+<span class="material-symbols-outlined text-[18px]">shield_lock</span>
+<span>Security &amp; Access</span>
+</button>
+<button class="tab-btn px-space-md py-space-sm rounded-lg font-body-md text-body-md font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center gap-space-xs whitespace-nowrap" id="tab-notifications" onclick="switchTab('notifications')">
+<span class="material-symbols-outlined text-[18px]">notifications_active</span>
+<span>Notification Triggers</span>
+</button>
+<button class="tab-btn px-space-md py-space-sm rounded-lg font-body-md text-body-md font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center gap-space-xs whitespace-nowrap" id="tab-apirigs" onclick="switchTab('apirigs')">
+<span class="material-symbols-outlined text-[18px]">hub</span>
+<span>API &amp; Edge Sensor Rigs</span>
+</button>
+<button class="tab-btn px-space-md py-space-sm rounded-lg font-body-md text-body-md font-medium text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all flex items-center gap-space-xs whitespace-nowrap" id="tab-activity" onclick="switchTab('activity')">
+<span class="material-symbols-outlined text-[18px]">history</span>
+<span>Session Activity</span>
+</button>
+</div>
+<!-- TAB 1: Account Information -->
+<div class="tab-content flex flex-col gap-space-xl" id="content-account">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
+<!-- Editable Main Form (8 Cols) -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg lg:p-space-xl flex flex-col gap-space-lg">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant tracking-wider">Clinical Practitioner Data</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Institutional Profile Details</h2>
+</div>
+<span class="font-label-sm text-label-sm px-2 py-1 bg-surface-container rounded text-on-surface-variant font-mono">ID: CLIN-88391</span>
+</div>
+<form class="flex flex-col gap-space-lg" id="profile-form" onsubmit="event.preventDefault(); showToast('Profile changes saved successfully.');">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="full-name">Full Name &amp; Academic Post-nominals</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2.5 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all" id="full-name" type="text" value="Dr. Sarah Lin, DPT, SCS"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-on-surface-variant text-[18px]">edit</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="clinical-email">Clinical Institutional Email</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2.5 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all" id="clinical-email" type="email" value="sarah.lin@biomech-institute.org"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-secondary text-[18px]">verified</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="phone-number">Emergency Pitchside Phone</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2.5 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all" id="phone-number" type="tel" value="+44 7700 900123"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-on-surface-variant text-[18px]">call</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="license-id">Clinical License / GMC Registration ID</label>
+<div class="relative">
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2.5 rounded-lg font-body-md font-mono focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all" id="license-id" type="text" value="#GMC-8839102"/>
+<span class="material-symbols-outlined absolute right-3 top-2.5 text-secondary text-[18px]">lock</span>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="timezone">Lab Timezone Standard</label>
+<select class="w-full bg-surface-container-low text-on-surface px-space-md py-2.5 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all" id="timezone">
+<option selected="">UTC+00:00 London (GMT/BST)</option>
+<option>UTC-05:00 Eastern Time (US &amp; Canada)</option>
+<option>UTC+01:00 Central European Time</option>
+<option>UTC+09:00 Tokyo High-Performance Lab</option>
+</select>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="sports">Primary Sport Specialization</label>
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2.5 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all" id="sports" type="text" value="Track &amp; Field (Sprints), Premier League Soccer"/>
+</div>
+</div>
+<!-- Pitchside Role Notes -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label-md text-label-md font-medium text-on-surface" for="clinical-notes">Pitchside Clinical Clearance Protocols</label>
+<textarea class="w-full bg-surface-container-low text-on-surface p-space-md rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container transition-all resize-none" id="clinical-notes" rows="3">Authorized for immediate pitch-side deload issuance, kinematic video triage, and high-velocity ground reaction force (GRF) asymmetry threshold overrides.</textarea>
+</div>
+<div class="flex flex-wrap items-center justify-between gap-space-md pt-space-sm">
+<div class="flex items-center gap-2 text-on-surface-variant font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-secondary">update</span>
+<span>Last institutional sync: Today at 08:42 GMT</span>
+</div>
+<div class="flex items-center gap-space-sm">
+<button class="px-space-md py-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-md font-medium transition-colors" type="reset">
+                  Discard
+                </button>
+<button class="px-space-lg py-space-sm rounded-lg bg-primary-container hover:bg-primary text-on-primary font-body-md font-semibold shadow-sm transition-colors flex items-center gap-1.5" type="submit">
+<span class="material-symbols-outlined text-[18px]">save</span>
+<span>Save Clinical Changes</span>
+</button>
+</div>
+</div>
+</form>
+</div>
+<!-- Lateral Column: Clinical Credentials & Equipment Assignment (4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Institutional Accreditation Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+<div class="flex items-center gap-space-sm">
+<div class="w-9 h-9 rounded-lg bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed">
+<span class="material-symbols-outlined text-[20px]">workspace_premium</span>
+</div>
+<div class="flex flex-col">
+<span class="font-headline-sm text-headline-sm text-on-surface">Clinical Certifications</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Validated by UK Health Council</span>
+</div>
+</div>
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between p-space-sm rounded bg-surface-container-low">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Sports Clinical Specialist (SCS)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">ABPTS Certified • Ref #94821</span>
+</div>
+<span class="font-label-sm text-[10px] bg-secondary-container text-on-secondary-fixed px-2 py-0.5 rounded font-semibold">VALID</span>
+</div>
+<div class="flex items-center justify-between p-space-sm rounded bg-surface-container-low">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Doctor of Physical Therapy (DPT)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">King's College London • 2018</span>
+</div>
+<span class="font-label-sm text-[10px] bg-secondary-container text-on-secondary-fixed px-2 py-0.5 rounded font-semibold">VALID</span>
+</div>
+<div class="flex items-center justify-between p-space-sm rounded bg-surface-container-low">
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">ISO 13485 Medical Software Operator</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">KinetiK Biomechanics • Level 3</span>
+</div>
+<span class="font-label-sm text-[10px] bg-secondary-container text-on-secondary-fixed px-2 py-0.5 rounded font-semibold">VALID</span>
+</div>
+</div>
+<button class="w-full py-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-medium transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined text-[16px]">upload_file</span>
+<span>Upload Renewal Certificate</span>
+</button>
+</div>
+<!-- Laboratory Environment Assignment -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-sm">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Assigned Hardware Hubs</span>
+<div class="flex items-center justify-between">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Rig Alpha (OptiTrack 16-Cam)</span>
+<span class="font-label-sm text-label-sm text-secondary font-mono">ONLINE</span>
+</div>
+<div class="w-full bg-surface-container h-1 rounded-full overflow-hidden">
+<div class="bg-secondary h-full w-full"></div>
+</div>
+<div class="flex items-center justify-between text-body-sm text-on-surface-variant">
+<span>Telemetry Calibration Offset</span>
+<span class="font-label-sm font-mono text-on-surface">±0.04mm RMS</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 2: Security & Access -->
+<div class="tab-content hidden flex-col gap-space-xl" id="content-security">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
+<!-- Clinical Security & 2FA Setup (7 Cols) -->
+<div class="lg:col-span-7 flex flex-col gap-space-lg">
+<!-- 2FA Status Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-space-sm">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/60 text-on-secondary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-[22px]">fingerprint</span>
+</div>
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Two-Factor Authentication (FIDO2)</h3>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Hardware Security Key &amp; WebAuthn Biometrics Enforced</span>
+</div>
+</div>
+<span class="px-space-sm py-1 rounded-full bg-secondary-container text-on-secondary-fixed font-label-sm text-label-sm font-semibold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+                ACTIVE
+              </span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">
+              Your account enforces hardware-level biometric validation (Yubikey 5Ci NFC &amp; Apple Touch ID) prior to decrypting athlete motion telemetry files or issuing pitch-side deload directives.
+            </p>
+<div class="flex flex-col gap-space-xs">
+<div class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">usb</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-medium text-on-surface">YubiKey 5C NFC (Primary Clinic Key)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Added: 14 Aug 2024 • Last used 35m ago</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors p-1" title="Revoke Key">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+<div class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[20px]">touch_app</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-medium text-on-surface">MacBook Pro TouchID Enclave</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Added: 12 Mar 2023 • Last used active session</span>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-error transition-colors p-1" title="Revoke Biometric">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+</button>
+</div>
+</div>
+<div class="pt-space-xs flex items-center gap-space-sm">
+<button class="px-space-md py-2 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-semibold transition-colors flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">add_moderator</span>
+<span>Register Additional Security Key</span>
+</button>
+</div>
+</div>
+<!-- Password Update with Visual Strength Meter -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+<div class="flex flex-col">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Update Practitioner Password</h3>
+<span class="font-body-sm text-body-sm text-on-surface-variant">Requires minimum 14 characters including cryptographic symbols.</span>
+</div>
+<form class="flex flex-col gap-space-md" onsubmit="event.preventDefault(); showToast('Password updated.');">
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface" for="curr-pass">Current Password</label>
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container" id="curr-pass" type="password" value="••••••••••••••••"/>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface" for="new-pass">New Clinical Password</label>
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container" id="new-pass" placeholder="At least 14 characters" type="password"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="font-label-md text-label-md text-on-surface" for="confirm-pass">Confirm New Password</label>
+<input class="w-full bg-surface-container-low text-on-surface px-space-md py-2 rounded-lg font-body-md focus:bg-surface-container-lowest focus:outline-none focus:ring-2 focus:ring-primary-container" id="confirm-pass" placeholder="Re-type password" type="password"/>
+</div>
+</div>
+<!-- Password Strength Meter -->
+<div class="flex flex-col gap-1.5 bg-surface-container-low p-space-sm rounded-lg">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Entropy Rating: Very High (112 bits)</span>
+<span class="text-secondary font-semibold">Compliant with NHS Digital Spec</span>
+</div>
+<div class="grid grid-cols-4 gap-1.5 w-full">
+<div class="h-1.5 rounded-full bg-secondary"></div>
+<div class="h-1.5 rounded-full bg-secondary"></div>
+<div class="h-1.5 rounded-full bg-secondary"></div>
+<div class="h-1.5 rounded-full bg-secondary"></div>
+</div>
+</div>
+<div class="flex justify-end pt-space-xs">
+<button class="px-space-md py-2 rounded-lg bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-body-md font-semibold transition-colors" type="submit">
+                  Rotate Password
+                </button>
+</div>
+</form>
+</div>
+</div>
+<!-- Active Sessions Feed (5 Cols) -->
+<div class="lg:col-span-5 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Hardware Auditing</span>
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Active Clinical Sessions</h3>
+</div>
+<button class="text-error hover:text-on-error-container font-label-sm text-label-sm font-semibold transition-colors" onclick="showToast('Remote sessions de-authenticated.');">
+              Terminate Other Sessions
+            </button>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Live hardware nodes logged in with Dr. Lin's telemetry decryption keys.
+          </p>
+<div class="flex flex-col gap-space-sm">
+<!-- Session 1: Current Chrome -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs relative overflow-hidden">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[22px]">desktop_mac</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Biomechanics Workstation #01</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Chrome 128 • macOS Sonoma • 192.168.10.45</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-primary-container text-on-primary font-label-sm text-[10px] font-semibold">CURRENT</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span>London Biomechanics Center, Lab Room 3</span>
+<span class="text-secondary font-mono">0ms ping</span>
+</div>
+</div>
+<!-- Session 2: iPad Pro Pitchside -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-secondary text-[22px]">tablet_mac</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">iPad Pro Pitchside Hub</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">KinetiK iOS Field App • London, UK</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-fixed font-label-sm text-[10px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary animate-pulse"></span>
+                  ACTIVE NOW
+                </span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span>Olympic Park Outdoor Track, Pit 2</span>
+<button class="text-error hover:underline">Sign out</button>
+</div>
+</div>
+<!-- Session 3: Edge Rig Terminal -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-on-surface-variant text-[22px]">developer_board</span>
+<div class="flex flex-col">
+<span class="font-body-sm text-body-sm font-semibold text-on-surface">Edge Rig Terminal #04</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">NVIDIA Jetson AGX Orin • High-Speed Rig</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded bg-surface-container-highest text-on-surface-variant font-label-sm text-[10px] font-semibold">IDLE</span>
+</div>
+<div class="flex items-center justify-between text-on-surface-variant font-label-sm text-label-sm pt-1">
+<span>Connected 2h ago • IP: 10.24.1.88</span>
+<button class="text-error hover:underline">Revoke Token</button>
+</div>
+</div>
+</div>
+<!-- Audit Log Monospace preview -->
+<div class="p-space-sm bg-surface-container rounded-lg flex items-center justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>Last Failed Challenge: None in past 90 days</span>
+<span class="text-secondary font-semibold">AUDIT CLEAN</span>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 3: Telemetry & Clinical Notification Triggers -->
+<div class="tab-content hidden flex-col gap-space-xl" id="content-notifications">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
+<!-- Clinical Trigger Rules (8 Cols) -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg lg:p-space-xl flex flex-col gap-space-lg">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Automated Risk Signals</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Pitchside Clinical Alerting Logic</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+              Configure real-time algorithmic triggers when kinematic thresholds are exceeded during live capture or video batch parsing.
+            </p>
+</div>
+<div class="flex flex-col gap-space-md">
+<!-- Trigger 1: High Risk Valgus & Asymmetry -->
+<div class="p-space-lg rounded-xl bg-surface-container-low flex flex-col gap-space-sm transition-all hover:shadow-sm">
+<div class="flex items-start justify-between gap-space-md">
+<div class="flex items-start gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-error-container text-on-error-container flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">warning</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Acute Knee Valgus &amp; Bilateral Asymmetry Spike</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+                      Instant auditory push to pitchside iPad and priority SMS when dynamic knee valgus exceeds &gt; 15° or landing ground reaction force asymmetry exceeds &gt; 15%.
+                    </span>
+</div>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input checked="" class="sr-only peer" onchange="showToast('High Risk Alert configuration updated');" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Parameter Tuning Micro-sliders -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-md pt-space-xs">
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-1">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">Valgus Angle Ceiling</span>
+<span class="text-primary font-mono font-bold">15.0°</span>
+</div>
+<input class="w-full accent-primary-container h-1.5 bg-surface-container rounded-lg appearance-none cursor-pointer" max="25" min="10" type="range" value="15"/>
+</div>
+<div class="bg-surface-container-lowest p-space-sm rounded-lg flex flex-col gap-1">
+<div class="flex justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">L/R Asymmetry Delta</span>
+<span class="text-primary font-mono font-bold">15% Threshold</span>
+</div>
+<input class="w-full accent-primary-container h-1.5 bg-surface-container rounded-lg appearance-none cursor-pointer" max="30" min="5" type="range" value="15"/>
+</div>
+</div>
+</div>
+<!-- Trigger 2: Video Batch Processing Completed -->
+<div class="p-space-lg rounded-xl bg-surface-container-low flex items-start justify-between gap-space-md transition-all hover:shadow-sm">
+<div class="flex items-start gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-surface-container-highest text-on-surface flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">movie_filter</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Video Batch Processing &amp; Pose Reconstruction Finished</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+                    Send webhook signal and workstation notification when VIBE-Pose 3.2 neural kinematics finish keypoint extraction for session uploads.
+                  </span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input checked="" class="sr-only peer" onchange="showToast('Video completion notifications toggled');" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Trigger 3: Weekly Biomechanical Cohort Digest -->
+<div class="p-space-lg rounded-xl bg-surface-container-low flex items-start justify-between gap-space-md transition-all hover:shadow-sm">
+<div class="flex items-start gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">summarize</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Weekly Biomechanical Longitudinal Digest</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+                    Compile cross-athlete tendon strain cumulative trends every Monday at 06:00 UTC and dispatch encrypted PDF to medical director.
+                  </span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input checked="" class="sr-only peer" onchange="showToast('Weekly cohort digest preference updated');" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Trigger 4: Acute Deload Recommendation -->
+<div class="p-space-lg rounded-xl bg-surface-container-low flex items-start justify-between gap-space-md transition-all hover:shadow-sm">
+<div class="flex items-start gap-space-sm">
+<div class="w-8 h-8 rounded-lg bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">heart_broken</span>
+</div>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Mandatory Rest / Deload Intervention Prompt</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">
+                    Generate an immediate training modification voucher when acute:chronic workload ratio (ACWR) spikes past 1.62.
+                  </span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer shrink-0 mt-1">
+<input class="sr-only peer" onchange="showToast('Deload alert preference toggled');" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-surface-container-lowest after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Notification Channels & Diagnostic Dispatch (4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Notification Channels</h3>
+<div class="flex flex-col gap-space-sm">
+<div class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">phone_iphone</span>
+<span class="font-body-sm text-body-sm font-medium text-on-surface">Apple APNs Field Push</span>
+</div>
+<span class="font-label-sm text-secondary font-mono">CONNECTED</span>
+</div>
+<div class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">sms</span>
+<span class="font-body-sm text-body-sm font-medium text-on-surface">Critical SMS Relay</span>
+</div>
+<span class="font-label-sm text-secondary font-mono">VERIFIED</span>
+</div>
+<div class="flex items-center justify-between p-space-sm bg-surface-container-low rounded-lg">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-on-surface-variant text-[18px]">mail</span>
+<span class="font-body-sm text-body-sm font-medium text-on-surface">Encrypted SMTP Digest</span>
+</div>
+<span class="font-label-sm text-secondary font-mono">ACTIVE</span>
+</div>
+</div>
+<!-- Pitchside Quiet Hours Policy -->
+<div class="pt-space-xs flex flex-col gap-1.5">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant font-semibold">Pitchside Quiet Hours</span>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Suppress non-critical digests between 22:00 - 06:00 London Time. Acute risk alerts remain unsuppressed.</p>
+<div class="flex items-center gap-2 mt-1">
+<span class="px-2 py-0.5 rounded bg-surface-container font-label-sm text-label-sm font-mono text-on-surface">22:00 - 06:00 GMT</span>
+<span class="text-secondary font-label-sm text-label-sm font-semibold">ENFORCED</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 4: API & Edge Sensor Rigs -->
+<div class="tab-content hidden flex-col gap-space-xl" id="content-apirigs">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-xl">
+<!-- Edge Sensor & API Key Module (8 Cols) -->
+<div class="lg:col-span-8 bg-surface-container-lowest rounded-xl shadow-sm p-space-lg lg:p-space-xl flex flex-col gap-space-lg">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Inference &amp; Rig Hardware Integration</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">VIBE-Pose 3.2 Edge Engine Access</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant mt-1">
+              Production tokens provisioned for real-time kinematic inferencing on local GPU clusters and camera synchronization rigs.
+            </p>
+</div>
+<!-- Token Card -->
+<div class="bg-surface-container-low p-space-lg rounded-xl flex flex-col gap-space-md">
+<div class="flex flex-wrap items-center justify-between gap-space-sm">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary text-[24px]">key</span>
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Live Telemetry Edge Token (Rig Alpha &amp; Pitchside)</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">Scope: pose.inference:write, telemetry:stream</span>
+</div>
+</div>
+<span class="px-space-sm py-0.5 rounded bg-secondary-container text-on-secondary-fixed font-label-sm text-label-sm font-semibold">
+                ACTIVE • 120Hz STREAM
+              </span>
+</div>
+<!-- Token Box with Copy Button -->
+<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-space-xs bg-surface-container-lowest p-space-sm rounded-lg">
+<div class="flex-1 font-mono text-body-sm text-on-surface truncate px-2 select-all" id="api-token-text">
+                ktk_live_vibe32_88f01b3e9a74c10a394bc88279d01f2
+              </div>
+<div class="flex items-center gap-space-xs shrink-0">
+<button class="px-space-md py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-semibold transition-colors flex items-center gap-1" onclick="copyApiToken()">
+<span class="material-symbols-outlined text-[16px]">content_copy</span>
+<span>Copy</span>
+</button>
+<button class="px-space-md py-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-body-sm font-semibold transition-colors flex items-center gap-1" onclick="regenerateApiToken()">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+<span>Rotate</span>
+</button>
+</div>
+</div>
+<div class="flex flex-wrap items-center justify-between text-on-surface-variant font-label-sm text-label-sm gap-space-sm">
+<span>Token created: 18 January 2025 • Automatic rotation every 90 days</span>
+<span class="text-secondary font-mono">RATE LIMIT: 240 req/sec</span>
+</div>
+</div>
+<!-- Connected Edge Sensor Rigs Inventory -->
+<div class="flex flex-col gap-space-sm">
+<span class="font-headline-sm text-headline-sm text-on-surface">Paired Pitch-Side Hardware Rigs</span>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- Rig 1 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between gap-space-sm">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Rig #01 - High-Speed Track Rig</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">ID: RIG-UK-ATH-01</span>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant flex flex-col gap-1">
+<div class="flex justify-between"><span>Cameras:</span> <span class="font-semibold text-on-surface">8x Sony Pregius 240fps</span></div>
+<div class="flex justify-between"><span>Inference Rig:</span> <span class="font-semibold text-on-surface">RTX 4090 Mobile Workstation</span></div>
+<div class="flex justify-between"><span>Latency:</span> <span class="text-secondary font-mono">4.2ms</span></div>
+</div>
+<button class="w-full py-1.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-medium transition-colors">
+                  Run Field Calibrate
+                </button>
+</div>
+<!-- Rig 2 -->
+<div class="p-space-md rounded-xl bg-surface-container-low flex flex-col justify-between gap-space-sm">
+<div class="flex items-start justify-between">
+<div class="flex flex-col">
+<span class="font-body-md text-body-md font-semibold text-on-surface">Rig #02 - Football Academy Pitch 4</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">ID: RIG-PREM-04</span>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-secondary"></span>
+</div>
+<div class="font-label-sm text-label-sm text-on-surface-variant flex flex-col gap-1">
+<div class="flex justify-between"><span>Cameras:</span> <span class="font-semibold text-on-surface">4x Flir Blackfly S GigE</span></div>
+<div class="flex justify-between"><span>Inference Rig:</span> <span class="font-semibold text-on-surface">Jetson AGX Orin 64GB</span></div>
+<div class="flex justify-between"><span>Latency:</span> <span class="text-secondary font-mono">8.9ms</span></div>
+</div>
+<button class="w-full py-1.5 rounded bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-medium transition-colors">
+                  Run Field Calibrate
+                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Telemetry Data Stream Diagnostics (4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg flex flex-col gap-space-md">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Stream Bandwidth HUD</h3>
+<!-- Inline SVG Sparkline / Kinematic Rate Telemetry -->
+<div class="w-full bg-surface-container-low p-space-md rounded-xl flex flex-col gap-2">
+<div class="flex items-center justify-between font-label-sm text-label-sm">
+<span class="text-on-surface-variant">PACKET FLOW RATE</span>
+<span class="text-primary font-mono font-bold">120.4 FPS</span>
+</div>
+<svg class="w-full h-16 text-primary" fill="none" viewbox="0 0 200 60">
+<path d="M0 45 C 20 40, 40 50, 60 20 C 80 -10, 100 50, 120 30 C 140 10, 160 40, 180 25 L 200 28" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path>
+<path d="M0 45 C 20 40, 40 50, 60 20 C 80 -10, 100 50, 120 30 C 140 10, 160 40, 180 25 L 200 28 L 200 60 L 0 60 Z" fill="currentColor" fill-opacity="0.08"></path>
+</svg>
+<div class="flex justify-between font-label-sm text-label-sm text-on-surface-variant">
+<span>0.0s</span>
+<span>Pose Confidence: 99.4%</span>
+<span>Live</span>
+</div>
+</div>
+<div class="flex flex-col gap-2 font-body-sm text-body-sm">
+<div class="flex justify-between py-1">
+<span class="text-on-surface-variant">Pose Model Checksum</span>
+<span class="font-mono text-on-surface font-semibold">SHA256:7b1e...c94a</span>
+</div>
+<div class="flex justify-between py-1">
+<span class="text-on-surface-variant">Sensor Jitter</span>
+<span class="font-mono text-secondary">&lt; 0.2ms</span>
+</div>
+<div class="flex justify-between py-1">
+<span class="text-on-surface-variant">Total Packets Evaluated</span>
+<span class="font-mono text-on-surface font-semibold">1,482,900</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- TAB 5: Session Activity & Historical Audit Log -->
+<div class="tab-content hidden flex-col gap-space-xl" id="content-activity">
+<div class="bg-surface-container-lowest rounded-xl shadow-sm p-space-lg lg:p-space-xl flex flex-col gap-space-lg">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-md">
+<div class="flex flex-col">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant">Regulatory Compliance Record</span>
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Practitioner Activity &amp; Kinematic Audit Trail</h2>
+</div>
+<button class="px-space-md py-space-sm rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface font-body-sm font-semibold transition-colors flex items-center gap-1.5 self-start md:self-auto" onclick="showToast('Audit log export initiated in JSON-LD format.');">
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+<span>Export Verified Audit Log (JSON)</span>
+</button>
+</div>
+<!-- Audit Table -->
+<div class="overflow-x-auto w-full">
+<table class="w-full text-left font-body-sm text-body-sm">
+<thead>
+<tr class="bg-surface-container-low text-on-surface-variant font-label-sm text-label-sm uppercase tracking-wider">
+<th class="py-3 px-space-md rounded-l">Timestamp (UTC)</th>
+<th class="py-3 px-space-md">Action / Event</th>
+<th class="py-3 px-space-md">Cohort / Subject</th>
+<th class="py-3 px-space-md">Hardware Node</th>
+<th class="py-3 px-space-md rounded-r text-right">Verification</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-surface-container">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-space-md font-mono text-on-surface">2025-02-23 10:48:12</td>
+<td class="py-3 px-space-md font-semibold text-on-surface">Kinematic Deload Directive Issued</td>
+<td class="py-3 px-space-md text-on-surface-variant">Athlete #104 (Marcus Vane)</td>
+<td class="py-3 px-space-md font-mono text-on-surface-variant">iPad Pro Pitchside Hub</td>
+<td class="py-3 px-space-md text-right">
+<span class="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-fixed font-label-sm text-label-sm font-semibold">SIGNED FIDO2</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-space-md font-mono text-on-surface">2025-02-23 09:14:02</td>
+<td class="py-3 px-space-md font-semibold text-on-surface">Video Pose Estimation Batch Run</td>
+<td class="py-3 px-space-md text-on-surface-variant">Track &amp; Field 100m Hurdle Trials</td>
+<td class="py-3 px-space-md font-mono text-on-surface-variant">Biomech Workstation #01</td>
+<td class="py-3 px-space-md text-right">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">ISO VALID</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-space-md font-mono text-on-surface">2025-02-22 16:30:45</td>
+<td class="py-3 px-space-md font-semibold text-on-surface">Threshold Override: Knee Valgus &gt; 18°</td>
+<td class="py-3 px-space-md text-on-surface-variant">Sprint Group B (Rehab Cohort)</td>
+<td class="py-3 px-space-md font-mono text-on-surface-variant">iPad Pro Pitchside Hub</td>
+<td class="py-3 px-space-md text-right">
+<span class="px-2 py-0.5 rounded bg-secondary-container text-on-secondary-fixed font-label-sm text-label-sm font-semibold">SIGNED FIDO2</span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-space-md font-mono text-on-surface">2025-02-22 14:05:19</td>
+<td class="py-3 px-space-md font-semibold text-on-surface">Edge Rig Calibration Acknowledged</td>
+<td class="py-3 px-space-md text-on-surface-variant">Rig Alpha (OptiTrack 16-Cam)</td>
+<td class="py-3 px-space-md font-mono text-on-surface-variant">Edge Terminal #04</td>
+<td class="py-3 px-space-md text-right">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-label-sm text-label-sm font-semibold">AUTO PASS</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+<!-- Section 5: Danger Zone (Global Persistent Footer Section) -->
+<div class="w-full bg-error-container/20 rounded-xl p-space-lg lg:p-space-xl flex flex-col gap-space-md">
+<div class="flex items-center gap-space-sm text-error">
+<span class="material-symbols-outlined text-[24px]">crisis_alert</span>
+<h3 class="font-headline-sm text-headline-sm font-semibold">Critical Administrative Clearance • Danger Zone</h3>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-3xl">
+        Revoking edge authorizations will instantaneously kill active high-frequency kinematic camera pipelines pitch-side. Exporting personal audit history generates a cryptographic package of Dr. Lin's digital approvals.
+      </p>
+<div class="flex flex-wrap items-center justify-between gap-space-md pt-space-xs">
+<div class="flex flex-wrap items-center gap-space-sm">
+<button class="px-space-md py-space-sm bg-error hover:bg-on-error-container text-on-error rounded-lg font-body-md font-semibold transition-colors flex items-center gap-1.5 shadow-sm" onclick="confirmRevocation()">
+<span class="material-symbols-outlined text-[18px]">phonelink_erase</span>
+<span>Revoke All Pitch-Side Edge Rig Tokens</span>
+</button>
+<button class="px-space-md py-space-sm bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg font-body-md font-semibold transition-colors flex items-center gap-1.5" onclick="showToast('Exporting GDPR/HIPAA clinical audit dossier...');">
+<span class="material-symbols-outlined text-[18px]">download_for_offline</span>
+<span>Export Personal Clinical Audit Dossier</span>
+</button>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">ENCLAVE CLEARANCE: TIER-2 LEAD</span>
+</div>
+</div>
+</div>
+<!-- Micro-Interaction Toast Feedback Element -->
+<div class="fixed bottom-6 right-6 transform translate-y-24 opacity-0 transition-all duration-300 z-50 bg-inverse-surface text-inverse-on-surface px-space-lg py-space-md rounded-xl shadow-xl flex items-center gap-space-md" id="toast-notification">
+<span class="material-symbols-outlined text-secondary-fixed text-[20px]">check_circle</span>
+<span class="font-body-md text-body-md font-medium" id="toast-message">Notification triggered.</span>
+</div>
+</div>
+<script>
+  function switchTab(tabId) {
+    // Hide all tabs
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(el => el.classList.add('hidden'));
+
+    // Reset button styles
+    const buttons = document.querySelectorAll('.tab-btn');
+    buttons.forEach(btn => {
+      btn.classList.remove('bg-primary-container', 'text-on-primary', 'shadow-sm');
+      btn.classList.add('text-on-surface-variant', 'font-medium');
+    });
+
+    // Activate selected tab content
+    const targetContent = document.getElementById('content-' + tabId);
+    if (targetContent) {
+      targetContent.classList.remove('hidden');
+    }
+
+    // Activate selected button
+    const targetBtn = document.getElementById('tab-' + tabId);
+    if (targetBtn) {
+      targetBtn.classList.remove('text-on-surface-variant', 'font-medium');
+      targetBtn.classList.add('bg-primary-container', 'text-on-primary', 'shadow-sm', 'font-semibold');
+    }
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast-notification');
+    const msgEl = document.getElementById('toast-message');
+    if (!toast || !msgEl) return;
+
+    msgEl.textContent = message;
+    toast.classList.remove('translate-y-24', 'opacity-0');
+    toast.classList.add('translate-y-0', 'opacity-100');
+
+    setTimeout(() => {
+      toast.classList.add('translate-y-24', 'opacity-0');
+      toast.classList.remove('translate-y-0', 'opacity-100');
+    }, 3200);
+  }
+
+  function copyApiToken() {
+    const tokenText = document.getElementById('api-token-text').innerText.trim();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(tokenText);
+    }
+    showToast('VIBE-Pose Edge Token copied to clipboard');
+  }
+
+  function regenerateApiToken() {
+    const chars = '0123456789abcdef';
+    let rand = '';
+    for (let i = 0; i < 24; i++) {
+      rand += chars[Math.floor(Math.random() * chars.length)];
+    }
+    const newToken = 'ktk_live_vibe32_' + rand;
+    document.getElementById('api-token-text').innerText = newToken;
+    showToast('New production token generated & provisioned.');
+  }
+
+  function confirmRevocation() {
+    if (window.confirm("WARNING: This will immediately drop real-time feeds on all pitch-side cameras and OptiTrack sensors. Continue?")) {
+      showToast('All pitchside edge sensor authorizations revoked.');
+    }
+  }
+</script></main><footer class="w-full bg-surface-container-low border-t border-outline-variant/30 py-space-lg"><div class="w-full px-margin-desktop flex flex-col md:flex-row items-center justify-between gap-space-md text-on-surface-variant font-label-sm text-label-sm"><div>© 2025 KinetiK Biomechanics Inc. High-Performance Movement Risk Analytics.</div><div class="flex items-center gap-space-lg"><span>API v2.4.1</span><span>CALIBRATION: PASSED</span><span>HIPAA / GDPR VALIDATED</span></div></div></footer></body></html>

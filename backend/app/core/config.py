@@ -21,16 +21,16 @@ class Settings(BaseSettings):
     POSE_MODEL_DIR: str = "models"
     
     # Progressive analysis / live progress
-    PROGRESS_CHUNK_FRAMES: int = 20       # sampled frames per progress update
+    PROGRESS_CHUNK_FRAMES: int = 8        # sampled frames per progress update (fast updates)
     POSE_WORKERS: int = 0                 # parallel MediaPipe instances (0 = auto: min(4, cpu count))
-    PREVIEW_EVERY_CHUNKS: int = 2         # refresh live preview frame every N chunks
+    PREVIEW_EVERY_CHUNKS: int = 1         # refresh live preview frame every N chunks
     # Pose runs on a downscaled ROI: MediaPipe resizes to ~256px internally,
     # so feeding a 4K crop only adds conversion cost (mapping is scale-invariant)
-    POSE_MAX_ROI_DIM: int = 960
+    POSE_MAX_ROI_DIM: int = 640
     # MediaPipe pose model complexity: 0 = lite, 1 = full, 2 = heavy
-    POSE_MODEL_COMPLEXITY: int = 1
+    POSE_MODEL_COMPLEXITY: int = 0
     # Cap annotated-video width: 4K encodes dominate runtime and file size
-    ANNOTATED_MAX_WIDTH: int = 1280
+    ANNOTATED_MAX_WIDTH: int = 960
 
     # --- Annotated output framing ("smart crop") ---    # When enabled, the annotated video (and the live preview) is cropped to a
     # moving window that follows the tracked athlete, so the full body fills the
@@ -87,10 +87,10 @@ class Settings(BaseSettings):
     # bounding box is scale-invariant, so the detector does not need the full
     # source resolution: frames wider than this are downscaled before YOLO and
     # the returned box is scaled back up. 0 disables the downscale.
-    DETECT_MAX_WIDTH: int = 1280
+    DETECT_MAX_WIDTH: int = 640
     # Inference size passed to YOLO. Left at the Ultralytics default (640) this
     # is explicit rather than implicit, and safely tunable per deployment.
-    DETECT_IMGSZ: int = 640
+    DETECT_IMGSZ: int = 480
 
     # --- Environment / email delivery ---
     # "development" prints OTPs and links to the console instead of emailing

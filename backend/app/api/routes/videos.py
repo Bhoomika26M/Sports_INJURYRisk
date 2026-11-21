@@ -152,12 +152,17 @@ def list_videos(
         athlete = VideoService.check_athlete_access(current_user, athlete_id, db)
         query = query.filter(Video.athlete_id == athlete_id)
     else:
-        # If no athlete filter, only show user's own videos (if athlete)
+        # If no athlete filter, show user's own videos PLUS system benchmark videos
         if current_user.role == "athlete":
             from app.models.athlete import Athlete
             athlete = db.query(Athlete).filter(Athlete.user_id == current_user.id).first()
+            benchmark_athletes = db.query(Athlete).filter(
+                (Athlete.athlete_id == "BENCHMARK-GOLD") | (Athlete.user_id.is_(None))
+            ).all()
+            allowed_athlete_ids = [b.id for b in benchmark_athletes]
             if athlete:
-                query = query.filter(Video.athlete_id == athlete.id)
+                allowed_athlete_ids.append(athlete.id)
+            query = query.filter(Video.athlete_id.in_(allowed_athlete_ids))
     
     return query.all()
 
