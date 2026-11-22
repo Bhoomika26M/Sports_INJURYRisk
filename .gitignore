@@ -15,20 +15,29 @@ ENV/
 .pytest_cache/
 .hypothesis/
 
-# Real-footage validation corpus: downloaded from public repos, unknown licences — not redistributed.
-data/real-corpus/*.mp4
-data/real-corpus/*.mov
-data/real-corpus/*.webm
-.coverage
-htmlcov/
+# Videos and Media (never committed to keep repo size minimal)
+*.mp4
+*.mov
+*.avi
+*.webm
+*.mkv
+*.flv
+*.wmv
+*.m4v
+uploads/
+backend/uploads/
+processed/
+backend/processed/
+test-assets/
 
 # Models / Data (auto-downloaded at runtime, never committed)
 *.pt
 *.onnx
 *.weights
 *.task
-uploads/
-test-assets/
+*.bin
+*.npz
+
 
 # Node
 node_modules/
