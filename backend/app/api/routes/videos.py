@@ -8,6 +8,7 @@ from app.db.database import get_db, SessionLocal
 from app.core.security import get_current_active_user
 from app.core.dependencies import require_admin
 from app.models.user import User
+from app.models.athlete import Athlete
 from app.models.video import Video, ProcessingStatus
 from app.models.pose_analysis import PoseAnalysis
 from app.models.biomechanical_analysis import BiomechanicalAnalysis
