@@ -138,23 +138,41 @@ def list_demo_samples():
             size_kb = round(f.stat().st_size / 1024, 1)
             size_str = f"{size_kb} KB" if size_kb < 1024 else f"{round(size_kb/1024, 2)} MB"
             name_lower = f.stem.lower()
-            if "jump" in name_lower or "drop" in name_lower or "landing" in name_lower:
+            if "deep_squat_baseline" in name_lower:
+                clean_title = "Deep Squat — Baseline"
+                suggested_activity = "Deep Squat"
+            elif "deep_squat_valgus" in name_lower or "deep_squat_increased" in name_lower:
+                clean_title = "Deep Squat — Increased knee-inward movement"
+                suggested_activity = "Deep Squat"
+            elif "drop_jump_baseline" in name_lower:
+                clean_title = "Drop Jump — Baseline"
                 suggested_activity = "Drop Jump"
+            elif "drop_jump_valgus" in name_lower or "drop_jump_increased" in name_lower:
+                clean_title = "Drop Jump — Increased knee-inward movement"
+                suggested_activity = "Drop Jump"
+            elif "jump" in name_lower or "drop" in name_lower or "landing" in name_lower:
+                suggested_activity = "Drop Jump"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
             elif "cut" in name_lower or "side" in name_lower:
                 suggested_activity = "Side Cut"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
             elif "squat" in name_lower:
                 suggested_activity = "Deep Squat"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
             elif "sprint" in name_lower:
                 suggested_activity = "Sprinting"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
             elif "run" in name_lower:
                 suggested_activity = "Running"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
             elif "throw" in name_lower:
                 suggested_activity = "Throwing"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
             else:
                 suggested_activity = "Drop Jump"
+                clean_title = f.stem.replace("synthetic_", "").replace("sample_", "Movement ").replace("_", " ").replace("-", " ").title()
 
             is_synth = "synthetic" in name_lower or "sample" in name_lower or "marcus" in name_lower
-            clean_title = f.stem.replace("synthetic_", "").replace("_", " ").replace("-", " ").title()
             samples.append({
                 "filename": f.name,
                 "title": clean_title,
@@ -199,29 +217,56 @@ def load_demo_sample(
     duration = round(frame_count / fps, 2) if fps > 0 else 0.0
     cap.release()
 
+    name_lower = safe_name.lower()
     if not activity_type:
-        name_lower = safe_name.lower()
-        if "jump" in name_lower or "drop" in name_lower or "landing" in name_lower:
+        if "deep_squat_baseline" in name_lower:
+            inferred_activity = "Deep Squat"
+            clean_base = "Deep Squat — Baseline"
+        elif "deep_squat_valgus" in name_lower or "deep_squat_increased" in name_lower:
+            inferred_activity = "Deep Squat"
+            clean_base = "Deep Squat — Increased knee-inward movement"
+        elif "drop_jump_baseline" in name_lower:
             inferred_activity = "Drop Jump"
+            clean_base = "Drop Jump — Baseline"
+        elif "drop_jump_valgus" in name_lower or "drop_jump_increased" in name_lower:
+            inferred_activity = "Drop Jump"
+            clean_base = "Drop Jump — Increased knee-inward movement"
+        elif "jump" in name_lower or "drop" in name_lower or "landing" in name_lower:
+            inferred_activity = "Drop Jump"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
         elif "cut" in name_lower or "side" in name_lower:
             inferred_activity = "Side Cut"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
         elif "squat" in name_lower:
             inferred_activity = "Deep Squat"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
         elif "sprint" in name_lower:
             inferred_activity = "Sprinting"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
         elif "run" in name_lower:
             inferred_activity = "Running"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
         elif "throw" in name_lower:
             inferred_activity = "Throwing"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
         else:
             inferred_activity = "Drop Jump"
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
     else:
         inferred_activity = activity_type if activity_type in ALLOWED_MOVEMENTS else "Drop Jump"
+        if "deep_squat_baseline" in name_lower:
+            clean_base = "Deep Squat — Baseline"
+        elif "deep_squat_valgus" in name_lower or "deep_squat_increased" in name_lower:
+            clean_base = "Deep Squat — Increased knee-inward movement"
+        elif "drop_jump_baseline" in name_lower:
+            clean_base = "Drop Jump — Baseline"
+        elif "drop_jump_valgus" in name_lower or "drop_jump_increased" in name_lower:
+            clean_base = "Drop Jump — Increased knee-inward movement"
+        else:
+            clean_base = safe_name.replace("synthetic_", "").replace("sample_", "Movement ").replace(".mp4", "").replace("_", " ").title()
 
     is_synth = "synthetic" in safe_name.lower() or "sample" in safe_name.lower() or "marcus" in safe_name.lower()
-    clean_base = safe_name.replace("synthetic_", "").replace(".mp4", "").replace("_", " ").title()
-    default_title = f"Synthetic Demo: {clean_base}" if is_synth else f"Demo: {clean_base}"
-    session_title = title or default_title
+    session_title = title or clean_base
 
     video_record = VideoRecord(
         athlete_id=athlete_id or 1,

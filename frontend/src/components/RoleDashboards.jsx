@@ -2,13 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { Users, ShieldAlert, Award, Activity, Heart, CheckCircle2, AlertTriangle, ArrowUpRight, TrendingUp, Sparkles, Filter, Database, Server, HardDrive, ShieldCheck, UserCheck } from 'lucide-react';
 import { api } from '../api/client';
 
-export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
+export default function RoleDashboards({ activeRole = 'athlete', setActiveRole, injuryRisk, athlete }) {
   const [coachData, setCoachData] = useState(null);
   const [physioData, setPhysioData] = useState(null);
   const [scientistData, setScientistData] = useState(null);
   const [adminData, setAdminData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [adminRoleFilter, setAdminRoleFilter] = useState('all');
+  const [selectedPerspective, setSelectedPerspective] = useState(activeRole);
+
+  const currentRole = setActiveRole ? activeRole : selectedPerspective;
+  const changeRole = setActiveRole || setSelectedPerspective;
+
+  const perspectives = [
+    { id: 'athlete', label: 'Athlete Readiness', icon: Award },
+    { id: 'coach', label: 'Coach Squad', icon: Users },
+    { id: 'physiotherapist', label: 'Clinical Physio', icon: ShieldAlert },
+    { id: 'sports_scientist', label: 'Sports Science', icon: Activity },
+    { id: 'administrator', label: 'Administration', icon: Database },
+  ];
+
+  const renderPerspectiveSelector = () => (
+    <div className="bg-white p-3 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        <Award className="w-4 h-4 text-teal-700" />
+        <span className="text-xs font-bold text-slate-900">Intelligence Perspective:</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5">
+        {perspectives.map((p) => {
+          const Icon = p.icon;
+          const isSelected = currentRole === p.id;
+          return (
+            <button
+              key={p.id}
+              onClick={() => changeRole(p.id)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors ${
+                isSelected
+                  ? 'bg-teal-700 text-white font-semibold shadow-xs'
+                  : 'bg-slate-50 text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-slate-200'
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              <span>{p.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   useEffect(() => {
     async function loadDashboards() {
@@ -43,13 +84,14 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
   }
 
   // 1. COACH DASHBOARD
-  if (activeRole === 'coach') {
+  if (currentRole === 'coach') {
     const summary = coachData?.summary || {};
     const roster = coachData?.roster || [];
     const alerts = coachData?.coach_action_alerts || [];
 
     return (
       <div className="space-y-6">
+        {renderPerspectiveSelector()}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -170,12 +212,13 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
   }
 
   // 2. PHYSIOTHERAPIST DASHBOARD
-  if (activeRole === 'physiotherapist') {
+  if (currentRole === 'physiotherapist') {
     const rehab = physioData?.rehab_registry || [];
     const focusAreas = physioData?.clinical_focus_areas || [];
 
     return (
       <div className="space-y-6">
+        {renderPerspectiveSelector()}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -255,13 +298,14 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
   }
 
   // 3. SPORTS SCIENTIST DASHBOARD
-  if (activeRole === 'sports_scientist') {
+  if (currentRole === 'sports_scientist') {
     const sci = scientistData?.scientific_overview || {};
     const dist = scientistData?.biomechanical_distributions || [];
     const insights = scientistData?.research_insights || [];
 
     return (
       <div className="space-y-6">
+        {renderPerspectiveSelector()}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -332,8 +376,15 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
   }
 
   // 4. ADMINISTRATOR DASHBOARD
-  if (activeRole === 'administrator') {
-    if (!adminData) return <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">Administrator data is unavailable. Sign in with an administrator account and try again.</div>;
+  if (currentRole === 'administrator') {
+    if (!adminData) {
+      return (
+        <div className="space-y-6">
+          {renderPerspectiveSelector()}
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">Administrator data is unavailable. Sign in with an administrator account and try again.</div>
+        </div>
+      );
+    }
     const sys = adminData.system_metrics;
     const roleCounts = adminData.role_breakdown;
     const allUsers = adminData?.users || [];
@@ -532,6 +583,7 @@ export default function RoleDashboards({ activeRole, injuryRisk, athlete }) {
 
   return (
     <div className="space-y-6">
+      {renderPerspectiveSelector()}
       <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">

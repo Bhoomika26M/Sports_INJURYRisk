@@ -107,15 +107,9 @@ export default function AuthPage({ onClose, onAuthSuccess, initialMode = 'login'
             <button type="submit" disabled={busy} className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-teal-900 disabled:cursor-wait disabled:opacity-60">{busy ? 'Please wait...' : mode === 'login' ? 'Sign in' : mode === 'register' ? 'Create account' : mode === 'forgot' ? 'Send reset link' : 'Update password'}{!busy && <ArrowRight className="h-4 w-4" />}</button>
           </form>
 
-          {mode === 'login' && import.meta.env.DEV && (
-            <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-              <b className="text-slate-800">Demo login:</b> athlete@sportsai.com / password123
-            </div>
-          )}
-
           {mode !== 'login' && <button type="button" onClick={() => changeMode('login')} className="mt-5 w-full text-center text-sm font-medium text-teal-800 hover:underline">Return to sign in</button>}
         </div>
-        <p className="mt-5 text-center text-xs text-slate-500">Movement-analysis results are informational and are not a medical diagnosis.</p>
+        <p className="mt-5 text-center text-xs text-slate-500">Movement-analysis results support screening and review; they are not a medical diagnosis.</p>
       </section>
     </main>
   );

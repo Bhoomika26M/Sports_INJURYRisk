@@ -11,11 +11,13 @@ def generate_athletic_movement_video(
     num_frames: int = 120,
     fps: int = 30,
     width: int = 1280,
-    height: int = 720
+    height: int = 720,
+    variant: str = "baseline"
 ) -> str:
     """
     Creates a clearly labeled synthetic movement clip for testing and pipeline demonstrations.
     This is computer-generated synthetic test footage using OpenCV primitives, not real athlete recordings.
+    Supports 'baseline' and 'increased_knee_inward' (or 'valgus') comparison variants.
     """
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     output_width = width + (width % 2)
@@ -36,6 +38,14 @@ def generate_athletic_movement_video(
     ground_y = int(height * 0.88)
 
     movement_key = movement_type.lower()
+    variant_key = variant.lower()
+    is_valgus_variant = (
+        "valgus" in variant_key
+        or "inward" in variant_key
+        or "increased" in variant_key
+        or "valgus" in movement_key
+        or "inward" in movement_key
+    )
 
     for i in range(num_frames):
         phase = i / num_frames
@@ -64,13 +74,19 @@ def generate_athletic_movement_video(
         if "squat" in movement_key:
             # Deep Squat: Bilateral descending and ascending mechanics
             squat_depth = np.sin(phase * np.pi) ** 2
-            hip_y = int(height * 0.44 + squat_depth * 135)
+            hip_y = int(height * 0.44 + squat_depth * 105)
             hip_x = center_x
-            knee_spread = int(55 + squat_depth * 28)
-            ankle_spread = 68
-            trunk_tilt = int(squat_depth * 14)
-            knee_y = hip_y + int(70 - squat_depth * 15)
+            trunk_tilt = int(squat_depth * 8)
+            knee_y = hip_y + int(85 - squat_depth * 6)
             ankle_y = ground_y - 12
+            ankle_spread = 64
+            if is_valgus_variant:
+                # Increased knee-inward movement (dynamic knee valgus collapse)
+                valgus_inward = int(squat_depth * 38)
+                knee_spread = max(22, 60 - valgus_inward)
+            else:
+                # Baseline: stable knee tracking aligned over feet
+                knee_spread = int(62 + squat_depth * 4)
             l_knee = (hip_x - knee_spread, knee_y)
             r_knee = (hip_x + knee_spread, knee_y)
             l_ankle = (hip_x - ankle_spread, ankle_y)
@@ -168,28 +184,33 @@ def generate_athletic_movement_video(
                 r_arm_mode = "throw_follow_r"
 
         else:
-            # Drop Jump: Descent, landing compression with medial knee valgus, and rebound
+            # Drop Jump: Descent, landing compression, and rebound
             if phase < 0.30:
                 jump_t = phase / 0.30
                 hip_y = int(height * 0.46 - np.sin(jump_t * np.pi) * 75)
                 hip_x = center_x
-                knee_spread = 58
+                knee_spread = 60
                 ankle_spread = 65
                 trunk_tilt = 0
             elif phase < 0.70:
                 land_t = (phase - 0.30) / 0.40
                 squat_depth = np.sin(land_t * np.pi)
                 hip_y = int(height * 0.50 + squat_depth * 115)
-                trunk_tilt = int(squat_depth * 32)
-                hip_x = center_x + int(trunk_tilt * 0.5)
-                valgus_collapse = int(squat_depth * 42)
-                knee_spread = max(16, 58 - valgus_collapse)
-                ankle_spread = 82
+                trunk_tilt = int(squat_depth * 30)
+                hip_x = center_x + int(trunk_tilt * 0.4)
+                ankle_spread = 80
+                if is_valgus_variant:
+                    # Increased knee-inward movement (dynamic knee valgus collapse upon landing)
+                    valgus_collapse = int(squat_depth * 46)
+                    knee_spread = max(16, 62 - valgus_collapse)
+                else:
+                    # Baseline: stable, parallel knee landing alignment
+                    knee_spread = 66
             else:
                 rec_t = (phase - 0.70) / 0.30
                 hip_y = int(height * 0.50 + (1.0 - rec_t) * 20)
                 hip_x = center_x
-                knee_spread = 52
+                knee_spread = 56
                 ankle_spread = 65
                 trunk_tilt = 0
 
@@ -214,10 +235,10 @@ def generate_athletic_movement_video(
 
         # Dynamic Arm Positions based on movement mode
         if l_arm_mode == "squat":
-            l_elbow = (l_shldr[0] - 25, shldr_y + 15)
-            r_elbow = (r_shldr[0] + 25, shldr_y + 15)
-            l_wrist = (l_elbow[0] + 20, l_elbow[1] - 30)
-            r_wrist = (r_elbow[0] - 20, r_elbow[1] - 30)
+            l_elbow = (l_shldr[0] - 38, shldr_y + 35)
+            r_elbow = (r_shldr[0] + 38, shldr_y + 35)
+            l_wrist = (l_elbow[0] - 22, l_elbow[1] + 25)
+            r_wrist = (r_elbow[0] + 22, r_elbow[1] + 25)
         elif l_arm_mode == "sprint_l":
             cycle = (phase * 6) % 1.0
             arm_p = np.sin(cycle * 2 * np.pi)
@@ -257,8 +278,11 @@ def generate_athletic_movement_video(
         athlete_color = (220, 225, 235)
         joint_color = (0, 210, 255)
 
+        # Neck
+        cv2.line(frame, head_pt, (hip_x, shldr_y), athlete_color, 8)
+
         # Head with facial anchors (MediaPipe uses eye/nose/mouth keypoints)
-        cv2.circle(frame, head_pt, 24, athlete_color, -1)
+        cv2.circle(frame, head_pt, 26, athlete_color, -1)
         eye_y = head_pt[1] - 4
         nose_y = head_pt[1] + 3
         mouth_y = head_pt[1] + 10
@@ -293,9 +317,10 @@ def generate_athletic_movement_video(
             cv2.circle(frame, pt, 5, joint_color, -1)
 
         # Transparent and Honest Watermark & Metadata
-        cv2.putText(frame, f"SYNTHETIC DEMO: {movement_type.upper()}", (35, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.70, (210, 220, 240), 2)
-        cv2.putText(frame, "Computer-generated synthetic test clip - Not athlete footage", (35, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (140, 160, 190), 1)
-        cv2.putText(frame, f"Frame: {i+1:03d}/{num_frames} | {fps} FPS | Kinematix Test Suite", (35, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (110, 130, 160), 1)
+        variant_desc = "Increased Knee-Inward" if is_valgus_variant else "Baseline"
+        cv2.putText(frame, f"REFERENCE SIMULATION: {movement_type.upper()} ({variant_desc.upper()})", (35, 45), cv2.FONT_HERSHEY_SIMPLEX, 0.70, (210, 220, 240), 2)
+        cv2.putText(frame, f"Computer-modeled movement simulation - {variant_desc} mechanics", (35, 75), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (140, 160, 190), 1)
+        cv2.putText(frame, f"Frame: {i+1:03d}/{num_frames} | {fps} FPS | Kinematix Motion Studio", (35, 100), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (110, 130, 160), 1)
 
         encoder.send(np.ascontiguousarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)).tobytes())
 

@@ -165,7 +165,7 @@ export const api = {
 
   getDemoSamples: async () => {
     const res = await fetch(`${API_BASE}/videos/demo_samples`);
-    if (!res.ok) throw new Error('Failed to load demo samples');
+    if (!res.ok) throw new Error('Failed to load movement library');
     return res.json();
   },
 
@@ -180,7 +180,7 @@ export const api = {
       method: 'POST'
     });
     const data = await res.json();
-    if (!res.ok) throw new Error(data.detail || 'Failed to load demo sample');
+    if (!res.ok) throw new Error(data.detail || 'Failed to load movement session');
     return data;
   },
 

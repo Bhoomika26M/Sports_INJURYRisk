@@ -150,6 +150,7 @@ def run_full_analysis(video_id: int, db: Session = Depends(get_db)):
             "message": "Analysis completed successfully",
             "video_id": video.id,
             "status": "analyzed",
+            "processed_video_path": video.processed_video_path,
             "biomechanics": biomech_metrics,
             "risk_assessment": {
                 "overall_injury_risk_score": scores["overall_injury_risk_score"],

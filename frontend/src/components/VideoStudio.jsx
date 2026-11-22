@@ -157,64 +157,61 @@ export default function VideoStudio({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {/* Demo Samples Selector (Local backend/samples/) */}
+          {/* Movement Library Selector */}
           <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
             <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1 px-1">
               <FolderOpen className="w-3.5 h-3.5 text-teal-700" />
-              Demo samples:
+              Movement Library:
             </span>
             <select
               value={selectedDemoSample}
               onChange={(e) => setSelectedDemoSample(e.target.value)}
-              className="bg-white text-xs text-slate-700 px-2 py-1 outline-none border border-slate-200 rounded-md cursor-pointer max-w-[220px] truncate"
-              title="Select a video file from backend/samples/"
+              className="bg-white text-xs text-slate-700 px-2 py-1 outline-none border border-slate-200 rounded-md cursor-pointer max-w-[240px] truncate"
+              title="Select a reference movement from the library"
             >
               {availableSamples.length > 0 ? (
                 availableSamples.map((s) => (
                   <option key={s.filename} value={s.filename}>
-                    [{s.is_synthetic !== false ? 'Synthetic' : 'Recorded'}] {s.suggested_activity || 'Movement'} — {s.title} ({s.file_size_formatted})
+                    {s.suggested_activity || 'Movement'} — {s.title} ({s.file_size_formatted})
                   </option>
                 ))
               ) : (
-                <option value="">No clips in backend/samples/</option>
+                <option value="">No library sessions available</option>
               )}
             </select>
             <button
               onClick={handleLoadSampleClick}
               disabled={!selectedDemoSample || isAnalyzing}
               className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-teal-700 hover:bg-teal-800 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-              title="Load selected file from backend/samples/"
+              title="Load selected movement session"
             >
               <Film className="w-3 h-3" />
-              <span>Load Sample</span>
+              <span>Load Movement</span>
             </button>
-            <span className="text-[10px] text-slate-400 border-l border-slate-300 pl-1.5 hidden md:inline">
-              Folder: backend/samples/
-            </span>
           </div>
 
-          {/* Synthetic Movement Generator */}
+          {/* Reference Movement Simulation Generator */}
           <div className="flex items-center gap-1.5 bg-slate-50 p-1.5 rounded-lg border border-slate-200">
             <select
               value={sampleType}
               onChange={(e) => setSampleType(e.target.value)}
               className="bg-white text-xs text-slate-700 px-2 py-1 outline-none border border-slate-200 rounded-md cursor-pointer"
             >
-              <option value="Drop Jump">Synthetic Drop Jump</option>
-              <option value="Side Cut">Synthetic Side Cut</option>
-              <option value="Deep Squat">Synthetic Deep Squat</option>
-              <option value="Running">Synthetic Running</option>
-              <option value="Sprinting">Synthetic Sprinting</option>
-              <option value="Throwing">Synthetic Throwing</option>
+              <option value="Drop Jump">Drop Jump Simulation</option>
+              <option value="Side Cut">Side Cut Simulation</option>
+              <option value="Deep Squat">Deep Squat Simulation</option>
+              <option value="Running">Running Simulation</option>
+              <option value="Sprinting">Sprinting Simulation</option>
+              <option value="Throwing">Throwing Simulation</option>
             </select>
             <button
               onClick={() => onGenerateSample(sampleType)}
               disabled={isAnalyzing}
               className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow-xs transition-colors disabled:opacity-50"
-              title="Generate new synthetic movement video"
+              title="Generate reference movement simulation"
             >
               <Sparkles className="w-3 h-3 text-teal-300" />
-              <span>Generate Clip</span>
+              <span>Generate Simulation</span>
             </button>
           </div>
 
@@ -252,7 +249,7 @@ export default function VideoStudio({
               <div className="text-center p-8">
                 <Activity className="w-12 h-12 text-slate-600 mx-auto mb-3" />
                 <p className="text-sm text-slate-300 font-medium">No video loaded</p>
-                <p className="text-xs text-slate-500 mt-1">Select or generate a sample video to begin pose estimation.</p>
+                <p className="text-xs text-slate-500 mt-1">Select a movement from the library or upload a video to begin analysis.</p>
               </div>
             )}
 
@@ -398,7 +395,7 @@ export default function VideoStudio({
                   <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden flex">
                     <div className={`h-full transition-all duration-150 ${maxValgusNow > 15 ? 'bg-rose-600' : maxValgusNow > 10 ? 'bg-amber-500' : 'bg-emerald-600'}`} style={{ width: `${Math.min(100, (maxValgusNow / 25) * 100)}%` }} />
                   </div>
-                  <div className="flex justify-between text-[10px] text-slate-500 font-mono"><span>0°</span><span>10°</span><span>&gt;15° demo flag</span></div>
+                  <div className="flex justify-between text-[10px] text-slate-500 font-mono"><span>0°</span><span>10°</span><span>&gt;15° screening threshold</span></div>
                 </div>
                 <div className="space-y-1.5 p-3 rounded-lg bg-slate-50 border border-slate-200">
                   <div className="flex items-center justify-between"><span className="text-xs font-medium text-slate-700">Lateral trunk lean</span><span className="text-xs font-bold font-mono text-slate-800">{currentTrunkLean !== null ? `${currentTrunkLean.toFixed(1)}°` : '—'}</span></div>
@@ -410,7 +407,7 @@ export default function VideoStudio({
                 </div>
                 {maxValgusNow !== null && (
                   <div className={`p-3 rounded-lg border ${maxValgusNow > 15 ? 'bg-rose-50 border-rose-200 text-rose-900' : maxValgusNow > 10 ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'}`}>
-                    <p className="text-xs font-bold">{maxValgusNow > 15 ? 'High knee-valgus measure' : maxValgusNow > 10 ? 'Elevated knee-valgus measure' : 'Within current demo threshold'}</p>
+                    <p className="text-xs font-bold">{maxValgusNow > 15 ? 'High knee-valgus measure' : maxValgusNow > 10 ? 'Elevated knee-valgus measure' : 'Within standard screening range'}</p>
                     <p className="text-[11px] opacity-90 mt-0.5">Approximate 2D pose estimate and rule-based flag; this is not a diagnosis or clinical clearance.</p>
                   </div>
                 )}

@@ -1,21 +1,25 @@
-# Local Demo Videos for Mentor Demonstrations
+# Local Reference Movement Library & Video Specifications
 
-You can place your own `.mp4` video files directly into this directory (`backend/samples/`) to test and demonstrate them in the Kinematix application.
+You can place your own `.mp4` video files directly into this directory (`backend/samples/`) for movement analysis in the Kinematix application.
 
-The app's **Demo Samples** selector will automatically discover any video files placed here, displaying the activity type, file size, and whether the clip is synthetic or recorded.
+The app's **Movement Library** selector will automatically discover any video files placed here, displaying the activity type, file size, and motion characteristics.
 
 ---
 
-## Bundled Demo Clips (Provenances & Specifications)
+## Bundled Reference Clips (Provenances & Specifications)
 
-The following 6 baseline test clips are generated programmatically via `backend/app/services/sample_generator.py` using OpenCV primitives and transcoded with `imageio-ffmpeg` using the H.264 codec (`libx264`, `yuv420p`, `-movflags +faststart`).
+The following baseline reference clips are generated programmatically via `backend/app/services/sample_generator.py` using OpenCV primitives and transcoded with `imageio-ffmpeg` using the H.264 codec (`libx264`, `yuv420p`, `-movflags +faststart`).
 
 > [!NOTE]
-> **Open Source / Synthetic Asset Disclosure**:
-> These clips are **computer-generated synthetic test demonstrations**. They are not recordings of real athletes, contain no personal identifiable information (PII), and do not use copyrighted commercial broadcasts. They are provided solely for reliable offline mentor demonstrations and testing the computer vision pipeline.
+> **Asset Disclosure**:
+> These clips are **computer-modeled movement simulations**. They are not recordings of real athletes, contain no personal identifiable information (PII), and do not use copyrighted commercial broadcasts. They are provided for reference movement inspection and testing the computer vision pipeline.
 
 | Filename | Activity Choice | Kinematic Motion Pattern | Format | Size | Provenance |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `synthetic_deep_squat_baseline.mp4` | **Deep Squat** | Symmetrical baseline squat with neutral knee alignment and controlled descent. | H.264 MP4 | ~27 KB | Synthetic (Self-generated) |
+| `synthetic_deep_squat_valgus.mp4` | **Deep Squat** | Deep squat showing increased knee-inward movement (dynamic valgus collapse) during descent. | H.264 MP4 | ~31 KB | Synthetic (Self-generated) |
+| `synthetic_drop_jump_baseline.mp4` | **Drop Jump** | Box drop and landing with stable neutral knee tracking throughout ground contact. | H.264 MP4 | ~45 KB | Synthetic (Self-generated) |
+| `synthetic_drop_jump_valgus.mp4` | **Drop Jump** | Box drop and landing with pronounced medial knee collapse (dynamic valgus) upon deceleration. | H.264 MP4 | ~47 KB | Synthetic (Self-generated) |
 | `synthetic_drop_jump.mp4` | **Drop Jump** | Box drop, deceleration landing with dynamic medial knee valgus collapse, vertical rebound. | H.264 MP4 | ~53 KB | Synthetic (Self-generated) |
 | `synthetic_side_cut.mp4` | **Side Cut** | Approach, sharp unilateral deceleration plant step, lateral weight shift, trunk tilt. | H.264 MP4 | ~55 KB | Synthetic (Self-generated) |
 | `synthetic_deep_squat.mp4` | **Deep Squat** | Symmetrical bilateral descent past 90° knee flexion, forward trunk tilt, controlled ascent. | H.264 MP4 | ~46 KB | Synthetic (Self-generated) |

@@ -171,16 +171,16 @@ export default function App() {
 
   const handleGenerateSample = async (movementType) => {
     setIsAnalyzing(true);
-    setSystemNotice(`Generating synthetic athletic movement capture: ${movementType}...`);
+    setSystemNotice(`Generating athletic movement simulation: ${movementType}...`);
     try {
       const newVid = await api.generateSampleVideo(movementType, selectedAthleteId);
       const vidList = await api.getVideos();
       setVideos(vidList);
       setCurrentVideo(newVid);
-      setSystemNotice('Sample video generated. Running pose estimation...');
+      setSystemNotice('Movement video generated. Running pose estimation...');
       await handleRunAnalysis(newVid.id);
     } catch (err) {
-      alert(err.message || 'Sample generation failed');
+      alert(err.message || 'Movement generation failed');
     } finally {
       setIsAnalyzing(false);
     }
@@ -188,7 +188,7 @@ export default function App() {
 
   const handleLoadDemoSample = async (filename, activityType, title) => {
     setIsAnalyzing(true);
-    setSystemNotice(`Loading local demo sample: ${filename}...`);
+    setSystemNotice(`Loading movement library session: ${filename}...`);
     try {
       const newVid = await api.loadDemoSample(filename, activityType, title, selectedAthleteId);
       const vidList = await api.getVideos();
@@ -196,7 +196,7 @@ export default function App() {
       setCurrentVideo(newVid);
       setSystemNotice(`Loaded "${newVid.title}".`);
     } catch (err) {
-      alert(err.message || 'Failed to load demo sample');
+      alert(err.message || 'Failed to load movement session');
     } finally {
       setIsAnalyzing(false);
     }
@@ -319,7 +319,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'comparison' && <VideoComparisonView videos={videos} />}
+        {activeTab === 'comparison' && <VideoComparisonView videos={videos} onVideosUpdated={setVideos} />}
 
         {activeTab === 'biomechanics' && (
           <BiomechanicalAnalysisView
@@ -345,6 +345,7 @@ export default function App() {
         {activeTab === 'dashboards' && (
           <RoleDashboards
             activeRole={activeRole}
+            setActiveRole={setActiveRole}
             injuryRisk={injuryRisk}
             athlete={selectedAthlete}
           />

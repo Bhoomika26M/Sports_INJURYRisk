@@ -1,15 +1,7 @@
 import React from 'react';
 import { Activity, ShieldAlert, Award, Video, Users, Database, Sparkles, LogIn, LogOut, UserCheck, ArrowLeftRight } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, activeRole, setActiveRole, currentUser, onOpenAuth, onLogout }) {
-  const roles = [
-    { id: 'athlete', label: 'Athlete', name: 'Marcus Vance', icon: Award },
-    { id: 'coach', label: 'Coach', name: 'Coach Martinez', icon: Users },
-    { id: 'physiotherapist', label: 'Physiotherapist', name: 'Dr. Jenkins', icon: ShieldAlert },
-    { id: 'sports_scientist', label: 'Sports Scientist', name: 'Dr. Volkov', icon: Activity },
-    { id: 'administrator', label: 'Administrator', name: 'Sys Admin', icon: Database },
-  ];
-
+export default function Navbar({ activeTab, setActiveTab, currentUser, onOpenAuth, onLogout }) {
   const navItems = [
     { id: 'video_studio', label: 'Video & Pose Tracker', icon: Video },
     { id: 'comparison', label: 'Compare Sessions', icon: ArrowLeftRight },
@@ -46,31 +38,8 @@ export default function Navbar({ activeTab, setActiveTab, activeRole, setActiveR
             </div>
           </div>
 
-          {/* Right Controls: Role Switcher & Auth */}
+          {/* Right Controls: User Profile & Auth */}
           <div className="flex items-center space-x-3">
-            {/* Perspective Selector */}
-            <div className="hidden md:flex items-center space-x-1 bg-slate-950 p-1 rounded-lg border border-slate-800">
-              <span className="text-[11px] text-slate-400 px-2 font-medium">Role:</span>
-              {roles.map((r) => {
-                const Icon = r.icon;
-                const isSelected = activeRole === r.id;
-                return (
-                  <button
-                    key={r.id}
-                    onClick={() => setActiveRole(r.id)}
-                    className={`flex items-center space-x-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-                      isSelected
-                        ? 'bg-slate-800 text-white font-semibold border border-slate-700 shadow-xs'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                    }`}
-                  >
-                    <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-teal-400' : 'text-slate-500'}`} />
-                    <span>{r.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-
             {/* User Session Button */}
             {currentUser ? (
               <div className="flex items-center space-x-2 bg-slate-950 pl-3 pr-1 py-1 rounded-lg border border-slate-800">

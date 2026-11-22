@@ -113,7 +113,7 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
             Biomechanical Assessment Studio
           </h2>
           <p className="text-xs text-slate-500">
-            Session: <span className="text-slate-800 font-semibold">{currentVideo?.title || 'Movement Test'}</span> | Frames Analyzed: {biomechanics.total_frames_analyzed} at {biomechanics.mean_fps} FPS
+            Session: <span className="text-slate-800 font-semibold">{currentVideo?.title || 'Movement Session'}</span> | Frames Analyzed: {biomechanics.total_frames_analyzed} at {biomechanics.mean_fps} FPS
           </p>
         </div>
 
@@ -196,7 +196,7 @@ export default function BiomechanicalAnalysisView({ biomechanics, currentVideo }
                 Dynamic Knee Valgus Angle (Frontal Plane FPPA)
               </h3>
               <p className="text-[11px] text-slate-500">
-                Red dotted line marks a 15.0° demo reference; it is not a validated clinical threshold.
+                Red dotted line marks a 15.0° screening threshold; it is not a validated clinical threshold.
               </p>
             </div>
           </div>

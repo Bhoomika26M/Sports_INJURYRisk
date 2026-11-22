@@ -81,7 +81,7 @@ export default function DatasetsView() {
               <p className="text-xs text-slate-600 leading-relaxed">{d.purpose}</p>
 
               <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 space-y-1">
-                <span className="text-[10px] font-bold text-slate-500 block uppercase">Sample Drills:</span>
+                <span className="text-[10px] font-bold text-slate-500 block uppercase">Example Drills:</span>
                 <p className="text-[11px] text-slate-700">{(d.sample_activities || []).join(', ')}</p>
               </div>
             </div>

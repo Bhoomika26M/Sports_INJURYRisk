@@ -30,28 +30,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
 
   if (!isOpen) return null;
 
-  const demoAccounts = [
-    { role: 'athlete', name: 'Marcus Vance', email: 'athlete@sportsai.com', label: 'Athlete' },
-    { role: 'coach', name: 'Coach Martinez', email: 'coach@sportsai.com', label: 'Coach' },
-    { role: 'physiotherapist', name: 'Dr. Jenkins', email: 'physio@sportsai.com', label: 'Physiotherapist' },
-    { role: 'sports_scientist', name: 'Dr. Volkov', email: 'scientist@sportsai.com', label: 'Sports Scientist' },
-    { role: 'administrator', name: 'System Admin', email: 'admin@sportsai.com', label: 'Administrator' },
-  ];
-
-  const handleQuickLogin = async (demoEmail) => {
-    setIsLoading(true);
-    setErrorMessage('');
-    try {
-      const data = await api.login(demoEmail, 'password123');
-      onAuthSuccess(data.user);
-      onClose();
-    } catch (err) {
-      setErrorMessage(err.message || 'Quick login failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
@@ -211,7 +189,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                       required
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="athlete@sportsai.com"
+                      placeholder="you@example.com"
                       className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600 transition-colors"
                     />
                   </div>
@@ -250,31 +228,6 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                   <ArrowRight className="w-3.5 h-3.5" />
                 </button>
               </form>
-
-              {/* Quick Demo Logins */}
-              <div className="pt-3 border-t border-slate-200">
-                <span className="text-[11px] font-semibold text-slate-500 block mb-2 uppercase tracking-wider">
-                  Quick Demo Access (Select Role):
-                </span>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
-                  {demoAccounts.map((d) => (
-                    <button
-                      key={d.email}
-                      type="button"
-                      onClick={() => handleQuickLogin(d.email)}
-                      disabled={isLoading}
-                      className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 hover:bg-slate-100 text-left transition-colors group"
-                    >
-                      <span className="text-[10px] font-bold text-teal-800 block">
-                        {d.label}
-                      </span>
-                      <span className="text-[11px] text-slate-700 truncate block">
-                        {d.name}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -369,7 +322,7 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess, initialMode 
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your-email@sportsai.com"
+                    placeholder="you@example.com"
                     className="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-3 py-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-teal-600 focus:ring-1 focus:ring-teal-600"
                   />
                 </div>
