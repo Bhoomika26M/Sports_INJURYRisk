@@ -68,6 +68,12 @@ DEMO_PERSONAS = [
 def ensure_demo_personas(db):
     """Ensure that all demo personas and athletes exist with valid credentials."""
     try:
+        # Check if users already exist to avoid unnecessary remote updates on every startup
+        existing_count = db.query(User).count()
+        if existing_count >= len(DEMO_PERSONAS):
+            logger.info("Demo personas already seeded in database.")
+            return
+
         pw_hash = get_password_hash("password123")
 
         for persona in DEMO_PERSONAS:

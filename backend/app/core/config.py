@@ -130,7 +130,15 @@ class Settings(BaseSettings):
     # Lifetime (seconds) of the signed OAuth state value (CSRF protection).
     GOOGLE_STATE_EXPIRE_SECONDS: int = 600
 
-    model_config = ConfigDict(env_file=".env")
+    # --- Supabase Cloud Storage & Database ---
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_BUCKET: str = "videos"
+
+    # Priority: backend/.env, falling back to workspace root .env
+    _backend_env = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), ".env")
+    model_config = ConfigDict(env_file=_backend_env if os.path.exists(_backend_env) else ".env", extra="ignore")
 
 
 settings = Settings()
