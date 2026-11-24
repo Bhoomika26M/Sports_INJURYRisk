@@ -83,7 +83,7 @@ const Layout = () => {
             <div className="flex items-center space-x-3">
               <div className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECFDF5] border border-[#6CF8BB]/50 text-[#006C49] font-mono text-[11px] font-semibold">
                 <span className="w-2 h-2 rounded-full bg-[#006C49] animate-pulse" />
-                <span>120Hz Calibrated</span>
+                
               </div>
 
               {/* Notifications for coaches/physios/athletes */}
@@ -116,15 +116,9 @@ const Layout = () => {
         {/* Secondary Sub-Bar / Telemetry Breadcrumb Strip */}
         <div className="h-7 w-full px-4 sm:px-6 lg:px-8 bg-[#F1F3FF] border-t border-[#E1BFB5]/20 flex items-center justify-between text-[11px] font-mono text-[#594139]">
           <div className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#006C49]" />
-            <span className="font-semibold text-[#141B2B]">Node 04 // Optical Gateway</span>
-            <span className="text-gray-300">/</span>
-            <span>AI Movement Biomechanics v4.2</span>
           </div>
           <div className="hidden sm:flex items-center gap-3 text-[10px]">
-            <span>ISO 13485 CLASS II</span>
-            <span>•</span>
-            <span>HIPAA VALIDATED</span>
+           
           </div>
         </div>
       </header>
