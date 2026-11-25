@@ -49,13 +49,13 @@ const Login = () => {
         <div className="w-full bg-[#E1E8FD]/80 rounded-lg px-3.5 py-1.5 flex items-center justify-between shadow-sm border border-[#E1BFB5]/30">
           <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider text-[#594139]">
             <span className="flex h-2 w-2 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#006C49] opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#006C49]" />
+              
+             
             </span>
-            <span>Node 04 // Optical Telemetry Gate</span>
+           
           </div>
           <div className="flex items-center gap-1 font-mono text-[10px] text-[#006C49] font-bold">
-            <span>120Hz CALIBRATED</span>
+           
           </div>
         </div>
 
